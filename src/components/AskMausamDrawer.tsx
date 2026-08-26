@@ -129,50 +129,50 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/60 backdrop-blur-xs transition-opacity select-none font-sans">
-      <div className="w-full max-w-lg bg-[#0b1326] border-l border-[#3e484f] h-full flex flex-col shadow-2xl animate-in slide-in-from-right duration-300">
+    <div className="fixed inset-0 z-50 flex justify-end bg-black/60 transition-opacity select-none font-sans">
+      <div className="w-full max-w-lg bg-[#0F141A] border-l border-[#334155] h-full flex flex-col shadow-lg animate-in slide-in-from-right duration-200">
         {/* Header */}
-        <div className="p-4 card-header-divider flex justify-between items-center bg-[#171f33]">
+        <div className="p-4 border-b border-[#334155] flex justify-between items-center bg-[#17212B]">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-[#8ed5ff]/20 card-border flex items-center justify-center text-[#8ed5ff]">
+            <div className="w-9 h-9 rounded bg-[#1E2733] border border-[#334155] flex items-center justify-center text-[#4FA8E0]">
               <span className="material-symbols-outlined text-[20px]">
                 psychology
               </span>
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-semibold text-[#dae2fd]">
-                  Ask Mausam AI
+                <h3 className="text-sm font-bold text-white">
+                  MAUSAM Atmospheric AI
                 </h3>
-                <span className="px-1.5 py-0.5 rounded bg-[#4edea3]/20 text-[#4edea3] text-[10px] font-semibold">
-                  Grounded
+                <span className="px-1.5 py-0.5 rounded bg-[#0B72B9]/20 text-[#4FA8E0] text-[10px] font-bold border border-[#0B72B9]/40">
+                  IMD / Gemini Grounded
                 </span>
               </div>
-              <p className="text-xs text-[#bdc8d1]">
-                Synced with {currentStation.name} ({currentStation.lat.toFixed(2)}°N, {currentStation.lng.toFixed(2)}°E)
+              <p className="text-xs text-[#8A94A6]">
+                Synced with {currentStation?.name || 'Observatory'} ({typeof currentStation?.lat === 'number' ? currentStation.lat.toFixed(2) : '20.29'}°N, {typeof currentStation?.lng === 'number' ? currentStation.lng.toFixed(2) : '85.82'}°E)
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="text-[#bdc8d1] hover:text-[#dae2fd] p-1.5 rounded-lg hover:bg-[#2d3449] transition-colors cursor-pointer"
+            className="text-[#8A94A6] hover:text-white p-1.5 rounded hover:bg-[#1E2733] transition-colors cursor-pointer"
           >
             <span className="material-symbols-outlined text-[20px]">close</span>
           </button>
         </div>
 
         {/* AI Grounding Mode Selector */}
-        <div className="px-4 py-2 bg-[#060e20] border-b border-[#3e484f]/60 flex items-center gap-1.5 overflow-x-auto text-xs">
-          <span className="text-[#87929a] shrink-0 text-[11px] font-medium mr-1">
+        <div className="px-4 py-2 bg-[#0F141A] border-b border-[#334155] flex items-center gap-1.5 overflow-x-auto text-xs">
+          <span className="text-[#8A94A6] shrink-0 text-[11px] font-medium mr-1">
             Grounding:
           </span>
           <button
             onClick={() => setGroundingMode('auto')}
-            className={`px-2.5 py-1 rounded-md transition-all cursor-pointer shrink-0 flex items-center gap-1 text-[11px] font-medium ${
+            className={`px-2.5 py-1 rounded transition-all cursor-pointer shrink-0 flex items-center gap-1 text-[11px] font-medium ${
               groundingMode === 'auto'
-                ? 'bg-[#0B72B9] text-white shadow-xs'
-                : 'bg-[#171f33] text-[#bdc8d1] hover:text-white border border-white/5'
+                ? 'bg-[#0B72B9] text-white'
+                : 'bg-[#17212B] text-[#8A94A6] hover:text-white border border-[#334155]'
             }`}
           >
             <span className="material-symbols-outlined text-[14px]">auto_awesome</span>
@@ -180,25 +180,25 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
           </button>
           <button
             onClick={() => setGroundingMode('search')}
-            className={`px-2.5 py-1 rounded-md transition-all cursor-pointer shrink-0 flex items-center gap-1 text-[11px] font-medium ${
+            className={`px-2.5 py-1 rounded transition-all cursor-pointer shrink-0 flex items-center gap-1 text-[11px] font-medium ${
               groundingMode === 'search'
-                ? 'bg-[#3A6EA5] text-white shadow-xs'
-                : 'bg-[#171f33] text-[#bdc8d1] hover:text-white border border-white/5'
+                ? 'bg-[#0B72B9] text-white'
+                : 'bg-[#17212B] text-[#8A94A6] hover:text-white border border-[#334155]'
             }`}
           >
             <span className="material-symbols-outlined text-[14px]">search</span>
-            Google Search (News & IMD)
+            Google Search (News &amp; IMD)
           </button>
           <button
             onClick={() => setGroundingMode('maps')}
-            className={`px-2.5 py-1 rounded-md transition-all cursor-pointer shrink-0 flex items-center gap-1 text-[11px] font-medium ${
+            className={`px-2.5 py-1 rounded transition-all cursor-pointer shrink-0 flex items-center gap-1 text-[11px] font-medium ${
               groundingMode === 'maps'
-                ? 'bg-[#22c55e] text-black font-semibold shadow-xs'
-                : 'bg-[#171f33] text-[#bdc8d1] hover:text-white border border-white/5'
+                ? 'bg-[#0B72B9] text-white'
+                : 'bg-[#17212B] text-[#8A94A6] hover:text-white border border-[#334155]'
             }`}
           >
             <span className="material-symbols-outlined text-[14px]">location_on</span>
-            Google Maps (Radar & Places)
+            Google Maps (Radar &amp; Places)
           </button>
         </div>
 
@@ -212,18 +212,18 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
               }`}
             >
               <div
-                className={`p-3.5 rounded-xl max-w-[92%] text-sm leading-relaxed ${
+                className={`p-3.5 rounded max-w-[92%] text-xs sm:text-sm leading-relaxed ${
                   m.role === 'user'
-                    ? 'bg-[#8ed5ff] text-[#00354a] font-medium shadow-md'
-                    : 'bg-[#171f33] card-border text-[#dae2fd] shadow-md'
+                    ? 'bg-[#0B72B9] text-white font-medium'
+                    : 'bg-[#17212B] border border-[#334155] text-[#D7DEE8]'
                 }`}
               >
                 <p className="whitespace-pre-line">{m.content}</p>
 
-                {/* Grounding Source Citations & Maps links as required by Gemini skill */}
+                {/* Grounding Source Citations & Maps links */}
                 {m.groundingSources && m.groundingSources.length > 0 && (
-                  <div className="mt-3 pt-2.5 border-t border-white/10 flex flex-col gap-1.5">
-                    <span className="text-[11px] font-semibold text-[#8ed5ff] flex items-center gap-1">
+                  <div className="mt-3 pt-2.5 border-t border-[#334155] flex flex-col gap-1.5">
+                    <span className="text-[11px] font-semibold text-[#4FA8E0] flex items-center gap-1">
                       <span className="material-symbols-outlined text-[14px]">
                         verified
                       </span>
@@ -238,8 +238,8 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
                           rel="noopener noreferrer"
                           className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium transition-colors ${
                             source.type === 'maps'
-                              ? 'bg-[#22c55e]/15 text-[#4edea3] hover:bg-[#22c55e]/25 border border-[#22c55e]/30'
-                              : 'bg-[#8ed5ff]/15 text-[#8ed5ff] hover:bg-[#8ed5ff]/25 border border-[#8ed5ff]/30'
+                              ? 'bg-[#2ECC71]/15 text-[#2ECC71] hover:bg-[#2ECC71]/25 border border-[#2ECC71]/30'
+                              : 'bg-[#0B72B9]/15 text-[#4FA8E0] hover:bg-[#0B72B9]/25 border border-[#0B72B9]/30'
                           }`}
                         >
                           <span className="material-symbols-outlined text-[12px]">
@@ -258,7 +258,7 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
                 )}
 
                 {m.source && (
-                  <div className="mt-2 flex items-center justify-between text-[10px] text-[#87929a] pt-1">
+                  <div className="mt-2 flex items-center justify-between text-[10px] text-[#8A94A6] pt-1">
                     <span>Engine: {m.source}</span>
                     {m.modeUsed && (
                       <span className="uppercase tracking-wider px-1 bg-black/20 rounded">
@@ -268,14 +268,14 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
                   </div>
                 )}
               </div>
-              <span className="text-[11px] text-[#87929a] mt-1 px-1">
+              <span className="text-[10px] text-[#8A94A6] mt-1 px-1 font-mono">
                 {m.timestamp}
               </span>
             </div>
           ))}
 
           {isLoading && (
-            <div className="flex items-center gap-2 text-[#8ed5ff] text-xs p-3 bg-[#171f33] rounded-lg card-border w-fit animate-pulse">
+            <div className="flex items-center gap-2 text-[#4FA8E0] text-xs p-3 bg-[#17212B] rounded border border-[#334155] w-fit animate-pulse">
               <span className="material-symbols-outlined text-[16px] animate-spin">
                 autorenew
               </span>
@@ -285,12 +285,12 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
         </div>
 
         {/* Quick Suggestion Chips */}
-        <div className="p-3 border-t border-[#3e484f] bg-[#060e20] flex flex-wrap gap-1.5">
+        <div className="p-3 border-t border-[#334155] bg-[#0F141A] flex flex-wrap gap-1.5">
           {quickPromptsByMode[groundingMode].map((chip) => (
             <button
               key={chip}
               onClick={() => handleSendMessage(chip)}
-              className="text-xs px-2.5 py-1 rounded-lg bg-[#171f33] card-border text-[#bdc8d1] hover:text-[#8ed5ff] hover:border-[#8ed5ff] transition-all cursor-pointer truncate max-w-full"
+              className="text-xs px-2.5 py-1 rounded bg-[#17212B] border border-[#334155] text-[#D7DEE8] hover:text-[#4FA8E0] hover:border-[#4FA8E0] transition-all cursor-pointer truncate max-w-full"
             >
               {chip}
             </button>
@@ -298,7 +298,7 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
         </div>
 
         {/* Input Bar */}
-        <div className="p-3.5 card-header-divider border-t border-[#3e484f] bg-[#171f33] flex items-center gap-2">
+        <div className="p-3.5 border-t border-[#334155] bg-[#17212B] flex items-center gap-2">
           <input
             type="text"
             placeholder={
@@ -311,14 +311,14 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
             value={inputPrompt}
             onChange={(e) => setInputPrompt(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-            className="flex-1 bg-[#0b1326] card-border rounded-lg px-3.5 py-2 text-sm text-[#dae2fd] placeholder-[#87929a] focus:outline-none focus:border-[#8ed5ff]"
+            className="flex-1 bg-[#0F141A] border border-[#334155] rounded px-3.5 py-2 text-xs text-white placeholder-[#8A94A6] focus:outline-none focus:border-[#4FA8E0]"
           />
           <button
             onClick={() => handleSendMessage()}
             disabled={isLoading || !inputPrompt.trim()}
-            className="bg-[#8ed5ff] text-[#00354a] p-2 rounded-lg hover:bg-[#38bdf8] disabled:opacity-40 transition-colors cursor-pointer"
+            className="mausam-btn mausam-btn--sm"
           >
-            <span className="material-symbols-outlined text-[20px]">send</span>
+            <span className="material-symbols-outlined text-[18px]">send</span>
           </button>
         </div>
       </div>

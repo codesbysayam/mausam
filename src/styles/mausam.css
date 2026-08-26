@@ -1,0 +1,510 @@
+:root {
+  --primary: #0B72B9;
+  --primary-dark: #0A5A94;
+  --primary-light: #4FA8E0;
+
+  --bg: #0F141A;
+  --surface: #17212B;
+  --surface-2: #1E2733;
+
+  --border: #334155;
+  --border-light: #475569;
+
+  --text: #FFFFFF;
+  --text-body: #D7DEE8;
+  --text-muted: #8A94A6;
+
+  --good: #2ECC71;
+  --warning: #F1C40F;
+  --alert: #FF8C42;
+  --danger: #E74C3C;
+
+  --rain: #3A6EA5;
+  --fog: #8D9CB8;
+  --storm: #4B4453;
+
+  --font:
+    "Roboto",
+    Arial,
+    Helvetica,
+    sans-serif;
+
+  --font-indic:
+    "Noto Sans",
+    "Noto Sans Devanagari",
+    "Noto Sans Oriya",
+    Arial,
+    sans-serif;
+
+  --radius: 6px;
+  --radius-small: 4px;
+
+  --border-width: 1px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  width: 100%;
+  min-height: 100%;
+
+  font-family: var(--font);
+
+  background: var(--bg);
+  color: var(--text);
+}
+
+body {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* =========================================
+   APPLICATION
+========================================= */
+
+.mausam-app {
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+/* =========================================
+   HEADER
+========================================= */
+
+.mausam-header {
+  height: 64px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0 24px;
+
+  background: var(--bg);
+
+  border-bottom:
+    1px solid var(--border);
+}
+
+.mausam-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.mausam-brand-logo {
+  width: 38px;
+  height: 38px;
+
+  display: grid;
+  place-items: center;
+
+  background: var(--primary);
+
+  border-radius: 4px;
+}
+
+.mausam-brand-name {
+  font-size: 19px;
+  font-weight: 700;
+
+  color: var(--text);
+}
+
+.mausam-brand-subtitle {
+  font-size: 11px;
+
+  color: var(--text-muted);
+}
+
+/* =========================================
+   NAVIGATION
+========================================= */
+
+.mausam-nav {
+  height: 48px;
+
+  display: flex;
+  align-items: center;
+
+  padding: 0 24px;
+
+  background: var(--surface);
+
+  border-bottom:
+    1px solid var(--border);
+
+  overflow-x: auto;
+}
+
+.mausam-nav-item {
+  height: 48px;
+
+  display: flex;
+  align-items: center;
+
+  padding: 0 18px;
+
+  color: var(--text-muted);
+
+  background: transparent;
+
+  border: 0;
+
+  border-bottom:
+    2px solid transparent;
+
+  font-size: 13px;
+  font-weight: 500;
+
+  white-space: nowrap;
+}
+
+.mausam-nav-item:hover {
+  color: var(--text);
+}
+
+.mausam-nav-item.active {
+  color: var(--primary-light);
+
+  border-bottom-color:
+    var(--primary-light);
+}
+
+/* =========================================
+   PAGE
+========================================= */
+
+.mausam-page {
+  width: 100%;
+  max-width: 1440px;
+
+  margin: 0 auto;
+
+  padding: 24px;
+}
+
+/* =========================================
+   SECTION
+========================================= */
+
+.mausam-section {
+  margin-bottom: 24px;
+}
+
+.mausam-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  margin-bottom: 12px;
+
+  padding-bottom: 8px;
+
+  border-bottom:
+    1px solid var(--border);
+}
+
+.mausam-section-title {
+  margin: 0;
+
+  color: var(--text);
+
+  font-size: 20px;
+  font-weight: 700;
+}
+
+/* =========================================
+   INFORMATION BLOCK
+========================================= */
+
+.mausam-panel {
+  background: var(--surface);
+
+  border:
+    1px solid var(--border);
+
+  border-radius:
+    var(--radius);
+
+  padding: 18px;
+}
+
+/* =========================================
+   GRID
+========================================= */
+
+.mausam-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(12, 1fr);
+
+  gap: 16px;
+}
+
+.mausam-col-12 {
+  grid-column: span 12;
+}
+
+.mausam-col-8 {
+  grid-column: span 8;
+}
+
+.mausam-col-6 {
+  grid-column: span 6;
+}
+
+.mausam-col-4 {
+  grid-column: span 4;
+}
+
+/* =========================================
+   DATA
+========================================= */
+
+.mausam-data-label {
+  display: block;
+
+  margin-bottom: 3px;
+
+  color: var(--text-muted);
+
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.mausam-data-value {
+  color: var(--text);
+
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* =========================================
+   CURRENT TEMPERATURE
+========================================= */
+
+.mausam-temperature {
+  font-size: 64px;
+
+  line-height: 1;
+
+  font-weight: 400;
+
+  color: var(--text);
+}
+
+.mausam-temperature-unit {
+  font-size: 24px;
+
+  color: var(--primary-light);
+
+  vertical-align: top;
+}
+
+/* =========================================
+   BUTTON
+========================================= */
+
+.mausam-button {
+  min-height: 36px;
+
+  padding: 0 14px;
+
+  border:
+    1px solid var(--primary);
+
+  border-radius:
+    var(--radius-small);
+
+  background:
+    var(--primary);
+
+  color: #fff;
+
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.mausam-button:hover {
+  background:
+    var(--primary-dark);
+}
+
+.mausam-button-outline {
+  background: transparent;
+
+  border-color:
+    var(--border-light);
+
+  color:
+    var(--text-body);
+}
+
+/* =========================================
+   TABLE
+========================================= */
+
+.mausam-table-wrapper {
+  overflow-x: auto;
+
+  border:
+    1px solid var(--border);
+
+  border-radius:
+    var(--radius);
+}
+
+.mausam-table {
+  width: 100%;
+
+  border-collapse: collapse;
+}
+
+.mausam-table th {
+  padding: 11px 14px;
+
+  background:
+    var(--surface-2);
+
+  color:
+    var(--text-muted);
+
+  border-bottom:
+    1px solid var(--border);
+
+  text-align: left;
+
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.mausam-table td {
+  padding: 12px 14px;
+
+  color:
+    var(--text-body);
+
+  border-bottom:
+    1px solid var(--border);
+
+  font-size: 13px;
+}
+
+.mausam-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.mausam-table tr:hover td {
+  background:
+    rgba(79, 168, 224, 0.04);
+}
+
+/* =========================================
+   ALERT
+========================================= */
+
+.mausam-alert {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  min-height: 58px;
+
+  padding: 10px 16px;
+
+  background:
+    rgba(231, 76, 60, 0.08);
+
+  border:
+    1px solid rgba(231, 76, 60, 0.45);
+
+  border-left:
+    4px solid var(--danger);
+
+  border-radius:
+    var(--radius);
+}
+
+.mausam-alert.warning {
+  background:
+    rgba(241, 196, 15, 0.07);
+
+  border-color:
+    rgba(241, 196, 15, 0.4);
+
+  border-left-color:
+    var(--warning);
+}
+
+.mausam-alert.normal {
+  background:
+    rgba(46, 204, 113, 0.06);
+
+  border-color:
+    rgba(46, 204, 113, 0.35);
+
+  border-left-color:
+    var(--good);
+}
+
+/* =========================================
+   STATUS
+========================================= */
+
+.status-good {
+  color: var(--good);
+}
+
+.status-warning {
+  color: var(--warning);
+}
+
+.status-alert {
+  color: var(--alert);
+}
+
+.status-danger {
+  color: var(--danger);
+}
+
+/* =========================================
+   RESPONSIVE
+========================================= */
+
+@media (max-width: 900px) {
+  .mausam-col-8,
+  .mausam-col-6,
+  .mausam-col-4 {
+    grid-column: span 12;
+  }
+
+  .mausam-header {
+    padding: 0 16px;
+  }
+
+  .mausam-page {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 600px) {
+  .mausam-brand-subtitle {
+    display: none;
+  }
+
+  .mausam-temperature {
+    font-size: 52px;
+  }
+
+  .mausam-page {
+    padding: 12px;
+  }
+}

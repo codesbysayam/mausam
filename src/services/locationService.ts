@@ -26,6 +26,24 @@ class LocationService {
     return this.locations.find((l) => l.id === id) || this.getPrimaryLocation();
   }
 
+  findLocationByName(name: string): LocationRecord | undefined {
+    if (!name) return undefined;
+    const q = name.toLowerCase().trim();
+    return this.locations.find(
+      (l) =>
+        l.city.toLowerCase() === q ||
+        l.district.toLowerCase() === q ||
+        l.displayName.toLowerCase() === q ||
+        (l.aliases && l.aliases.some((a) => a.toLowerCase() === q))
+    );
+  }
+
+  findLocationsByState(state: string): LocationRecord[] {
+    if (!state) return [];
+    const q = state.toLowerCase().trim();
+    return this.locations.filter((l) => l.state.toLowerCase() === q);
+  }
+
   searchLocations(query: string): LocationRecord[] {
     if (!query.trim()) return this.locations;
     const q = query.toLowerCase().trim();
