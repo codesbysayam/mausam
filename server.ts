@@ -3,6 +3,7 @@ import path from 'path';
 import dotenv from 'dotenv';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
+import { imdRouter } from './server/routes/imdRoutes';
 
 dotenv.config();
 
@@ -65,6 +66,9 @@ async function startServer() {
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', time: new Date().toISOString() });
   });
+
+  // Official IMD Data Connector Routes
+  app.use('/api/imd', imdRouter);
 
   // AI Assistant endpoint: Ask Mausam with Search & Maps Grounding
   const handleAskMausam = async (req: express.Request, res: express.Response) => {

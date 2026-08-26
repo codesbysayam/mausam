@@ -19,6 +19,7 @@ import { ReportsPage } from './pages/Reports';
 import { PrivacyPolicy } from './pages/PrivacyPolicy';
 import { OpenDataApi } from './pages/OpenDataApi';
 import { TermsOfObservation } from './pages/TermsOfObservation';
+import { ApiDebugPage } from './pages/ApiDebug';
 import { AskMausamDrawer } from './components/AskMausamDrawer';
 import { useLanguage } from './i18n/LanguageContext';
 import './styles/mausam.css';
@@ -30,6 +31,7 @@ function getTabFromPathname(path: string): AppView {
   if (cleanPath === '/privacy' || cleanPath === '/privacy-policy') return 'privacy';
   if (cleanPath === '/api' || cleanPath === '/open-data-api') return 'api';
   if (cleanPath === '/terms' || cleanPath === '/terms-of-observation') return 'terms';
+  if (cleanPath === '/debug' || cleanPath === '/api-debug') return 'debug';
   if (cleanPath === '/forecast') return 'forecast';
   if (cleanPath === '/warnings' || cleanPath === '/alerts') return 'warnings';
   if (cleanPath === '/radar' || cleanPath === '/maps') return 'radar';
@@ -48,6 +50,8 @@ function getPathForView(view: AppView): string {
       return '/api';
     case 'terms':
       return '/terms';
+    case 'debug':
+      return '/api-debug';
     case 'forecast':
       return '/forecast';
     case 'warnings':
@@ -259,6 +263,9 @@ export default function App() {
           {activeTab === 'terms' && (
             <TermsOfObservation onNavigateHome={() => navigateToTab('home')} />
           )}
+
+          {/* IMD API INTEGRATION DIAGNOSTICS */}
+          {activeTab === 'debug' && <ApiDebugPage />}
         </PageContainer>
       </main>
 

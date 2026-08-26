@@ -1,0 +1,222 @@
+{
+  "bhubaneswar": {
+    "city": "Bhubaneswar",
+    "district": "Khordha",
+    "state": "Odisha",
+    "cityForecastId": "42971",
+    "stationId": "42971",
+    "latitude": 20.2961,
+    "longitude": 85.8245,
+    "elevationMeters": 45
+  },
+  "cuttack": {
+    "city": "Cuttack",
+    "district": "Cuttack",
+    "state": "Odisha",
+    "cityForecastId": "42970",
+    "stationId": "42970",
+    "latitude": 20.4625,
+    "longitude": 85.8830,
+    "elevationMeters": 36
+  },
+  "puri": {
+    "city": "Puri",
+    "district": "Puri",
+    "state": "Odisha",
+    "cityForecastId": "43053",
+    "stationId": "43053",
+    "latitude": 19.8135,
+    "longitude": 85.8312,
+    "elevationMeters": 10
+  },
+  "delhi": {
+    "city": "New Delhi (Safdarjung)",
+    "district": "New Delhi",
+    "state": "Delhi",
+    "cityForecastId": "42182",
+    "stationId": "42182",
+    "latitude": 28.6139,
+    "longitude": 77.2090,
+    "elevationMeters": 216
+  },
+  "mumbai": {
+    "city": "Mumbai (Colaba / Santacruz)",
+    "district": "Mumbai City",
+    "state": "Maharashtra",
+    "cityForecastId": "43003",
+    "stationId": "43003",
+    "latitude": 19.0760,
+    "longitude": 72.8777,
+    "elevationMeters": 14
+  },
+  "pune": {
+    "city": "Pune (Shivajinagar)",
+    "district": "Pune",
+    "state": "Maharashtra",
+    "cityForecastId": "43063",
+    "stationId": "43063",
+    "latitude": 18.5204,
+    "longitude": 73.8567,
+    "elevationMeters": 560
+  },
+  "nagpur": {
+    "city": "Nagpur (Sonegaon)",
+    "district": "Nagpur",
+    "state": "Maharashtra",
+    "cityForecastId": "42867",
+    "stationId": "42867",
+    "latitude": 21.1458,
+    "longitude": 79.0882,
+    "elevationMeters": 310
+  },
+  "kolkata": {
+    "city": "Kolkata (Alipore / Dumdum)",
+    "district": "Kolkata",
+    "state": "West Bengal",
+    "cityForecastId": "42807",
+    "stationId": "42807",
+    "latitude": 22.5726,
+    "longitude": 88.3639,
+    "elevationMeters": 9
+  },
+  "chennai": {
+    "city": "Chennai (Meenambakkam / Nungambakkam)",
+    "district": "Chennai",
+    "state": "Tamil Nadu",
+    "cityForecastId": "43279",
+    "stationId": "43279",
+    "latitude": 13.0827,
+    "longitude": 80.2707,
+    "elevationMeters": 16
+  },
+  "bengaluru": {
+    "city": "Bengaluru (HAL / City)",
+    "district": "Bengaluru Urban",
+    "state": "Karnataka",
+    "cityForecastId": "43295",
+    "stationId": "43295",
+    "latitude": 12.9716,
+    "longitude": 77.5946,
+    "elevationMeters": 920
+  },
+  "hyderabad": {
+    "city": "Hyderabad (Begumpet)",
+    "district": "Hyderabad",
+    "state": "Telangana",
+    "cityForecastId": "43128",
+    "stationId": "43128",
+    "latitude": 17.3850,
+    "longitude": 78.4867,
+    "elevationMeters": 542
+  },
+  "ahmedabad": {
+    "city": "Ahmedabad",
+    "district": "Ahmedabad",
+    "state": "Gujarat",
+    "cityForecastId": "42647",
+    "stationId": "42647",
+    "latitude": 23.0225,
+    "longitude": 72.5714,
+    "elevationMeters": 53
+  },
+  "jaipur": {
+    "city": "Jaipur (Sanganer)",
+    "district": "Jaipur",
+    "state": "Rajasthan",
+    "cityForecastId": "42348",
+    "stationId": "42348",
+    "latitude": 26.9124,
+    "longitude": 75.7873,
+    "elevationMeters": 431
+  },
+  "lucknow": {
+    "city": "Lucknow (Amausi)",
+    "district": "Lucknow",
+    "state": "Uttar Pradesh",
+    "cityForecastId": "42369",
+    "stationId": "42369",
+    "latitude": 26.8467,
+    "longitude": 80.9462,
+    "elevationMeters": 123
+  },
+  "patna": {
+    "city": "Patna",
+    "district": "Patna",
+    "state": "Bihar",
+    "cityForecastId": "42492",
+    "stationId": "42492",
+    "latitude": 25.5941,
+    "longitude": 85.1376,
+    "elevationMeters": 53
+  },
+  "guwahati": {
+    "city": "Guwahati (Borjhar)",
+    "district": "Kamrup Metropolitan",
+    "state": "Assam",
+    "cityForecastId": "42410",
+    "stationId": "42410",
+    "latitude": 26.1445,
+    "longitude": 91.7362,
+    "elevationMeters": 55
+  },
+  "srinagar": {
+    "city": "Srinagar",
+    "district": "Srinagar",
+    "state": "Jammu and Kashmir",
+    "cityForecastId": "42027",
+    "stationId": "42027",
+    "latitude": 34.0837,
+    "longitude": 74.7973,
+    "elevationMeters": 1585
+  },
+  "shimla": {
+    "city": "Shimla",
+    "district": "Shimla",
+    "state": "Himachal Pradesh",
+    "cityForecastId": "42083",
+    "stationId": "42083",
+    "latitude": 31.1048,
+    "longitude": 77.1734,
+    "elevationMeters": 2205
+  },
+  "thiruvananthapuram": {
+    "city": "Thiruvananthapuram",
+    "district": "Thiruvananthapuram",
+    "state": "Kerala",
+    "cityForecastId": "43371",
+    "stationId": "43371",
+    "latitude": 8.5241,
+    "longitude": 76.9366,
+    "elevationMeters": 64
+  },
+  "kochi": {
+    "city": "Kochi (Willingdon Island / Nedumbassery)",
+    "district": "Ernakulam",
+    "state": "Kerala",
+    "cityForecastId": "43355",
+    "stationId": "43355",
+    "latitude": 9.9312,
+    "longitude": 76.2673,
+    "elevationMeters": 4
+  },
+  "panaji": {
+    "city": "Panaji",
+    "district": "North Goa",
+    "state": "Goa",
+    "cityForecastId": "43192",
+    "stationId": "43192",
+    "latitude": 15.4909,
+    "longitude": 73.8278,
+    "elevationMeters": 7
+  },
+  "portblair": {
+    "city": "Port Blair",
+    "district": "South Andaman",
+    "state": "Andaman and Nicobar Islands",
+    "cityForecastId": "43333",
+    "stationId": "43333",
+    "latitude": 11.6234,
+    "longitude": 92.7265,
+    "elevationMeters": 79
+  }
+}

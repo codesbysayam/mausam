@@ -1,0 +1,26 @@
+export const IMD_ENDPOINTS = {
+  CITY_FORECAST: 'cityforecast',
+  CITY_FORECAST_LOCATION: 'cityforecastloc',
+  CITY_FORECAST_MAPPING: 'cityforecast_mapping',
+  CURRENT_WEATHER: 'current_wx',
+  DISTRICT_NOWCAST: 'districtnowcast',
+  DISTRICT_RAINFALL: 'districtrainfall',
+  DISTRICT_WARNING: 'districtwarning',
+  STATION_NOWCAST: 'stationnowcast',
+  STATE_RAINFALL: 'staterainfall',
+  AWS_DATA: 'aws_data',
+  AWS_MAPPING: 'aws_data_mapping',
+  BASIN_QPF: 'basinqpf',
+  PORT_WARNING: 'portwarning',
+  SEA_BULLETIN: 'seabulletin',
+  COASTAL_BULLETIN: 'coastalbulletin',
+  SUBDIVISION_WARNING: 'subdivisionwarning',
+  SUN_MOON: 'sunmoon',
+  SUBDIVISION_RAINFALL_FORECAST: 'subdivision_rainfall_forecast',
+  STATE_DISTRICT_RAINFALL_FORECAST: 'state_district_rainfall_forecast',
+  CYCLONE_TRACK: 'cyclone_track',
+  CYCLONE_WIND: 'cyclone_wind',
+  CYCLONE_CONE: 'cyclone_cou',
+} as const;
+
+export type IMDEndpointKey = keyof typeof IMD_ENDPOINTS;

@@ -1,0 +1,330 @@
+[
+  {
+    "id": "42971",
+    "name": "Bhubaneswar",
+    "state": "Odisha",
+    "latitude": 20.2961,
+    "longitude": 85.8245,
+    "type": "city"
+  },
+  {
+    "id": "42970",
+    "name": "Cuttack",
+    "state": "Odisha",
+    "latitude": 20.4625,
+    "longitude": 85.8830,
+    "type": "city"
+  },
+  {
+    "id": "42972",
+    "name": "Puri",
+    "state": "Odisha",
+    "latitude": 19.8135,
+    "longitude": 85.8312,
+    "type": "coastal"
+  },
+  {
+    "id": "42976",
+    "name": "Paradip",
+    "state": "Odisha",
+    "latitude": 20.2644,
+    "longitude": 86.6094,
+    "type": "port"
+  },
+  {
+    "id": "43049",
+    "name": "Gopalpur",
+    "state": "Odisha",
+    "latitude": 19.2600,
+    "longitude": 84.9100,
+    "type": "coastal"
+  },
+  {
+    "id": "42895",
+    "name": "Balasore",
+    "state": "Odisha",
+    "latitude": 21.4934,
+    "longitude": 86.9135,
+    "type": "city"
+  },
+  {
+    "id": "42883",
+    "name": "Sambalpur",
+    "state": "Odisha",
+    "latitude": 21.4669,
+    "longitude": 83.9812,
+    "type": "city"
+  },
+  {
+    "id": "42886",
+    "name": "Jharsuguda",
+    "state": "Odisha",
+    "latitude": 21.8554,
+    "longitude": 84.0062,
+    "type": "city"
+  },
+  {
+    "id": "42887",
+    "name": "Rourkela",
+    "state": "Odisha",
+    "latitude": 22.2604,
+    "longitude": 84.8536,
+    "type": "city"
+  },
+  {
+    "id": "43045",
+    "name": "Koraput",
+    "state": "Odisha",
+    "latitude": 18.8135,
+    "longitude": 82.7123,
+    "type": "hill"
+  },
+  {
+    "id": "42182",
+    "name": "New Delhi (Safdarjung)",
+    "state": "Delhi",
+    "latitude": 28.5850,
+    "longitude": 77.2060,
+    "type": "capital"
+  },
+  {
+    "id": "42181",
+    "name": "New Delhi (Palam)",
+    "state": "Delhi",
+    "latitude": 28.5630,
+    "longitude": 77.1090,
+    "type": "airport"
+  },
+  {
+    "id": "43003",
+    "name": "Mumbai (Santacruz)",
+    "state": "Maharashtra",
+    "latitude": 19.1176,
+    "longitude": 72.8561,
+    "type": "metro"
+  },
+  {
+    "id": "43057",
+    "name": "Mumbai (Colaba)",
+    "state": "Maharashtra",
+    "latitude": 18.9067,
+    "longitude": 72.8147,
+    "type": "coastal"
+  },
+  {
+    "id": "43063",
+    "name": "Pune",
+    "state": "Maharashtra",
+    "latitude": 18.5204,
+    "longitude": 73.8567,
+    "type": "city"
+  },
+  {
+    "id": "42809",
+    "name": "Kolkata (Alipore)",
+    "state": "West Bengal",
+    "latitude": 22.5255,
+    "longitude": 88.3308,
+    "type": "metro"
+  },
+  {
+    "id": "42807",
+    "name": "Kolkata (Dum Dum)",
+    "state": "West Bengal",
+    "latitude": 22.6547,
+    "longitude": 88.4467,
+    "type": "airport"
+  },
+  {
+    "id": "42295",
+    "name": "Darjeeling",
+    "state": "West Bengal",
+    "latitude": 27.0410,
+    "longitude": 88.2663,
+    "type": "hill"
+  },
+  {
+    "id": "43279",
+    "name": "Chennai (Nungambakkam)",
+    "state": "Tamil Nadu",
+    "latitude": 13.0620,
+    "longitude": 80.2410,
+    "type": "coastal"
+  },
+  {
+    "id": "43278",
+    "name": "Chennai (Meenambakkam)",
+    "state": "Tamil Nadu",
+    "latitude": 12.9940,
+    "longitude": 80.1810,
+    "type": "airport"
+  },
+  {
+    "id": "43295",
+    "name": "Bengaluru (City)",
+    "state": "Karnataka",
+    "latitude": 12.9716,
+    "longitude": 77.5946,
+    "type": "metro"
+  },
+  {
+    "id": "43296",
+    "name": "Bengaluru (HAL Airport)",
+    "state": "Karnataka",
+    "latitude": 12.9500,
+    "longitude": 77.6680,
+    "type": "airport"
+  },
+  {
+    "id": "43128",
+    "name": "Hyderabad (Begumpet)",
+    "state": "Telangana",
+    "latitude": 17.4531,
+    "longitude": 78.4677,
+    "type": "metro"
+  },
+  {
+    "id": "42647",
+    "name": "Ahmedabad",
+    "state": "Gujarat",
+    "latitude": 23.0225,
+    "longitude": 72.5714,
+    "type": "city"
+  },
+  {
+    "id": "42348",
+    "name": "Jaipur",
+    "state": "Rajasthan",
+    "latitude": 26.9124,
+    "longitude": 75.7873,
+    "type": "capital"
+  },
+  {
+    "id": "42369",
+    "name": "Lucknow",
+    "state": "Uttar Pradesh",
+    "latitude": 26.8467,
+    "longitude": 80.9462,
+    "type": "capital"
+  },
+  {
+    "id": "42475",
+    "name": "Varanasi",
+    "state": "Uttar Pradesh",
+    "latitude": 25.3176,
+    "longitude": 82.9739,
+    "type": "city"
+  },
+  {
+    "id": "42492",
+    "name": "Patna",
+    "state": "Bihar",
+    "latitude": 25.5941,
+    "longitude": 85.1376,
+    "type": "capital"
+  },
+  {
+    "id": "42667",
+    "name": "Bhopal",
+    "state": "Madhya Pradesh",
+    "latitude": 23.2599,
+    "longitude": 77.4126,
+    "type": "capital"
+  },
+  {
+    "id": "42111",
+    "name": "Chandigarh",
+    "state": "Chandigarh",
+    "latitude": 30.7333,
+    "longitude": 76.7794,
+    "type": "ut"
+  },
+  {
+    "id": "42083",
+    "name": "Shimla",
+    "state": "Himachal Pradesh",
+    "latitude": 31.1048,
+    "longitude": 77.1734,
+    "type": "hill"
+  },
+  {
+    "id": "42112",
+    "name": "Dehradun",
+    "state": "Uttarakhand",
+    "latitude": 30.3165,
+    "longitude": 78.0322,
+    "type": "capital"
+  },
+  {
+    "id": "42027",
+    "name": "Srinagar",
+    "state": "Jammu and Kashmir",
+    "latitude": 34.0837,
+    "longitude": 74.7973,
+    "type": "valley"
+  },
+  {
+    "id": "42410",
+    "name": "Guwahati",
+    "state": "Assam",
+    "latitude": 26.1445,
+    "longitude": 91.7362,
+    "type": "city"
+  },
+  {
+    "id": "43371",
+    "name": "Thiruvananthapuram",
+    "state": "Kerala",
+    "latitude": 8.5241,
+    "longitude": 76.9366,
+    "type": "coastal"
+  },
+  {
+    "id": "43346",
+    "name": "Kochi",
+    "state": "Kerala",
+    "latitude": 9.9312,
+    "longitude": 76.2673,
+    "type": "port"
+  },
+  {
+    "id": "43189",
+    "name": "Visakhapatnam",
+    "state": "Andhra Pradesh",
+    "latitude": 17.6868,
+    "longitude": 83.2185,
+    "type": "port"
+  },
+  {
+    "id": "43314",
+    "name": "Panaji",
+    "state": "Goa",
+    "latitude": 15.4909,
+    "longitude": 73.8278,
+    "type": "coastal"
+  },
+  {
+    "id": "42798",
+    "name": "Ranchi",
+    "state": "Jharkhand",
+    "latitude": 23.3441,
+    "longitude": 85.3096,
+    "type": "capital"
+  },
+  {
+    "id": "42898",
+    "name": "Raipur",
+    "state": "Chhattisgarh",
+    "latitude": 21.2514,
+    "longitude": 81.6296,
+    "type": "capital"
+  },
+  {
+    "id": "43333",
+    "name": "Port Blair",
+    "state": "Andaman and Nicobar Islands",
+    "latitude": 11.6234,
+    "longitude": 92.7265,
+    "type": "island"
+  }
+]

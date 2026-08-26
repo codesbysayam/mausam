@@ -1,0 +1,23 @@
+{
+  "provider": "India Meteorological Department",
+  "baseUrl": "https://api.imd.gov.in/api/v1",
+  "timeouts": {
+    "request": 10000
+  },
+  "retries": {
+    "max": 3,
+    "backoff": 500
+  },
+  "cache": {
+    "enabled": true,
+    "ttl": 60000
+  },
+  "polling": {
+    "currentWeather": 60000,
+    "warnings": 60000,
+    "cyclone": 60000,
+    "forecast": 300000,
+    "rainfall": 300000,
+    "marine": 300000
+  }
+}

@@ -1,0 +1,153 @@
+{
+  "provider": "India Meteorological Department (IMD)",
+  "baseUrl": "https://api.imd.gov.in/api/v1",
+  "endpoints": {
+    "currentWeather": {
+      "path": "/current_wx",
+      "method": "GET",
+      "params": ["id"],
+      "description": "Real-time observation data including MSLP, wind direction/speed, temp, weather code, cloud cover, humidity, 24h rainfall",
+      "source": "IMD"
+    },
+    "cityForecast": {
+      "path": "/cityforecast",
+      "method": "GET",
+      "params": ["id"],
+      "description": "7-day medium range city weather forecast including min/max temp and weather description",
+      "source": "IMD"
+    },
+    "cityForecastLocation": {
+      "path": "/cityforecastloc",
+      "method": "GET",
+      "params": ["id"],
+      "description": "7-day city weather forecast with station latitude, longitude, and elevation coordinates",
+      "source": "IMD"
+    },
+    "districtNowcast": {
+      "path": "/districtnowcast",
+      "method": "GET",
+      "params": ["id"],
+      "description": "Severe weather nowcast (3-hour validity) for districts with warning colors and meteorological descriptions",
+      "source": "IMD"
+    },
+    "districtRainfall": {
+      "path": "/districtrainfall",
+      "method": "GET",
+      "params": ["id"],
+      "description": "District-level cumulative daily and seasonal rainfall telemetry with IMD category codes (LE, E, N, D, LD, NR, ND)",
+      "source": "IMD"
+    },
+    "districtWarning": {
+      "path": "/districtwarning",
+      "method": "GET",
+      "params": ["id"],
+      "description": "Multi-hazard district-level 5-day warning matrix with hazard codes (Heavy Rain, Squall, Heat Wave, etc.)",
+      "source": "IMD"
+    },
+    "stationNowcast": {
+      "path": "/stationnowcast",
+      "method": "GET",
+      "params": ["id"],
+      "description": "Station-specific thunderstorm, gust, and convective nowcasting alerts",
+      "source": "IMD"
+    },
+    "stateRainfall": {
+      "path": "/staterainfall",
+      "method": "GET",
+      "params": ["id"],
+      "description": "State-level cumulative rainfall statistics and departure percentages",
+      "source": "IMD"
+    },
+    "awsData": {
+      "path": "/aws_data",
+      "method": "GET",
+      "params": ["id", "sid"],
+      "description": "Surface telemetry from Automatic Weather Stations (AWS) & Automated Rain Gauges (ARG)",
+      "source": "IMD"
+    },
+    "awsMapping": {
+      "path": "/aws_data_mapping",
+      "method": "GET",
+      "params": [],
+      "description": "Registry of operational Automatic Weather Stations across India",
+      "source": "IMD"
+    },
+    "basinQPF": {
+      "path": "/basinqpf",
+      "method": "GET",
+      "params": ["id"],
+      "description": "Quantitative Precipitation Forecast (QPF) for major Indian river sub-basins",
+      "source": "IMD"
+    },
+    "portWarning": {
+      "path": "/portwarning",
+      "method": "GET",
+      "params": ["id"],
+      "description": "Marine port warning signals and gale advisories for Indian sea ports",
+      "source": "IMD"
+    },
+    "seaBulletin": {
+      "path": "/seabulletin",
+      "method": "GET",
+      "params": ["id"],
+      "description": "Sea area meteorological bulletins for Arabian Sea, Bay of Bengal, and Indian Ocean",
+      "source": "IMD"
+    },
+    "coastalBulletin": {
+      "path": "/coastalbulletin",
+      "method": "GET",
+      "params": [],
+      "description": "Coastal weather bulletin for maritime fishing operations and coastal craft",
+      "source": "IMD"
+    },
+    "subdivisionWarning": {
+      "path": "/subdivisionwarning",
+      "method": "GET",
+      "params": [],
+      "description": "Synoptic meteorological warnings across all 36 meteorological subdivisions of India",
+      "source": "IMD"
+    },
+    "sunMoon": {
+      "path": "/sunmoon",
+      "method": "GET",
+      "params": ["lat", "lon"],
+      "description": "Solar and lunar ephemeris (Sunrise, Sunset, Moonrise, Moonset) in IST",
+      "source": "IMD"
+    },
+    "subdivisionRainfallForecast": {
+      "path": "/subdivision_rainfall_forecast",
+      "method": "GET",
+      "params": [],
+      "description": "Subdivisional spatial rainfall distribution forecast",
+      "source": "IMD"
+    },
+    "stateDistrictRainfallForecast": {
+      "path": "/state_district_rainfall_forecast",
+      "method": "GET",
+      "params": [],
+      "description": "State and district level quantitative precipitation forecasts",
+      "source": "IMD"
+    },
+    "cycloneTrack": {
+      "path": "/cyclone_track",
+      "method": "GET",
+      "params": [],
+      "description": "Observed and forecasted tropical cyclonic storm tracks with coordinates and intensity",
+      "source": "IMD"
+    },
+    "cycloneWind": {
+      "path": "/cyclone_wind",
+      "method": "GET",
+      "params": [],
+      "description": "Gale wind speed hazard radius and quadrants (28kt, 34kt, 50kt, 64kt)",
+      "source": "IMD"
+    },
+    "cycloneCone": {
+      "path": "/cyclone_cou",
+      "method": "GET",
+      "params": [],
+      "description": "Cone of Uncertainty polygon coordinates for active tropical storms",
+      "source": "IMD"
+    }
+  }
+}
