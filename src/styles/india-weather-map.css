@@ -1,0 +1,314 @@
+.india-weather-map {
+  width: 100%;
+  min-height: 620px;
+
+  background:
+    linear-gradient(
+      145deg,
+      #0a0f1c 0%,
+      #0f1724 55%,
+      #111a27 100%
+    );
+
+  border: 1px solid #1e2733;
+  border-radius: 14px;
+
+  padding: 24px;
+
+  color: #ffffff;
+
+  box-sizing: border-box;
+}
+
+.india-weather-map__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+
+  gap: 24px;
+
+  margin-bottom: 20px;
+}
+
+.india-weather-map__eyebrow {
+  color: #4fa8e0;
+
+  font-size: 12px;
+  font-weight: 700;
+
+  letter-spacing: 0.12em;
+
+  margin-bottom: 6px;
+}
+
+.india-weather-map__header h2 {
+  margin: 0;
+
+  color: #ffffff;
+
+  font-family:
+    "Noto Sans",
+    Arial,
+    sans-serif;
+
+  font-size: 24px;
+  font-weight: 700;
+
+  line-height: 1.25;
+}
+
+.india-weather-map__header p {
+  margin: 7px 0 0;
+
+  color: #8a94a6;
+
+  font-family:
+    "Noto Sans",
+    Arial,
+    sans-serif;
+
+  font-size: 13px;
+}
+
+.india-weather-map__metric {
+  border: 1px solid #263342;
+
+  background: #111a27;
+
+  border-radius: 8px;
+
+  padding: 9px 13px;
+
+  min-width: 100px;
+
+  text-align: right;
+}
+
+.india-weather-map__metric span {
+  display: block;
+
+  color: #8a94a6;
+
+  font-size: 9px;
+
+  letter-spacing: 0.12em;
+}
+
+.india-weather-map__metric strong {
+  display: block;
+
+  color: #4fa8e0;
+
+  font-size: 12px;
+
+  margin-top: 3px;
+}
+
+.india-weather-map__body {
+  position: relative;
+
+  display: flex;
+
+  justify-content: center;
+  align-items: center;
+
+  min-height: 470px;
+
+  background:
+    radial-gradient(
+      circle at center,
+      rgba(79, 168, 224, 0.06),
+      transparent 55%
+    );
+
+  border-top: 1px solid #1e2733;
+  border-bottom: 1px solid #1e2733;
+}
+
+.india-map-wrapper {
+  width: min(100%, 650px);
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.india-map-svg {
+  width: 100%;
+  height: auto;
+
+  max-height: 520px;
+}
+
+/* All India map paths */
+
+.india-map-svg path {
+  fill: #1e2733;
+
+  stroke: #4a5568;
+
+  stroke-width: 0.7;
+
+  vector-effect: non-scaling-stroke;
+
+  transition:
+    fill 160ms ease,
+    stroke 160ms ease,
+    opacity 160ms ease;
+}
+
+.india-map-svg path:hover {
+  fill: #0b72b9;
+
+  stroke: #4fa8e0;
+
+  stroke-width: 1.2;
+
+  cursor: pointer;
+}
+
+/* Selected state */
+
+.india-map-svg path.is-selected {
+  fill: #4fa8e0;
+
+  stroke: #ffffff;
+
+  stroke-width: 1.5;
+}
+
+/* Tooltip */
+
+.india-map-tooltip {
+  position: absolute;
+
+  top: 24px;
+  right: 24px;
+
+  min-width: 190px;
+
+  padding: 14px 16px;
+
+  background: #0f141a;
+
+  border: 1px solid #4fa8e0;
+
+  border-radius: 8px;
+
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.35);
+
+  pointer-events: none;
+
+  z-index: 10;
+}
+
+.tooltip-title {
+  color: #ffffff;
+
+  font-size: 15px;
+
+  font-weight: 700;
+}
+
+.tooltip-city {
+  color: #8a94a6;
+
+  font-size: 11px;
+
+  margin-top: 3px;
+}
+
+.tooltip-value {
+  color: #4fa8e0;
+
+  font-size: 22px;
+
+  font-weight: 700;
+
+  margin-top: 10px;
+}
+
+.tooltip-condition {
+  color: #c5ced9;
+
+  font-size: 12px;
+
+  margin-top: 3px;
+}
+
+/* Legend */
+
+.india-weather-map__legend {
+  padding-top: 18px;
+
+  max-width: 500px;
+
+  margin: 0 auto;
+}
+
+.legend-title {
+  display: block;
+
+  color: #ffffff;
+
+  font-size: 11px;
+
+  font-weight: 600;
+
+  margin-bottom: 7px;
+}
+
+.legend-gradient {
+  height: 7px;
+
+  border-radius: 999px;
+
+  background:
+    linear-gradient(
+      90deg,
+      #5ac8e0,
+      #3a6ea5,
+      #4fa8e0,
+      #ffc93c,
+      #ff8c42,
+      #e85d4c
+    );
+}
+
+.legend-labels {
+  display: flex;
+
+  justify-content: space-between;
+
+  margin-top: 5px;
+
+  color: #8a94a6;
+
+  font-size: 10px;
+}
+
+/* Responsive */
+
+@media (max-width: 768px) {
+  .india-weather-map {
+    padding: 16px;
+  }
+
+  .india-weather-map__header {
+    flex-direction: column;
+  }
+
+  .india-weather-map__metric {
+    text-align: left;
+  }
+
+  .india-weather-map__body {
+    min-height: 380px;
+  }
+
+  .india-map-tooltip {
+    top: 12px;
+    right: 12px;
+  }
+}

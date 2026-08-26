@@ -284,10 +284,12 @@ export default function App() {
         {/* 5. Fitness & Outdoor Physiological Activities */}
         {activeTab === 'activities' && <ActivitiesView />}
 
-        {/* 6. Dynamic India Radar Map View */}
+        {/* 6. Interactive India Weather & Synoptic Map View */}
         {activeTab === 'radar' && (
           <RadarMapView
             alerts={alerts}
+            selectedLocation={selectedLocation}
+            onSelectLocation={handleSelectLocation}
             onSelectStation={handleSelectStation}
             selectedStationId={selectedLocation.id}
           />
