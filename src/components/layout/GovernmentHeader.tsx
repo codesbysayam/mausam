@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { LocationRecord } from '../../types';
 import { locationService } from '../../services/locationService';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { Language } from '../../i18n/translations';
+import { LanguageSelector } from './LanguageSelector';
 
 interface GovernmentHeaderProps {
   selectedLocation: LocationRecord;
@@ -15,7 +15,7 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
   onSelectLocation,
   onOpenAskMausam,
 }) => {
-  const { language, setLanguage, t, formatDate } = useLanguage();
+  const { t, formatDate } = useLanguage();
   const [now, setNow] = useState<Date>(new Date());
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -46,38 +46,34 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
     document.documentElement.style.fontSize = `${16 * next}px`;
   };
 
-  const handleLanguageChange = (lang: Language) => {
-    setLanguage(lang);
-  };
-
   return (
     <header className="w-full bg-[#0F141A] border-b border-[#334155] sticky top-0 z-50 select-none">
-      <div className="max-w-[1440px] mx-auto px-4 lg:px-6 h-16 flex items-center justify-between gap-4">
+      <div className="max-w-[1440px] mx-auto px-4 lg:px-6 h-16 flex items-center justify-between gap-3 sm:gap-4">
         {/* Left: Emblem & National Meteorological Platform Title */}
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded bg-[#17212B] border border-[#334155] flex items-center justify-center text-[#4FA8E0] shrink-0">
-            <span className="material-symbols-outlined text-[24px]">
+        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded bg-[#17212B] border border-[#334155] flex items-center justify-center text-[#4FA8E0] shrink-0">
+            <span className="material-symbols-outlined text-[22px] sm:text-[24px]">
               cloud
             </span>
           </div>
 
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-white font-bold text-lg leading-tight tracking-tight">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <h1 className="text-white font-bold text-base sm:text-lg leading-tight tracking-tight">
                 {t('portalTitle', 'MAUSAM')}
               </h1>
-              <span className="bg-[#0B72B9]/20 text-[#4FA8E0] text-[10px] font-bold px-1.5 py-0.5 rounded border border-[#0B72B9]/40">
+              <span className="bg-[#0B72B9]/20 text-[#4FA8E0] text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded border border-[#0B72B9]/40">
                 SIH 2026
               </span>
             </div>
-            <p className="text-[#8A94A6] text-xs font-normal leading-none mt-0.5 hidden sm:block">
+            <p className="text-[#8A94A6] text-[11px] sm:text-xs font-normal leading-none mt-0.5 hidden sm:block">
               {t('portalSubtitle', 'Atmospheric Intelligence & Citizen Weather Platform')}
             </p>
           </div>
         </div>
 
         {/* Center: Search / Location Selector */}
-        <div className="relative flex-1 max-w-xs md:max-w-sm">
+        <div className="relative flex-1 max-w-[200px] sm:max-w-xs md:max-w-sm">
           <div className="relative">
             <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[#8A94A6] text-[18px]">
               location_on
@@ -85,12 +81,12 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
             <input
               type="text"
               id="station-search-input"
-              placeholder={t('searchPlaceholder', 'Search station or state...')}
+              placeholder={t('searchPlaceholder', 'Search station, city or state...')}
               value={searchQuery}
               onFocus={() => setIsSearchOpen(true)}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full h-9 bg-[#17212B] border border-[#334155] rounded text-white text-xs pl-8 pr-8 focus:outline-none focus:border-[#4FA8E0]"
-              aria-label={t('searchPlaceholder', 'Search station or state...')}
+              className="w-full h-9 bg-[#17212B] border border-[#334155] rounded text-white text-xs pl-8 pr-8 focus:outline-none focus:border-[#4FA8E0] truncate"
+              aria-label={t('searchPlaceholder', 'Search station, city or state...')}
             />
             {searchQuery && (
               <button
@@ -170,8 +166,8 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
           )}
         </div>
 
-        {/* Right: IST Clock & Accessibility Controls */}
-        <div className="flex items-center gap-3 md:gap-4 shrink-0">
+        {/* Right: IST Clock, Ask MAUSAM, Font Adjuster, Searchable Language Selector */}
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {/* IST Time */}
           <div className="hidden lg:flex flex-col text-right pr-3 border-r border-[#334155]">
             <div className="text-white font-bold text-xs font-mono tracking-wide">
@@ -200,7 +196,7 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
 
           {/* Accessibility Font Size Controls */}
           <div
-            className="hidden sm:flex items-center bg-[#17212B] border border-[#334155] rounded px-1 h-8"
+            className="hidden md:flex items-center bg-[#17212B] border border-[#334155] rounded px-1 h-[38px]"
             role="group"
             aria-label="Font size controls"
           >
@@ -238,44 +234,8 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
             </button>
           </div>
 
-          {/* Compact Government-Portal Segmented Language Selector (EN | HI | OR) */}
-          <div
-            className="flex items-center bg-[#17212B] border border-[#334155] rounded-[5px] h-[38px] w-[150px] overflow-hidden p-0.5"
-            role="group"
-            aria-label="Language Selector"
-            title="Switch language"
-          >
-            {[
-              { code: 'en' as const, label: 'EN', aria: 'English' },
-              { code: 'hi' as const, label: 'HI', aria: 'Hindi' },
-              { code: 'or' as const, label: 'OR', aria: 'Odia' },
-            ].map((item, idx) => {
-              const isSelected = language === item.code;
-              return (
-                <React.Fragment key={item.code}>
-                  {idx > 0 && (
-                    <span className="text-[#334155] select-none h-4 flex items-center" aria-hidden="true">
-                      |
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    id={`lang-select-${item.code}`}
-                    onClick={() => handleLanguageChange(item.code)}
-                    aria-label={item.aria}
-                    aria-pressed={isSelected}
-                    className={`flex-1 h-full text-[11px] font-bold tracking-wider rounded-[3px] transition-colors focus:outline-none focus:ring-1 focus:ring-[#4FA8E0] ${
-                      isSelected
-                        ? 'bg-[#0B72B9] text-white'
-                        : 'text-[#D7DEE8] hover:bg-[#1E2733] hover:text-white'
-                    }`}
-                  >
-                    {item.label}
-                  </button>
-                </React.Fragment>
-              );
-            })}
-          </div>
+          {/* Searchable Multilingual Language Selector supporting 22 Scheduled Languages + English */}
+          <LanguageSelector />
         </div>
       </div>
     </header>

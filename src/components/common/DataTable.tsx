@@ -16,17 +16,20 @@ interface DataTableProps<T> {
 }
 
 export function DataTable<T>({
-  data,
-  columns,
+  data = [],
+  columns = [],
   keyExtractor,
   emptyMessage = 'No records found.',
 }: DataTableProps<T>) {
+  const safeData = data || [];
+  const safeColumns = columns || [];
+
   return (
     <div className="mausam-table-container">
       <table className="mausam-table">
         <thead>
           <tr>
-            {columns.map((col, i) => (
+            {safeColumns.map((col, i) => (
               <th
                 key={i}
                 style={{
@@ -40,19 +43,19 @@ export function DataTable<T>({
           </tr>
         </thead>
         <tbody>
-          {data.length === 0 ? (
+          {safeData.length === 0 ? (
             <tr>
               <td
-                colSpan={columns.length}
+                colSpan={safeColumns.length || 1}
                 className="text-center py-6 text-[#8A94A6]"
               >
                 {emptyMessage}
               </td>
             </tr>
           ) : (
-            data.map((row, idx) => (
+            safeData.map((row, idx) => (
               <tr key={keyExtractor(row, idx)}>
-                {columns.map((col, cIdx) => (
+                {safeColumns.map((col, cIdx) => (
                   <td
                     key={cIdx}
                     style={{

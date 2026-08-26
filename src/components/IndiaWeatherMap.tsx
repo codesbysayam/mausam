@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import India from "@svg-maps/india";
+import { INDIA_WEATHER_DATA } from "../data/indiaWeatherData";
 import "../styles/india-weather-map.css";
 
 export type WeatherMapMetric =
@@ -23,7 +24,7 @@ export interface StateWeatherData {
 }
 
 interface IndiaWeatherMapProps {
-  data: StateWeatherData[];
+  data?: StateWeatherData[];
   metric?: WeatherMapMetric;
   onMetricChange?: (metric: WeatherMapMetric) => void;
   selectedState?: string | null;
@@ -129,7 +130,7 @@ function getStateColor(
 }
 
 export default function IndiaWeatherMap({
-  data,
+  data = INDIA_WEATHER_DATA,
   metric: controlledMetric,
   onMetricChange,
   selectedState,
@@ -150,7 +151,8 @@ export default function IndiaWeatherMap({
   // Map data lookup table with aliases for flexible matching
   const dataMap = useMemo(() => {
     const map = new Map<string, StateWeatherData>();
-    data.forEach((item) => {
+    const safeData = data || INDIA_WEATHER_DATA;
+    safeData.forEach((item) => {
       map.set(item.name.toLowerCase().trim(), item);
       map.set(item.id.toLowerCase().trim(), item);
       if (item.name === "Dadra and Nagar Haveli and Daman and Diu") {

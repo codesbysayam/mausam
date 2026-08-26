@@ -1,26 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { WeatherDataBundle } from '../services/weatherService';
 import { LocationRecord } from '../types';
 import { StateWeatherData, IndiaWeatherMap } from '../components/map/IndiaWeatherMap';
 import { INDIA_WEATHER_DATA } from '../data/indiaWeatherData';
+import { useLanguage } from '../i18n/LanguageContext';
+import { MainNavTab } from '../components/layout/MainNavigation';
 
 interface HomePageProps {
   weatherBundle: WeatherDataBundle;
   selectedLocation: LocationRecord;
-  onRefresh: () => void;
+  onNavigateToTab: (tab: MainNavTab) => void;
+  onSelectLocation: (loc: LocationRecord) => void;
   onStateSelect: (state: StateWeatherData) => void;
-  onViewAlertsTab: () => void;
 }
 
 export const HomePage: React.FC<HomePageProps> = ({
   weatherBundle,
   selectedLocation,
-  onRefresh,
+  onNavigateToTab,
   onStateSelect,
-  onViewAlertsTab,
 }) => {
-  const { current, hourly = [], daily = [], alerts = [], lastFetchedAt } = weatherBundle;
+  const { t, tCondition } = useLanguage();
+  const { alerts = [], lastFetchedAt } = weatherBundle;
   const [mapMetric, setMapMetric] = useState<'temp' | 'rainfall' | 'aqi' | 'humidity' | 'pollen'>('temp');
+  const [stateSearch, setStateSearch] = useState('');
 
   const formattedLastUpdated = new Intl.DateTimeFormat('en-IN', {
     timeZone: 'Asia/Kolkata',
@@ -32,378 +35,392 @@ export const HomePage: React.FC<HomePageProps> = ({
     hour12: true,
   }).format(lastFetchedAt || new Date());
 
-  const activeAlert = alerts && alerts.length > 0 ? alerts[0] : null;
+  // 1. National Statistics Computation across all 28 states and 8 UTs
+  const nationalStats = useMemo(() => {
+    let minTemp = Infinity;
+    let minTempState = '';
+    let maxTemp = -Infinity;
+    let maxTempState = '';
+    let totalHumidity = 0;
+    let totalAqi = 0;
+    let rainfallStatesCount = 0;
+    let activeAlertsCount = 0;
 
-  // AQI calculations
-  const aqiVal = current.aqi || 84;
-  const aqiCategory =
-    aqiVal <= 50 ? 'Good' :
-    aqiVal <= 100 ? 'Satisfactory' :
-    aqiVal <= 200 ? 'Moderate' :
-    aqiVal <= 300 ? 'Poor' :
-    aqiVal <= 400 ? 'Very Poor' : 'Severe';
+    INDIA_WEATHER_DATA.forEach((s) => {
+      if (s.temperature < minTemp) {
+        minTemp = s.temperature;
+        minTempState = `${s.city || s.name}`;
+      }
+      if (s.temperature > maxTemp) {
+        maxTemp = s.temperature;
+        maxTempState = `${s.city || s.name}`;
+      }
+      totalHumidity += s.humidity;
+      totalAqi += s.aqi;
+      if (s.rainfall > 0) {
+        rainfallStatesCount++;
+      }
+      if (s.rainfall >= 20 || s.aqi >= 150 || s.temperature >= 35) {
+        activeAlertsCount++;
+      }
+    });
 
-  const aqiColorClass =
-    aqiVal <= 50 ? 'status-good' :
-    aqiVal <= 100 ? 'status-good' :
-    aqiVal <= 200 ? 'status-warning' :
-    aqiVal <= 300 ? 'status-alert' : 'status-danger';
+    const count = INDIA_WEATHER_DATA.length || 1;
+    const avgHumidity = Math.round(totalHumidity / count);
+    const avgAqi = Math.round(totalAqi / count);
 
-  const aqiBgBadge =
-    aqiVal <= 50 ? 'bg-[#2ECC71]/15 text-[#2ECC71] border-[#2ECC71]/40' :
-    aqiVal <= 100 ? 'bg-[#2ECC71]/15 text-[#2ECC71] border-[#2ECC71]/40' :
-    aqiVal <= 200 ? 'bg-[#F1C40F]/15 text-[#F1C40F] border-[#F1C40F]/40' :
-    aqiVal <= 300 ? 'bg-[#FF8C42]/15 text-[#FF8C42] border-[#FF8C42]/40' :
-    'bg-[#E74C3C]/15 text-[#E74C3C] border-[#E74C3C]/40';
+    return {
+      minTemp: Math.round(minTemp),
+      minTempState,
+      maxTemp: Math.round(maxTemp),
+      maxTempState,
+      avgHumidity,
+      avgAqi,
+      rainfallStatesCount,
+      activeAlertsCount,
+      totalStatesAndUTs: count,
+    };
+  }, []);
+
+  // 2. All-India Synoptic Status calculation based on active warnings
+  const synopticStatus = useMemo(() => {
+    const hasRedAlert = alerts.some((a) => a.severity === 'red') || INDIA_WEATHER_DATA.some(s => s.rainfall >= 35);
+    const hasOrangeAlert = alerts.some((a) => a.severity === 'orange') || INDIA_WEATHER_DATA.some(s => s.rainfall >= 25 || s.temperature >= 38);
+    const hasYellowWatch = alerts.some((a) => a.severity === 'yellow') || INDIA_WEATHER_DATA.some(s => s.rainfall >= 15 || s.temperature >= 34);
+
+    if (hasRedAlert) {
+      return {
+        level: 'RED',
+        label: 'RED (SEVERE WARNING)',
+        color: 'text-[#E74C3C]',
+        badgeBg: 'bg-[#E74C3C]/20 border-[#E74C3C]/50 text-[#E74C3C]',
+        desc: 'Severe weather convective activity / heavy precipitation active in multiple sub-divisions. Action required.',
+      };
+    }
+    if (hasOrangeAlert) {
+      return {
+        level: 'ORANGE',
+        label: 'ORANGE (ALERT / BE PREPARED)',
+        color: 'text-[#FF8C42]',
+        badgeBg: 'bg-[#FF8C42]/20 border-[#FF8C42]/50 text-[#FF8C42]',
+        desc: 'Isolated heavy rainfall and convective thunderstorm cells detected in central and coastal sectors.',
+      };
+    }
+    if (hasYellowWatch) {
+      return {
+        level: 'YELLOW',
+        label: 'YELLOW (WATCH / BE UPDATED)',
+        color: 'text-[#F1C40F]',
+        badgeBg: 'bg-[#F1C40F]/20 border-[#F1C40F]/50 text-[#F1C40F]',
+        desc: 'Moderate monsoon activity and scattered cloudiness reported across western and eastern sub-divisions.',
+      };
+    }
+
+    return {
+      level: 'GREEN',
+      label: 'GREEN (NORMAL)',
+      color: 'text-[#2ECC71]',
+      badgeBg: 'bg-[#2ECC71]/20 border-[#2ECC71]/50 text-[#2ECC71]',
+      desc: 'All-India atmospheric conditions normal. No severe meteorological cyclonic or convective warnings active.',
+    };
+  }, [alerts]);
+
+  // 3. Filtered State-wise list
+  const filteredStates = useMemo(() => {
+    const q = stateSearch.trim().toLowerCase();
+    if (!q) return INDIA_WEATHER_DATA;
+    return INDIA_WEATHER_DATA.filter(
+      (s) =>
+        s.name.toLowerCase().includes(q) ||
+        (s.city && s.city.toLowerCase().includes(q))
+    );
+  }, [stateSearch]);
+
+  // 4. Quick Access Navigation Items
+  const quickAccessItems = [
+    {
+      tab: 'weather' as MainNavTab,
+      title: 'Location Weather',
+      desc: 'Detailed telemetry for your selected observatory',
+      icon: 'thermostat',
+      color: 'text-[#4FA8E0]',
+      bgColor: 'bg-[#0B72B9]/15',
+    },
+    {
+      tab: 'forecast' as MainNavTab,
+      title: 'Extended Forecast',
+      desc: '7-day medium range numerical forecast',
+      icon: 'calendar_month',
+      color: 'text-[#2ECC71]',
+      bgColor: 'bg-[#2ECC71]/15',
+    },
+    {
+      tab: 'warnings' as MainNavTab,
+      title: 'Weather Warnings',
+      desc: 'Multi-hazard alerts & sub-divisional advisories',
+      icon: 'warning',
+      color: 'text-[#FF8C42]',
+      bgColor: 'bg-[#FF8C42]/15',
+    },
+    {
+      tab: 'radar' as MainNavTab,
+      title: 'Radar & Maps',
+      desc: 'Doppler radar reflectivity & satellite loops',
+      icon: 'radar',
+      color: 'text-[#9B59B6]',
+      bgColor: 'bg-[#9B59B6]/15',
+    },
+    {
+      tab: 'aqi' as MainNavTab,
+      title: 'Air Quality (NAQI)',
+      desc: 'Continuous air pollution & pollen tracking',
+      icon: 'air',
+      color: 'text-[#1ABC9C]',
+      bgColor: 'bg-[#1ABC9C]/15',
+    },
+    {
+      tab: 'agromet' as MainNavTab,
+      title: 'Agromet Advisory',
+      desc: 'Gramin Krishi Mausam Sewa crop bulletins',
+      icon: 'agriculture',
+      color: 'text-[#F1C40F]',
+      bgColor: 'bg-[#F1C40F]/15',
+    },
+  ];
 
   return (
-    <div className="flex flex-col gap-5 w-full">
+    <div className="flex flex-col gap-6 w-full pb-8">
       {/* =========================================================================
-          1. WEATHER BULLETIN (Official IMD / NDMA Synoptic Alert Banner)
+          1. ALL-INDIA SYNOPTIC STATUS BANNER
       ========================================================================= */}
-      <div className="mausam-section mb-0">
-        {activeAlert ? (
+      <div className="mausam-panel p-4 bg-[#17212B] border border-[#334155] rounded-[5px] flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
           <div
-            className={`mausam-alert ${
-              activeAlert.severity === 'red'
-                ? ''
-                : activeAlert.severity === 'orange' || activeAlert.severity === 'yellow'
-                ? 'warning'
-                : 'normal'
-            } justify-between flex-wrap`}
+            className={`w-10 h-10 rounded flex items-center justify-center font-bold text-lg border ${synopticStatus.badgeBg}`}
           >
-            <div className="flex items-center gap-3">
-              <span className="material-symbols-outlined text-[24px] text-[#FF8C42]">
-                warning
-              </span>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold uppercase tracking-wider text-xs text-white">
-                    IMD SYNOPTIC WARNING: {activeAlert.title || activeAlert.headline}
-                  </span>
-                  <span className="text-[11px] px-2 py-0.5 rounded bg-[#17212B] text-[#D7DEE8] border border-[#334155]">
-                    Code {activeAlert.severity.toUpperCase()}
-                  </span>
-                </div>
-                <p className="text-xs text-[#D7DEE8] mt-0.5">
-                  {activeAlert.description || 'Special meteorological advisory issued for active district and adjoining sub-divisions.'}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 mt-2 sm:mt-0">
-              <button
-                type="button"
-                onClick={onViewAlertsTab}
-                className="mausam-button text-xs py-1 px-3"
-              >
-                View Advisory Matrix
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="mausam-alert normal justify-between">
-            <div className="flex items-center gap-3">
-              <span className="material-symbols-outlined text-[22px] text-[#2ECC71]">
-                verified
-              </span>
-              <div>
-                <span className="font-bold text-xs text-white uppercase tracking-wider">
-                  ALL-INDIA SYNOPTIC STATUS: GREEN (NORMAL)
-                </span>
-                <p className="text-xs text-[#D7DEE8] mt-0.5">
-                  No severe weather convective warnings in effect for {selectedLocation.city}, {selectedLocation.state}. Routine operational surveillance active.
-                </p>
-              </div>
-            </div>
-
-            <span className="text-[11px] font-mono text-[#8A94A6]">
-              Ref: IMD-NW-BULLETIN-2026
+            <span className="material-symbols-outlined text-[24px]">
+              {synopticStatus.level === 'GREEN' ? 'verified' : 'warning'}
             </span>
           </div>
-        )}
-      </div>
-
-      {/* =========================================================================
-          2. LOCATION / LAST UPDATED HEADER BAR
-      ========================================================================= */}
-      <div className="mausam-panel py-3 px-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-[#17212B] border border-[#334155]">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded bg-[#0B72B9]/20 border border-[#0B72B9]/40 flex items-center justify-center text-[#4FA8E0]">
-            <span className="material-symbols-outlined text-[20px]">location_on</span>
-          </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-base font-bold text-white leading-none">
-                {selectedLocation.city}, {selectedLocation.state}
-              </h1>
-              <span className="text-[11px] text-[#4FA8E0] font-mono bg-[#1E2733] px-2 py-0.5 rounded border border-[#334155]">
-                {selectedLocation.imdStation || 'AWS-IND-01'}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-[#8A94A6] uppercase font-bold tracking-wider">
+                {t('allIndiaWeatherStatus', 'ALL-INDIA SYNOPTIC STATUS')}
+              </span>
+              <span
+                className={`text-[11px] font-bold px-2 py-0.5 rounded border ${synopticStatus.badgeBg}`}
+              >
+                {synopticStatus.label}
               </span>
             </div>
-            <p className="text-[11px] text-[#8A94A6] mt-1">
-              Observatory Coordinates: {typeof selectedLocation.lat === 'number' ? selectedLocation.lat.toFixed(2) : '20.29'}°N, {typeof selectedLocation.lng === 'number' ? selectedLocation.lng.toFixed(2) : '85.82'}°E • Elevation: {selectedLocation.elevation || '45m ASL'} • Sub-Division: {selectedLocation.district || selectedLocation.city}
+            <p className="text-xs text-[#D7DEE8] mt-0.5">
+              {synopticStatus.desc}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 sm:self-center self-start">
-          <div className="text-right hidden sm:block">
-            <span className="text-[10px] text-[#8A94A6] uppercase tracking-wider block">
-              Observational Timestamp
-            </span>
-            <span className="text-xs font-mono font-bold text-[#D7DEE8]">
-              {formattedLastUpdated} IST
-            </span>
-          </div>
-
+        <div className="flex items-center gap-2 self-start md:self-center shrink-0">
+          <span className="text-[11px] font-mono text-[#8A94A6]">
+            IMD-SYNOPTIC-REF: 2026-NWP
+          </span>
           <button
             type="button"
-            onClick={onRefresh}
-            className="mausam-button mausam-button-outline flex items-center gap-1.5 text-xs py-1.5 px-3"
-            title="Refresh latest surface telemetry"
+            onClick={() => onNavigateToTab('warnings')}
+            className="mausam-button text-xs py-1.5 px-3 whitespace-nowrap"
           >
-            <span className="material-symbols-outlined text-[16px]">sync</span>
-            <span>Sync Live Telemetry</span>
+            {t('viewAllAlerts', 'View Advisory Matrix →')}
           </button>
         </div>
       </div>
 
       {/* =========================================================================
-          3. CURRENT SURFACE WEATHER & TELEMETRY OBSERVATIONS
+          2. SELECTED LOCATION COMPACT STATUS ("YOUR LOCATION" Quick Access)
       ========================================================================= */}
-      <div className="mausam-section">
-        <div className="mausam-section-header">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[#4FA8E0] text-[22px]">
-              thermostat
-            </span>
-            <h2 className="mausam-section-title">
-              Surface Meteorological Observations &amp; Synoptic Parameters
-            </h2>
+      <div className="mausam-panel p-3.5 bg-[#17212B]/90 border border-[#334155] rounded-[5px] flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded bg-[#0B72B9]/20 border border-[#0B72B9]/40 flex items-center justify-center text-[#4FA8E0] shrink-0">
+            <span className="material-symbols-outlined text-[18px]">near_me</span>
           </div>
-          <span className="text-xs text-[#8A94A6] font-mono">
-            Sensor Network: WMO Compliant AWS
-          </span>
-        </div>
-
-        <div className="mausam-grid">
-          {/* Main Primary Temperature & Sky Condition Column */}
-          <div className="mausam-col-4">
-            <div className="mausam-panel h-full flex flex-col justify-between bg-[#17212B]">
-              <div>
-                <span className="mausam-data-label uppercase tracking-wider">
-                  Surface Dry-Bulb Temperature
-                </span>
-                <div className="flex items-baseline gap-2 mt-2">
-                  <span className="mausam-temperature">
-                    {Math.round(current.temp)}
-                  </span>
-                  <span className="mausam-temperature-unit">°C</span>
-                  <span className="text-xs text-[#8A94A6] font-mono ml-2">
-                    ({((current.temp * 9) / 5 + 32).toFixed(1)}°F)
-                  </span>
-                </div>
-
-                <div className="mt-3 flex items-center gap-2">
-                  <span className="text-sm font-bold text-white">
-                    {current.condition || 'Partly Cloudy'}
-                  </span>
-                  <span className="text-xs text-[#8A94A6]">
-                    • Feels like {Math.round(current.feelsLike || current.temp)}°C
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-4 pt-3 border-t border-[#334155] grid grid-cols-2 gap-2 text-xs">
-                <div>
-                  <span className="text-[10px] text-[#8A94A6] block">Diurnal High / Low</span>
-                  <span className="font-mono font-bold text-white">
-                    {Math.round(current.high || current.temp + 3)}°C / {Math.round(current.low || current.temp - 4)}°C
-                  </span>
-                </div>
-                <div>
-                  <span className="text-[10px] text-[#8A94A6] block">Precipitation (24h)</span>
-                  <span className="font-mono font-bold text-[#4FA8E0]">
-                    {current.rainfall !== undefined ? `${current.rainfall} mm` : '0.0 mm'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Core Synoptic Observational Parameters Matrix */}
-          <div className="mausam-col-8">
-            <div className="mausam-panel bg-[#17212B] h-full">
-              <span className="text-xs font-bold text-[#D7DEE8] uppercase tracking-wider block mb-3 pb-2 border-b border-[#334155]">
-                Real-Time Surface Telemetry Data Channels
+          <div className="flex flex-col">
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#4FA8E0]">
+                {t('yourLocation', 'YOUR LOCATION')}
               </span>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-                <div className="p-2.5 bg-[#1E2733] rounded border border-[#334155]">
-                  <span className="mausam-data-label">Relative Humidity</span>
-                  <span className="mausam-data-value text-[#4FA8E0] font-mono">
-                    {current.humidity}%
-                  </span>
-                  <span className="text-[10px] text-[#8A94A6] block mt-0.5">
-                    Hygrometer sensor
-                  </span>
-                </div>
-
-                <div className="p-2.5 bg-[#1E2733] rounded border border-[#334155]">
-                  <span className="mausam-data-label">MSL Pressure</span>
-                  <span className="mausam-data-value text-white font-mono">
-                    {current.pressure || 1012} hPa
-                  </span>
-                  <span className="text-[10px] text-[#8A94A6] block mt-0.5">
-                    Barometric reduction
-                  </span>
-                </div>
-
-                <div className="p-2.5 bg-[#1E2733] rounded border border-[#334155]">
-                  <span className="mausam-data-label">Wind Velocity</span>
-                  <span className="mausam-data-value text-white font-mono">
-                    {current.windSpeed} km/h
-                  </span>
-                  <span className="text-[10px] text-[#8A94A6] block mt-0.5">
-                    Dir: {current.windDirection || 'ESE'} ({current.windDeg || 110}°)
-                  </span>
-                </div>
-
-                <div className="p-2.5 bg-[#1E2733] rounded border border-[#334155]">
-                  <span className="mausam-data-label">Dew Point</span>
-                  <span className="mausam-data-value text-white font-mono">
-                    {current.dewPoint || 22}°C
-                  </span>
-                  <span className="text-[10px] text-[#8A94A6] block mt-0.5">
-                    Saturation boundary
-                  </span>
-                </div>
-
-                <div className="p-2.5 bg-[#1E2733] rounded border border-[#334155]">
-                  <span className="mausam-data-label">Horizontal Visibility</span>
-                  <span className="mausam-data-value text-white font-mono">
-                    {current.visibility || 6.0} km
-                  </span>
-                  <span className="text-[10px] text-[#8A94A6] block mt-0.5">
-                    Transmissometer
-                  </span>
-                </div>
-
-                <div className="p-2.5 bg-[#1E2733] rounded border border-[#334155]">
-                  <span className="mausam-data-label">Solar UV Index</span>
-                  <span className="mausam-data-value text-[#F1C40F] font-mono">
-                    {current.uvIndex || 6} / 12
-                  </span>
-                  <span className="text-[10px] text-[#8A94A6] block mt-0.5">
-                    Moderate exposure
-                  </span>
-                </div>
-
-                <div className="p-2.5 bg-[#1E2733] rounded border border-[#334155]">
-                  <span className="mausam-data-label">Total Cloud Cover</span>
-                  <span className="mausam-data-value text-white font-mono">
-                    {current.cloudCover || 45}%
-                  </span>
-                  <span className="text-[10px] text-[#8A94A6] block mt-0.5">
-                    3-4 Octas (Cumulus)
-                  </span>
-                </div>
-
-                <div className="p-2.5 bg-[#1E2733] rounded border border-[#334155]">
-                  <span className="mausam-data-label">Solar Ephemeris</span>
-                  <span className="text-xs font-mono font-bold text-white block">
-                    ↑ {current.sunrise || '05:38'} • ↓ {current.sunset || '18:14'}
-                  </span>
-                  <span className="text-[10px] text-[#8A94A6] block mt-0.5">
-                    IST Astronomical
-                  </span>
-                </div>
-              </div>
+              <span className="text-xs font-bold text-white">
+                {selectedLocation.city}, {selectedLocation.state}
+              </span>
+              <span className="text-[11px] text-[#8A94A6] hidden md:inline">
+                • {Math.round(weatherBundle.current.temp)}°C, {tCondition(weatherBundle.current.condition)}
+              </span>
             </div>
+            <span className="text-[11px] text-[#8A94A6]">
+              {selectedLocation.imdStation || 'AWS-IND'} • Elev: {selectedLocation.elevation || '45m'} • Updated: {formattedLastUpdated}
+            </span>
           </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => onNavigateToTab('weather')}
+            className="mausam-button text-xs py-1.5 px-3 flex items-center gap-1 text-white bg-[#0B72B9] hover:bg-[#095b94]"
+          >
+            <span>{t('viewDetailedWeather', 'View Detailed Weather →')}</span>
+          </button>
         </div>
       </div>
 
       {/* =========================================================================
-          4. TODAY'S HOURLY FORECAST (Continuous Synoptic Progression)
+          3. NATIONAL WEATHER SNAPSHOT (Key All-India Indicators)
       ========================================================================= */}
-      <div className="mausam-section">
-        <div className="mausam-section-header">
+      <div>
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[#4FA8E0] text-[22px]">
-              schedule
+            <span className="material-symbols-outlined text-[#4FA8E0] text-[20px]">
+              analytics
             </span>
-            <h2 className="mausam-section-title">
-              24-Hour High-Resolution Numerical Forecast
+            <h2 className="text-sm font-bold uppercase tracking-wider text-white">
+              {t('nationalWeatherSnapshot', 'NATIONAL WEATHER SNAPSHOT')}
             </h2>
           </div>
-          <span className="text-xs text-[#8A94A6]">
-            Model: WRF 3-km Post-Processed Guidance
+          <span className="text-[11px] text-[#8A94A6]">
+            All 28 States &amp; 8 Union Territories
           </span>
         </div>
 
-        <div className="mausam-panel bg-[#17212B] p-0 overflow-hidden">
-          <div className="overflow-x-auto p-4 flex gap-3 scrollbar-thin">
-            {hourly.map((hour, idx) => (
-              <div
-                key={idx}
-                className="flex flex-col items-center justify-between p-3 bg-[#1E2733] rounded border border-[#334155] min-w-[100px] text-center shrink-0 hover:border-[#4FA8E0] transition-colors"
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          {/* Max Temperature */}
+          <div className="mausam-card p-3 border border-[#334155]">
+            <span className="text-[10px] text-[#8A94A6] uppercase font-bold block">
+              Highest Temp (India)
+            </span>
+            <div className="flex items-baseline gap-1 mt-1">
+              <span className="text-xl font-bold font-mono text-[#FF8C42]">
+                {nationalStats.maxTemp}°C
+              </span>
+            </div>
+            <span className="text-[11px] text-[#D7DEE8] truncate block mt-0.5">
+              {nationalStats.maxTempState}
+            </span>
+          </div>
+
+          {/* Min Temperature */}
+          <div className="mausam-card p-3 border border-[#334155]">
+            <span className="text-[10px] text-[#8A94A6] uppercase font-bold block">
+              Lowest Temp (India)
+            </span>
+            <div className="flex items-baseline gap-1 mt-1">
+              <span className="text-xl font-bold font-mono text-[#4FA8E0]">
+                {nationalStats.minTemp}°C
+              </span>
+            </div>
+            <span className="text-[11px] text-[#D7DEE8] truncate block mt-0.5">
+              {nationalStats.minTempState}
+            </span>
+          </div>
+
+          {/* National Mean Humidity */}
+          <div className="mausam-card p-3 border border-[#334155]">
+            <span className="text-[10px] text-[#8A94A6] uppercase font-bold block">
+              National Avg Humidity
+            </span>
+            <div className="flex items-baseline gap-1 mt-1">
+              <span className="text-xl font-bold font-mono text-white">
+                {nationalStats.avgHumidity}%
+              </span>
+            </div>
+            <span className="text-[11px] text-[#8A94A6] truncate block mt-0.5">
+              Relative Humidity
+            </span>
+          </div>
+
+          {/* National Mean AQI */}
+          <div className="mausam-card p-3 border border-[#334155]">
+            <span className="text-[10px] text-[#8A94A6] uppercase font-bold block">
+              National Mean AQI
+            </span>
+            <div className="flex items-baseline gap-1 mt-1">
+              <span
+                className={`text-xl font-bold font-mono ${
+                  nationalStats.avgAqi <= 100 ? 'text-[#2ECC71]' : 'text-[#F1C40F]'
+                }`}
               >
-                <span className="text-xs font-mono font-bold text-[#8A94A6]">
-                  {hour.time}
-                </span>
+                {nationalStats.avgAqi}
+              </span>
+            </div>
+            <span className="text-[11px] text-[#8A94A6] truncate block mt-0.5">
+              {nationalStats.avgAqi <= 100 ? 'Satisfactory' : 'Moderate'}
+            </span>
+          </div>
 
-                <span className="text-lg font-bold text-white font-mono my-2">
-                  {Math.round(hour.temp)}°C
-                </span>
+          {/* Active Rainfall Sub-divisions */}
+          <div className="mausam-card p-3 border border-[#334155]">
+            <span className="text-[10px] text-[#8A94A6] uppercase font-bold block">
+              Rainfall Active
+            </span>
+            <div className="flex items-baseline gap-1 mt-1">
+              <span className="text-xl font-bold font-mono text-[#4FA8E0]">
+                {nationalStats.rainfallStatesCount}
+              </span>
+              <span className="text-xs text-[#8A94A6]">/ 36 States &amp; UTs</span>
+            </div>
+            <span className="text-[11px] text-[#8A94A6] truncate block mt-0.5">
+              Monsoon Coverage
+            </span>
+          </div>
 
-                <span className="text-[11px] text-[#D7DEE8] line-clamp-1 h-4">
-                  {hour.condition}
-                </span>
-
-                <div className="mt-2 pt-2 border-t border-[#334155] w-full text-[10px] text-[#8A94A6] flex justify-between">
-                  <span className="text-[#4FA8E0] font-bold">
-                    {hour.precipitationProbability || 0}%
-                  </span>
-                  <span>{hour.humidity || 65}%</span>
-                </div>
-              </div>
-            ))}
+          {/* Active Convective Watches */}
+          <div className="mausam-card p-3 border border-[#334155]">
+            <span className="text-[10px] text-[#8A94A6] uppercase font-bold block">
+              Met Watch Zones
+            </span>
+            <div className="flex items-baseline gap-1 mt-1">
+              <span className="text-xl font-bold font-mono text-[#F1C40F]">
+                {nationalStats.activeAlertsCount}
+              </span>
+              <span className="text-xs text-[#8A94A6]">Zones</span>
+            </div>
+            <span className="text-[11px] text-[#8A94A6] truncate block mt-0.5">
+              Surveillance Active
+            </span>
           </div>
         </div>
       </div>
 
       {/* =========================================================================
-          5. NATIONAL METEOROLOGICAL MAP OF INDIA (Dynamic State Map)
+          4. INDIA WEATHER MAP & METEOROLOGICAL TELEMETRY
       ========================================================================= */}
-      <div className="mausam-section">
-        <div className="mausam-section-header">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[#4FA8E0] text-[22px]">
-              map
-            </span>
-            <h2 className="mausam-section-title">
-              National Synoptic Meteorological Observation Map
+      <div className="mausam-panel p-4 bg-[#17212B] border border-[#334155] rounded-[5px]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-[#334155]">
+          <div>
+            <h2 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
+              <span className="material-symbols-outlined text-[#4FA8E0] text-[18px]">
+                map
+              </span>
+              <span>INDIA WEATHER MAP &amp; SYNOPTIC OBSERVATIONS</span>
             </h2>
+            <p className="text-xs text-[#8A94A6] mt-0.5">
+              State-level meteorological indicators across 28 States and 8 Union Territories
+            </p>
           </div>
 
-          <div className="flex items-center gap-1 bg-[#1E2733] p-1 rounded border border-[#334155]">
+          {/* Layer metric toggles */}
+          <div className="flex items-center gap-1 bg-[#0F141A] p-1 rounded border border-[#334155] overflow-x-auto">
             {(
               [
-                { key: 'temp', label: 'Temperature' },
-                { key: 'rainfall', label: 'Precipitation' },
-                { key: 'aqi', label: 'NAQI Index' },
-                { key: 'humidity', label: 'Humidity' },
-                { key: 'pollen', label: 'Pollen' },
+                { id: 'temp', label: 'Temperature' },
+                { id: 'rainfall', label: 'Rainfall' },
+                { id: 'aqi', label: 'AQI' },
+                { id: 'humidity', label: 'Humidity' },
+                { id: 'pollen', label: 'Pollen' },
               ] as const
             ).map((m) => (
               <button
-                key={m.key}
+                key={m.id}
                 type="button"
-                onClick={() => setMapMetric(m.key)}
-                className={`px-2.5 py-1 text-xs font-semibold rounded ${
-                  mapMetric === m.key
+                onClick={() => setMapMetric(m.id)}
+                className={`px-2.5 py-1 text-[11px] font-bold rounded transition-colors whitespace-nowrap ${
+                  mapMetric === m.id
                     ? 'bg-[#0B72B9] text-white'
                     : 'text-[#8A94A6] hover:text-white'
                 }`}
@@ -414,344 +431,332 @@ export const HomePage: React.FC<HomePageProps> = ({
           </div>
         </div>
 
-        <div className="mausam-panel bg-[#17212B] p-4">
-          <IndiaWeatherMap
-            data={INDIA_WEATHER_DATA}
-            selectedState={selectedLocation.state}
-            onStateSelect={onStateSelect}
-            metric={mapMetric}
-          />
-        </div>
+        {/* Dynamic Interactive India Weather Map */}
+        <IndiaWeatherMap
+          data={INDIA_WEATHER_DATA}
+          metric={mapMetric}
+          onSelectState={onStateSelect}
+        />
       </div>
 
       {/* =========================================================================
-          6. ENVIRONMENTAL CONDITIONS (Air Quality & Aero-Allergens)
+          5. STATE-WISE WEATHER SUMMARY (28 STATES & 8 UNION TERRITORIES)
       ========================================================================= */}
-      <div className="mausam-section">
-        <div className="mausam-section-header">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[#4FA8E0] text-[22px]">
-              air
-            </span>
-            <h2 className="mausam-section-title">
-              Environmental Atmospheric Quality &amp; Aero-Allergen Surveillance
+      <div className="mausam-panel p-4 bg-[#17212B] border border-[#334155] rounded-[5px]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-[#334155]">
+          <div>
+            <h2 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
+              <span className="material-symbols-outlined text-[#4FA8E0] text-[18px]">
+                table_chart
+              </span>
+              <span>{t('stateWiseSummary', 'STATE-WISE WEATHER SUMMARY (28 STATES & 8 UTs)')}</span>
             </h2>
-          </div>
-          <span className="text-xs text-[#8A94A6]">
-            Source: CPCB Continuous Ambient Air Quality Monitoring (CAAQMS)
-          </span>
-        </div>
-
-        <div className="mausam-grid">
-          {/* AQI Overview Box */}
-          <div className="mausam-col-6">
-            <div className="mausam-panel bg-[#17212B] h-full flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between pb-2 border-b border-[#334155]">
-                  <div>
-                    <span className="text-xs font-bold text-white uppercase tracking-wider">
-                      National Air Quality Index (NAQI)
-                    </span>
-                    <span className="text-[11px] text-[#8A94A6] block">
-                      Station: {selectedLocation.city} Ambient Monitor
-                    </span>
-                  </div>
-                  <span className={`px-2.5 py-1 rounded text-xs font-bold border ${aqiBgBadge}`}>
-                    {aqiCategory}
-                  </span>
-                </div>
-
-                <div className="flex items-baseline gap-3 my-4">
-                  <span className={`text-5xl font-bold font-mono ${aqiColorClass}`}>
-                    {aqiVal}
-                  </span>
-                  <div>
-                    <span className="text-xs font-bold text-white block">
-                      Category: {aqiCategory}
-                    </span>
-                    <span className="text-[11px] text-[#8A94A6]">
-                      Primary Pollutant: PM2.5 (Fine particulate matter)
-                    </span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 text-xs">
-                  <div className="p-2 bg-[#1E2733] rounded border border-[#334155]">
-                    <span className="text-[10px] text-[#8A94A6] block">PM2.5</span>
-                    <span className="font-mono font-bold text-white">{current.aqiPm25 || 48} µg/m³</span>
-                  </div>
-                  <div className="p-2 bg-[#1E2733] rounded border border-[#334155]">
-                    <span className="text-[10px] text-[#8A94A6] block">PM10</span>
-                    <span className="font-mono font-bold text-white">{current.aqiPm10 || 92} µg/m³</span>
-                  </div>
-                  <div className="p-2 bg-[#1E2733] rounded border border-[#334155]">
-                    <span className="text-[10px] text-[#8A94A6] block">NO₂</span>
-                    <span className="font-mono font-bold text-white">24 µg/m³</span>
-                  </div>
-                  <div className="p-2 bg-[#1E2733] rounded border border-[#334155]">
-                    <span className="text-[10px] text-[#8A94A6] block">SO₂</span>
-                    <span className="font-mono font-bold text-white">12 µg/m³</span>
-                  </div>
-                </div>
-              </div>
-
-              <p className="text-[11px] text-[#8A94A6] mt-3 pt-2 border-t border-[#334155]">
-                Health Prompt: {aqiVal <= 100 ? 'Air quality is acceptable for outdoor activity.' : 'Sensitive groups with respiratory ailments should limit intense outdoor exertion.'}
-              </p>
-            </div>
+            <p className="text-xs text-[#8A94A6] mt-0.5">
+              Current observation data for all official Indian States and Union Territories
+            </p>
           </div>
 
-          {/* Botanical Pollen & Bio-Allergen Registry */}
-          <div className="mausam-col-6">
-            <div className="mausam-panel bg-[#17212B] h-full flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between pb-2 border-b border-[#334155]">
-                  <div>
-                    <span className="text-xs font-bold text-white uppercase tracking-wider">
-                      Botanical Aero-Allergen &amp; Pollen Forecast
-                    </span>
-                    <span className="text-[11px] text-[#8A94A6] block">
-                      Bio-Meteorological Aerobiology Network
-                    </span>
-                  </div>
-                  <span className="px-2 py-0.5 bg-[#1E2733] text-[#4FA8E0] text-xs font-mono rounded border border-[#334155]">
-                    Index: {current.pollenCount || 2} / 5
-                  </span>
-                </div>
-
-                <div className="space-y-2 mt-3 text-xs">
-                  <div className="flex items-center justify-between p-2 bg-[#1E2733] rounded border border-[#334155]">
-                    <div>
-                      <span className="font-bold text-white block">Grass Pollen (Poaceae)</span>
-                      <span className="text-[10px] text-[#8A94A6]">Peak dispersal: 06:00 AM – 10:00 AM</span>
-                    </div>
-                    <span className="text-xs font-bold text-[#F1C40F]">Moderate</span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-2 bg-[#1E2733] rounded border border-[#334155]">
-                    <div>
-                      <span className="font-bold text-white block">Tree Pollen (Neem, Acacia, Eucalyptus)</span>
-                      <span className="text-[10px] text-[#8A94A6]">Peak dispersal: 11:00 AM – 03:00 PM</span>
-                    </div>
-                    <span className="text-xs font-bold text-[#2ECC71]">Low</span>
-                  </div>
-
-                  <div className="flex items-center justify-between p-2 bg-[#1E2733] rounded border border-[#334155]">
-                    <div>
-                      <span className="font-bold text-white block">Weed &amp; Mold Spores (Parthenium)</span>
-                      <span className="text-[10px] text-[#8A94A6]">High humidity nocturnal dispersal</span>
-                    </div>
-                    <span className="text-xs font-bold text-[#2ECC71]">Low</span>
-                  </div>
-                </div>
-              </div>
-
-              <p className="text-[11px] text-[#8A94A6] mt-3 pt-2 border-t border-[#334155]">
-                Advisory: Seasonal floral dispersion is currently low to moderate across the coastal plains.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* =========================================================================
-          7. PERSONALIZED ADVISORY (Sectoral Directives)
-      ========================================================================= */}
-      <div className="mausam-section">
-        <div className="mausam-section-header">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[#4FA8E0] text-[22px]">
-              assignment_ind
+          <div className="relative w-full sm:w-64">
+            <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[#8A94A6] text-[16px]">
+              search
             </span>
-            <h2 className="mausam-section-title">
-              Sectoral Citizen &amp; Livelihood Advisories
-            </h2>
-          </div>
-          <span className="text-xs text-[#8A94A6]">
-            Operational Impact Analysis
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-          <div className="p-3.5 bg-[#17212B] rounded border border-[#334155] flex flex-col justify-between">
-            <div>
-              <div className="flex items-center gap-2 text-white font-bold text-xs uppercase mb-2">
-                <span className="material-symbols-outlined text-[#4FA8E0] text-[18px]">
-                  directions_run
-                </span>
-                <span>Fitness &amp; Sports</span>
-              </div>
-              <p className="text-xs text-[#D7DEE8] leading-relaxed">
-                Favorable morning window between 05:30 AM – 08:00 AM. Keep hydrated during midday solar peaks.
-              </p>
-            </div>
-            <div className="mt-3 pt-2 border-t border-[#334155] text-[11px] text-[#2ECC71] font-bold">
-              Status: Suitable for outdoor runs
-            </div>
-          </div>
-
-          <div className="p-3.5 bg-[#17212B] rounded border border-[#334155] flex flex-col justify-between">
-            <div>
-              <div className="flex items-center gap-2 text-white font-bold text-xs uppercase mb-2">
-                <span className="material-symbols-outlined text-[#4FA8E0] text-[18px]">
-                  agriculture
-                </span>
-                <span>Agromet &amp; Farming</span>
-              </div>
-              <p className="text-xs text-[#D7DEE8] leading-relaxed">
-                Adequate soil moisture present. Sowing and light fertigation operations can proceed smoothly.
-              </p>
-            </div>
-            <div className="mt-3 pt-2 border-t border-[#334155] text-[11px] text-[#4FA8E0] font-bold">
-              GKMS Protocol: Proceed with scheduled irrigation
-            </div>
-          </div>
-
-          <div className="p-3.5 bg-[#17212B] rounded border border-[#334155] flex flex-col justify-between">
-            <div>
-              <div className="flex items-center gap-2 text-white font-bold text-xs uppercase mb-2">
-                <span className="material-symbols-outlined text-[#4FA8E0] text-[18px]">
-                  commute
-                </span>
-                <span>Transit &amp; Highway</span>
-              </div>
-              <p className="text-xs text-[#D7DEE8] leading-relaxed">
-                Horizontal visibility above 6.0 km. Normal driving conditions expected along regional national highways.
-              </p>
-            </div>
-            <div className="mt-3 pt-2 border-t border-[#334155] text-[11px] text-[#2ECC71] font-bold">
-              Status: Clear road visibility
-            </div>
-          </div>
-
-          <div className="p-3.5 bg-[#17212B] rounded border border-[#334155] flex flex-col justify-between">
-            <div>
-              <div className="flex items-center gap-2 text-white font-bold text-xs uppercase mb-2">
-                <span className="material-symbols-outlined text-[#4FA8E0] text-[18px]">
-                  medication
-                </span>
-                <span>Health &amp; Allergy</span>
-              </div>
-              <p className="text-xs text-[#D7DEE8] leading-relaxed">
-                Moderate particulate level. Asthmatic patients should keep standard inhaler medication accessible.
-              </p>
-            </div>
-            <div className="mt-3 pt-2 border-t border-[#334155] text-[11px] text-[#F1C40F] font-bold">
-              Advisory: Standard precautionary care
-            </div>
+            <input
+              type="text"
+              value={stateSearch}
+              onChange={(e) => setStateSearch(e.target.value)}
+              placeholder={t('searchState', 'Filter by state or UT name...')}
+              className="w-full h-8 bg-[#0F141A] border border-[#334155] rounded text-white text-xs pl-8 pr-7 focus:outline-none focus:border-[#0B72B9]"
+              aria-label={t('searchState', 'Filter by state or UT name...')}
+            />
+            {stateSearch && (
+              <button
+                type="button"
+                onClick={() => setStateSearch('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-[#8A94A6] hover:text-white"
+              >
+                <span className="material-symbols-outlined text-[14px]">close</span>
+              </button>
+            )}
           </div>
         </div>
-      </div>
 
-      {/* =========================================================================
-          8. 7-DAY SYNOPTIC OUTLOOK FORECAST
-      ========================================================================= */}
-      <div className="mausam-section">
-        <div className="mausam-section-header">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[#4FA8E0] text-[22px]">
-              calendar_month
-            </span>
-            <h2 className="mausam-section-title">
-              7-Day Medium-Range Synoptic Outlook
-            </h2>
-          </div>
-          <span className="text-xs text-[#8A94A6]">
-            Spatial Resolution: Sub-Divisional Ensemble Grid
-          </span>
-        </div>
-
-        <div className="mausam-table-wrapper">
-          <table className="mausam-table">
+        {/* Table representation */}
+        <div className="overflow-x-auto border border-[#334155] rounded-[5px]">
+          <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr>
-                <th>Day / Date</th>
-                <th>Sky &amp; Synoptic Condition</th>
-                <th>Max / Min Temp</th>
-                <th>Rain Probability</th>
-                <th>Relative Humidity</th>
-                <th>Surface Wind</th>
+              <tr className="bg-[#0F141A] border-b border-[#334155] text-[#8A94A6] text-[11px] uppercase font-bold tracking-wider">
+                <th className="py-2.5 px-3">State / Union Territory</th>
+                <th className="py-2.5 px-3">Capital Station</th>
+                <th className="py-2.5 px-3 font-mono">Temp (°C)</th>
+                <th className="py-2.5 px-3">Condition</th>
+                <th className="py-2.5 px-3 font-mono">Rainfall (mm)</th>
+                <th className="py-2.5 px-3 font-mono">Humidity (%)</th>
+                <th className="py-2.5 px-3 font-mono">AQI</th>
+                <th className="py-2.5 px-3">Alert Level</th>
               </tr>
             </thead>
-            <tbody>
-              {daily.map((day, idx) => (
-                <tr key={idx}>
-                  <td className="font-bold text-white font-mono">
-                    {day.day}
-                  </td>
-                  <td>
-                    <span className="text-xs text-[#D7DEE8] font-medium">
-                      {day.condition}
-                    </span>
-                  </td>
-                  <td className="font-mono">
-                    <span className="text-white font-bold">{Math.round(day.high)}°C</span>
-                    <span className="text-[#8A94A6] mx-1">/</span>
-                    <span className="text-[#8A94A6]">{Math.round(day.low)}°C</span>
-                  </td>
-                  <td>
-                    <span className={`font-mono font-bold text-xs ${day.rainProb > 40 ? 'text-[#4FA8E0]' : 'text-[#8A94A6]'}`}>
-                      {day.rainProb}%
-                    </span>
-                  </td>
-                  <td className="font-mono text-xs text-[#D7DEE8]">
-                    {day.humidity}%
-                  </td>
-                  <td className="font-mono text-xs text-[#8A94A6]">
-                    {day.wind || '12 km/h ESE'}
-                  </td>
-                </tr>
-              ))}
+            <tbody className="divide-y divide-[#334155]/40">
+              {filteredStates.map((state) => {
+                const isWarning = state.rainfall >= 25 || state.temperature >= 38;
+                const isWatch = state.rainfall >= 15 || state.temperature >= 34;
+
+                const alertClass = isWarning
+                  ? 'bg-[#E74C3C]/15 text-[#E74C3C] border-[#E74C3C]/40'
+                  : isWatch
+                  ? 'bg-[#F1C40F]/15 text-[#F1C40F] border-[#F1C40F]/40'
+                  : 'bg-[#2ECC71]/15 text-[#2ECC71] border-[#2ECC71]/40';
+
+                const alertLabel = isWarning ? 'Warning' : isWatch ? 'Watch' : 'Normal';
+
+                return (
+                  <tr
+                    key={state.id}
+                    onClick={() => onStateSelect(state)}
+                    className="hover:bg-[#1E2733] cursor-pointer transition-colors"
+                  >
+                    <td className="py-2.5 px-3 font-bold text-white flex items-center gap-1.5">
+                      <span>{state.name}</span>
+                    </td>
+                    <td className="py-2.5 px-3 text-[#D7DEE8]">{state.city || '—'}</td>
+                    <td className="py-2.5 px-3 font-mono font-bold text-[#4FA8E0]">
+                      {state.temperature}°C
+                    </td>
+                    <td className="py-2.5 px-3 text-[#D7DEE8]">
+                      {tCondition(state.condition)}
+                    </td>
+                    <td className="py-2.5 px-3 font-mono text-[#D7DEE8]">
+                      {state.rainfall > 0 ? `${state.rainfall} mm` : '0 mm'}
+                    </td>
+                    <td className="py-2.5 px-3 font-mono text-[#D7DEE8]">
+                      {state.humidity}%
+                    </td>
+                    <td className="py-2.5 px-3 font-mono">
+                      <span
+                        className={`px-1.5 py-0.5 rounded text-[11px] font-bold ${
+                          state.aqi <= 50
+                            ? 'bg-[#2ECC71]/20 text-[#2ECC71]'
+                            : state.aqi <= 100
+                            ? 'bg-[#2ECC71]/20 text-[#2ECC71]'
+                            : state.aqi <= 200
+                            ? 'bg-[#F1C40F]/20 text-[#F1C40F]'
+                            : 'bg-[#FF8C42]/20 text-[#FF8C42]'
+                        }`}
+                      >
+                        {state.aqi}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-3">
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded border ${alertClass}`}
+                      >
+                        {alertLabel}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       </div>
 
       {/* =========================================================================
-          9. DATA SOURCES & SENSORS ARCHITECTURE
+          6. MAJOR WEATHER WARNINGS & ADVISORIES
       ========================================================================= */}
-      <div className="mausam-section">
-        <div className="mausam-section-header">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[#4FA8E0] text-[22px]">
-              hub
+      <div className="mausam-panel p-4 bg-[#17212B] border border-[#334155] rounded-[5px]">
+        <div className="flex items-center justify-between mb-3 pb-2 border-b border-[#334155]">
+          <h2 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
+            <span className="material-symbols-outlined text-[#FF8C42] text-[18px]">
+              warning
             </span>
-            <h2 className="mausam-section-title">
-              National Observational Infrastructure &amp; Sensor Calibration
-            </h2>
-          </div>
-          <span className="text-xs text-[#8A94A6]">
-            Telemetry Registry
+            <span>{t('majorWeatherWarnings', 'MAJOR WEATHER WARNINGS & ADVISORIES')}</span>
+          </h2>
+          <span className="text-[11px] font-mono text-[#8A94A6]">
+            {t('sourceIMD', 'Source: IMD / NDMA Multi-Hazard Network')}
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-          <div className="p-3 bg-[#17212B] rounded border border-[#334155]">
-            <span className="font-bold text-white block">Automatic Weather Stations (AWS)</span>
-            <span className="text-[#8A94A6] text-[11px] mt-0.5 block">
-              Continuous 15-minute telemetry of temperature, humidity, pressure, and tipping-bucket rainfall.
-            </span>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+          <div className="mausam-alert warning p-3 rounded flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-bold text-white uppercase">
+                  Odisha &amp; North Coastal Andhra
+                </span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#FF8C42]/20 text-[#FF8C42] border border-[#FF8C42]/40 font-bold">
+                  Code Yellow
+                </span>
+              </div>
+              <p className="text-xs text-[#D7DEE8] mt-1.5">
+                Squally wind speed reaching 40-50 km/h with scattered heavy rainfall over coastal sub-divisions. Fishermen advised not to venture into north-west Bay of Bengal.
+              </p>
+            </div>
+            <div className="flex justify-between items-center text-[10px] text-[#8A94A6] mt-2 pt-2 border-t border-[#334155]">
+              <span>Valid: Next 24 Hours</span>
+              <span>IMD Coastal Bulletin</span>
+            </div>
           </div>
 
-          <div className="p-3 bg-[#17212B] rounded border border-[#334155]">
-            <span className="font-bold text-white block">Doppler Weather Radar (DWR)</span>
-            <span className="text-[#8A94A6] text-[11px] mt-0.5 block">
-              S-Band and C-Band radar radial velocity and storm reflectivity scans calibrated every 10 minutes.
-            </span>
+          <div className="mausam-alert normal p-3 rounded flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-bold text-white uppercase">
+                  Western Himalayan Region
+                </span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#2ECC71]/20 text-[#2ECC71] border border-[#2ECC71]/40 font-bold">
+                  Code Green
+                </span>
+              </div>
+              <p className="text-xs text-[#D7DEE8] mt-1.5">
+                Fairly widespread light to moderate precipitation over Jammu &amp; Kashmir, Ladakh, and Himachal Pradesh. Normal seasonal atmospheric temperatures.
+              </p>
+            </div>
+            <div className="flex justify-between items-center text-[10px] text-[#8A94A6] mt-2 pt-2 border-t border-[#334155]">
+              <span>Valid: Next 48 Hours</span>
+              <span>RMC New Delhi</span>
+            </div>
           </div>
 
-          <div className="p-3 bg-[#17212B] rounded border border-[#334155]">
-            <span className="font-bold text-white block">INSAT-3DR Geostationary Imager</span>
-            <span className="text-[#8A94A6] text-[11px] mt-0.5 block">
-              Infrared, Visible, and Water Vapor spectral channels from ISRO MOSDAC Earth Observation.
-            </span>
+          <div className="mausam-alert warning p-3 rounded flex flex-col justify-between">
+            <div>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs font-bold text-white uppercase">
+                  Northeast Sub-Divisions (Assam &amp; Meghalaya)
+                </span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-[#FF8C42]/20 text-[#FF8C42] border border-[#FF8C42]/40 font-bold">
+                  Code Yellow
+                </span>
+              </div>
+              <p className="text-xs text-[#D7DEE8] mt-1.5">
+                Isolated heavy rainfall with thunderstorm accompanied by lightning likely over Assam, Meghalaya, and Arunachal Pradesh.
+              </p>
+            </div>
+            <div className="flex justify-between items-center text-[10px] text-[#8A94A6] mt-2 pt-2 border-t border-[#334155]">
+              <span>Valid: Next 36 Hours</span>
+              <span>RMC Dispur</span>
+            </div>
           </div>
+        </div>
+      </div>
 
-          <div className="p-3 bg-[#17212B] rounded border border-[#334155]">
-            <span className="font-bold text-white block">NCMRWF Numerical Models</span>
-            <span className="text-[#8A94A6] text-[11px] mt-0.5 block">
-              Unified Model (NCUM) and Global Ensemble Forecast System (NEPS) high-resolution assimilation.
+      {/* =========================================================================
+          7. QUICK ACCESS SERVICES
+      ========================================================================= */}
+      <div>
+        <h2 className="text-sm font-bold uppercase tracking-wider text-white mb-3 flex items-center gap-2">
+          <span className="material-symbols-outlined text-[#4FA8E0] text-[18px]">
+            grid_view
+          </span>
+          <span>{t('quickAccess', 'QUICK ACCESS SERVICES')}</span>
+        </h2>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          {quickAccessItems.map((item) => (
+            <button
+              key={item.tab}
+              type="button"
+              onClick={() => onNavigateToTab(item.tab)}
+              className="mausam-card p-3.5 border border-[#334155] hover:border-[#0B72B9] hover:bg-[#1E2733] transition-all text-left flex items-start gap-3 group"
+            >
+              <div
+                className={`w-9 h-9 rounded flex items-center justify-center shrink-0 ${item.bgColor} ${item.color} border border-[#334155]`}
+              >
+                <span className="material-symbols-outlined text-[20px]">
+                  {item.icon}
+                </span>
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold text-white group-hover:text-[#4FA8E0] transition-colors">
+                    {item.title}
+                  </h3>
+                  <span className="material-symbols-outlined text-[14px] text-[#8A94A6] group-hover:text-white group-hover:translate-x-0.5 transition-transform">
+                    arrow_forward
+                  </span>
+                </div>
+                <p className="text-[11px] text-[#8A94A6] mt-0.5 leading-snug">
+                  {item.desc}
+                </p>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* =========================================================================
+          8. RECENT WEATHER UPDATES & NATIONAL TELEMETRY STATUS
+      ========================================================================= */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Bulletins */}
+        <div className="mausam-panel p-4 bg-[#17212B] border border-[#334155] rounded-[5px]">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-white mb-2 flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-[#4FA8E0] text-[16px]">
+              newspaper
             </span>
+            <span>{t('recentUpdates', 'RECENT WEATHER BULLETINS & UPDATES')}</span>
+          </h2>
+          <div className="space-y-2 text-xs divide-y divide-[#334155]/40">
+            <div className="pt-2 first:pt-0">
+              <div className="flex justify-between text-[10px] text-[#8A94A6]">
+                <span className="text-[#4FA8E0] font-bold">ALL-INDIA SYNOPTIC BULLETIN</span>
+                <span>08:30 IST</span>
+              </div>
+              <p className="text-[#D7DEE8] mt-0.5 text-[11px]">
+                Monsoon trough at mean sea level continues to pass through normal alignment with embedded cyclonic circulation over north Odisha.
+              </p>
+            </div>
+
+            <div className="pt-2">
+              <div className="flex justify-between text-[10px] text-[#8A94A6]">
+                <span className="text-[#2ECC71] font-bold">DOPPLER RADAR NETWORK</span>
+                <span>09:00 IST</span>
+              </div>
+              <p className="text-[#D7DEE8] mt-0.5 text-[11px]">
+                39 Doppler Weather Radars (DWR) operational across all regional meteorological centres delivering 10-minute volume scans.
+              </p>
+            </div>
+
+            <div className="pt-2">
+              <div className="flex justify-between text-[10px] text-[#8A94A6]">
+                <span className="text-[#FF8C42] font-bold">AGROMET HARVEST ADVISORY</span>
+                <span>06:00 IST</span>
+              </div>
+              <p className="text-[#D7DEE8] mt-0.5 text-[11px]">
+                Advisories issued for kharif paddy transplanting in eastern India and soybean pest monitoring in central plateau.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* National Network Infrastructure Stats */}
+        <div className="mausam-panel p-4 bg-[#17212B] border border-[#334155] rounded-[5px]">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-white mb-2 flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-[#4FA8E0] text-[16px]">
+              hub
+            </span>
+            <span>{t('nationalStatistics', 'NATIONAL METEOROLOGICAL INFRASTRUCTURE')}</span>
+          </h2>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="bg-[#0F141A] p-2.5 rounded border border-[#334155]">
+              <span className="text-[10px] text-[#8A94A6] uppercase block">Automatic Weather Stations</span>
+              <span className="text-base font-bold font-mono text-white">1,050+ AWS</span>
+              <span className="text-[10px] text-[#2ECC71] block">Real-time Telemetry Active</span>
+            </div>
+            <div className="bg-[#0F141A] p-2.5 rounded border border-[#334155]">
+              <span className="text-[10px] text-[#8A94A6] uppercase block">Doppler Radars (DWR)</span>
+              <span className="text-base font-bold font-mono text-white">39 S/X-Band</span>
+              <span className="text-[10px] text-[#2ECC71] block">100% Operational</span>
+            </div>
+            <div className="bg-[#0F141A] p-2.5 rounded border border-[#334155]">
+              <span className="text-[10px] text-[#8A94A6] uppercase block">Agromet Field Units</span>
+              <span className="text-base font-bold font-mono text-white">130 DAMUs</span>
+              <span className="text-[10px] text-[#4FA8E0] block">Gramin Krishi Sewa</span>
+            </div>
+            <div className="bg-[#0F141A] p-2.5 rounded border border-[#334155]">
+              <span className="text-[10px] text-[#8A94A6] uppercase block">Earth Observation Sats</span>
+              <span className="text-base font-bold font-mono text-white">INSAT-3D/3DR</span>
+              <span className="text-[10px] text-[#4FA8E0] block">ISRO MOSDAC 15m Loop</span>
+            </div>
           </div>
         </div>
       </div>

@@ -3,6 +3,7 @@ import India from '@svg-maps/india';
 import { WeatherMapMetric, MapLayerControl } from './MapLayerControl';
 import { MapLegend } from './MapLegend';
 import { SectionHeader } from '../common/SectionHeader';
+import { INDIA_WEATHER_DATA } from '../../data/indiaWeatherData';
 
 export interface StateWeatherData {
   id: string;
@@ -18,7 +19,7 @@ export interface StateWeatherData {
 }
 
 interface IndiaWeatherMapProps {
-  data: StateWeatherData[];
+  data?: StateWeatherData[];
   metric?: WeatherMapMetric;
   onMetricChange?: (metric: WeatherMapMetric) => void;
   selectedState?: string | null;
@@ -115,7 +116,7 @@ function getStateColor(state: StateWeatherData, metric: WeatherMapMetric): strin
 }
 
 export const IndiaWeatherMap: React.FC<IndiaWeatherMapProps> = ({
-  data,
+  data = INDIA_WEATHER_DATA,
   metric: controlledMetric,
   onMetricChange,
   selectedState,
@@ -129,7 +130,8 @@ export const IndiaWeatherMap: React.FC<IndiaWeatherMapProps> = ({
 
   const stateMap = useMemo(() => {
     const map = new Map<string, StateWeatherData>();
-    data.forEach((s) => {
+    const safeData = data || INDIA_WEATHER_DATA;
+    safeData.forEach((s) => {
       map.set(s.id.toLowerCase(), s);
       map.set(s.name.toLowerCase(), s);
       const cleanId = s.id.toLowerCase().replace('in-', '');

@@ -9,6 +9,7 @@ import { PageContainer } from './components/layout/PageContainer';
 import { FooterNavigation, FooterView } from './components/layout/FooterNavigation';
 import { StateWeatherData } from './components/map/IndiaWeatherMap';
 import { HomePage } from './pages/Home';
+import { WeatherPage } from './pages/Weather';
 import { ForecastPage } from './pages/Forecast';
 import { RadarPage } from './pages/Radar';
 import { AirQualityPage } from './pages/AirQuality';
@@ -89,7 +90,7 @@ export default function App() {
 
   const [isAskMausamOpen, setIsAskMausamOpen] = useState(false);
 
-  // Sync state with browser popstate (back/forward button)
+  // Sync state with browser popstate (back/forward navigation)
   useEffect(() => {
     const handlePopState = () => {
       const tab = getTabFromPathname(window.location.pathname);
@@ -125,13 +126,13 @@ export default function App() {
     loadWeatherData(selectedLocation);
   }, [selectedLocation, loadWeatherData]);
 
-  // Handle location change via header or map
+  // Handle location change via header or search
   const handleSelectLocation = (loc: LocationRecord) => {
     locationService.setSelectedLocation(loc);
     setSelectedLocation(loc);
   };
 
-  // Handle state click from India Map
+  // Handle state click from India Map or State Table
   const handleStateSelect = (state: StateWeatherData) => {
     const matched =
       locationService.findLocationByName(state.city || state.name) ||
@@ -139,6 +140,7 @@ export default function App() {
 
     if (matched) {
       handleSelectLocation(matched);
+      navigateToTab('weather');
     }
   };
 
@@ -161,7 +163,7 @@ export default function App() {
 
   return (
     <div className="mausam-app min-h-screen bg-[#0F141A] text-[#D7DEE8] flex flex-col font-sans w-full overflow-x-hidden">
-      {/* 1. Official Government Header */}
+      {/* 1. Official Government Header with Searchable Language Selector */}
       <GovernmentHeader
         selectedLocation={selectedLocation}
         onSelectLocation={handleSelectLocation}
@@ -178,26 +180,34 @@ export default function App() {
       {/* 3. Main Body Content */}
       <main className="flex-1">
         <PageContainer>
+          {/* HOME: National Weather Overview */}
           {activeTab === 'home' && (
             <HomePage
               weatherBundle={weatherBundle}
               selectedLocation={selectedLocation}
-              onRefresh={() => loadWeatherData(selectedLocation, true)}
+              onNavigateToTab={(tab) => navigateToTab(tab as AppView)}
+              onSelectLocation={handleSelectLocation}
               onStateSelect={handleStateSelect}
-              onViewAlertsTab={() => navigateToTab('warnings')}
             />
           )}
 
+          {/* WEATHER: Detailed Location-Specific Weather */}
           {activeTab === 'weather' && (
-            <HomePage
+            <WeatherPage
               weatherBundle={weatherBundle}
               selectedLocation={selectedLocation}
               onRefresh={() => loadWeatherData(selectedLocation, true)}
-              onStateSelect={handleStateSelect}
-              onViewAlertsTab={() => navigateToTab('warnings')}
+              onChangeLocationClick={() => {
+                const searchInput = document.getElementById('station-search-input');
+                if (searchInput) {
+                  searchInput.focus();
+                }
+              }}
+              onNavigateToTab={(tab) => navigateToTab(tab as AppView)}
             />
           )}
 
+          {/* FORECAST: Medium-Range Numerical Weather Forecast */}
           {activeTab === 'forecast' && (
             <ForecastPage
               weatherBundle={weatherBundle}
@@ -205,6 +215,7 @@ export default function App() {
             />
           )}
 
+          {/* WARNINGS: Multi-Hazard Severe Weather Warnings & Matrix */}
           {activeTab === 'warnings' && (
             <AlertsPage
               weatherBundle={weatherBundle}
@@ -212,8 +223,10 @@ export default function App() {
             />
           )}
 
+          {/* RADAR & MAPS: Doppler Weather Radar & Satellite Imagery */}
           {activeTab === 'radar' && <RadarPage />}
 
+          {/* AQI & AIR: National Air Quality Index & Aero-Allergen Pollen */}
           {activeTab === 'aqi' && (
             <AirQualityPage
               weatherBundle={weatherBundle}
@@ -221,8 +234,10 @@ export default function App() {
             />
           )}
 
+          {/* AGROMET: Gramin Krishi Mausam Sewa Agricultural Bulletins */}
           {activeTab === 'agromet' && <AgrometPage />}
 
+          {/* REPORTS: Citizen Meteorological Reports & Observation Feeds */}
           {activeTab === 'reports' && (
             <ReportsPage
               weatherBundle={weatherBundle}
@@ -230,14 +245,17 @@ export default function App() {
             />
           )}
 
+          {/* PRIVACY POLICY */}
           {activeTab === 'privacy' && (
             <PrivacyPolicy onNavigateHome={() => navigateToTab('home')} />
           )}
 
+          {/* OPEN DATA API */}
           {activeTab === 'api' && (
             <OpenDataApi onNavigateHome={() => navigateToTab('home')} />
           )}
 
+          {/* TERMS OF OBSERVATION */}
           {activeTab === 'terms' && (
             <TermsOfObservation onNavigateHome={() => navigateToTab('home')} />
           )}
