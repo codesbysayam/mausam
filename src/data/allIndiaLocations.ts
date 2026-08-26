@@ -1,5 +1,6 @@
 import { LocationRecord } from '../types';
 import { ODISHA_LOCATIONS } from './odishaLocations';
+import { INDIA_STATES_UTS } from './indiaRegions';
 
 export interface LocationGroup {
   groupName: string;
@@ -1202,15 +1203,71 @@ export const NATIONAL_INDIA_LOCATIONS: LocationRecord[] = [
   },
 ];
 
-// Combine all 30 Odisha Districts and all National Key Indian Met/DWR Stations
+// Convert INDIA_STATES_UTS into standardized LocationRecord instances for national synoptic coverage
+export const ALL_INDIA_STATES_LOCATIONS: LocationRecord[] = INDIA_STATES_UTS.filter(
+  (r) => r.type === 'STATE'
+).map((r) => ({
+  id: r.id,
+  state: r.name,
+  district: r.representativeCity,
+  city: r.representativeCity,
+  lat: r.latitude,
+  lng: r.longitude,
+  pincode: '',
+  timezone: 'Asia/Kolkata',
+  displayName: `${r.name} (${r.representativeCity} - ${r.code})`,
+  aliases: [r.name, r.representativeCity, r.code],
+  isPrimary: true,
+  elevation: '200m ASL',
+  weatherStation: `IMD ${r.representativeCity} Observatory`,
+  imdStation: `AWS-${r.code}`,
+  radarCoverage: `${r.representativeCity} DWR`,
+  coastalStatus: ['AP', 'GA', 'GJ', 'KA', 'KL', 'MH', 'OD', 'TN', 'WB'].includes(r.code) ? 'coastal' : 'inland',
+}));
+
+export const ALL_INDIA_UTS_LOCATIONS: LocationRecord[] = INDIA_STATES_UTS.filter(
+  (r) => r.type === 'UNION_TERRITORY'
+).map((r) => ({
+  id: r.id,
+  state: r.name,
+  district: r.representativeCity,
+  city: r.representativeCity,
+  lat: r.latitude,
+  lng: r.longitude,
+  pincode: '',
+  timezone: 'Asia/Kolkata',
+  displayName: `${r.name} (${r.representativeCity} - ${r.code})`,
+  aliases: [r.name, r.representativeCity, r.code],
+  isPrimary: true,
+  elevation: '50m ASL',
+  weatherStation: `IMD ${r.representativeCity} Observatory`,
+  imdStation: `AWS-${r.code}`,
+  radarCoverage: `${r.representativeCity} DWR`,
+  coastalStatus: ['AN', 'DN', 'LD', 'PY'].includes(r.code) ? 'coastal' : 'inland',
+}));
+
+// Combine all 30 Odisha Districts, all 28 States, all 8 UTs, and National Key Indian Met/DWR Stations
 export const ALL_INDIA_LOCATIONS: LocationRecord[] = [
+  ...ALL_INDIA_STATES_LOCATIONS,
+  ...ALL_INDIA_UTS_LOCATIONS,
   ...ODISHA_LOCATIONS,
   ...NATIONAL_INDIA_LOCATIONS.filter(
-    (nl) => !ODISHA_LOCATIONS.some((ol) => ol.id === nl.id)
+    (nl) =>
+      !ODISHA_LOCATIONS.some((ol) => ol.id === nl.id) &&
+      !ALL_INDIA_STATES_LOCATIONS.some((sl) => sl.id === nl.id) &&
+      !ALL_INDIA_UTS_LOCATIONS.some((ul) => ul.id === nl.id)
   ),
 ];
 
 export const GROUPED_INDIA_LOCATIONS: LocationGroup[] = [
+  {
+    groupName: '28 States of India (Representative Met Cities)',
+    locations: ALL_INDIA_STATES_LOCATIONS,
+  },
+  {
+    groupName: '8 Union Territories of India',
+    locations: ALL_INDIA_UTS_LOCATIONS,
+  },
   {
     groupName: 'Odisha (All 30 Districts & Coastal Observatories)',
     locations: ODISHA_LOCATIONS.filter((l) => l.state === 'Odisha'),
