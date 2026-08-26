@@ -16,7 +16,6 @@ import {
   NavigationTab,
   HistoricalTrendPoint,
 } from '../types';
-import { DynamicIndiaMap } from './DynamicIndiaMap';
 import { IstClock } from './IstClock';
 import { resolveVisualState, tokens } from '../theme/tokens';
 
@@ -819,31 +818,6 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
             </AreaChart>
           </ResponsiveContainer>
         </div>
-      </div>
-
-      {/* 6. Dynamic India Radar Map Section */}
-      <div className="flex flex-col gap-3">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[#0B72B9] text-[20px]">
-              radar
-            </span>
-            <h3 className="font-h3 text-sm font-semibold text-[#FFFFFF]">
-              Dynamic India Weather Radar &amp; Satellite Array
-            </h3>
-          </div>
-          <button
-            onClick={() => onNavigateTab && onNavigateTab('radar')}
-            className="text-xs font-semibold text-[#0B72B9] hover:text-[#4FA8E0] flex items-center gap-1 cursor-pointer"
-          >
-            <span>Full Radar &amp; Maps &rarr;</span>
-          </button>
-        </div>
-
-        <DynamicIndiaMap
-          onSelectStation={onSelectStation}
-          selectedStationId={weather.stationCode.toLowerCase()}
-        />
       </div>
     </div>
   );
