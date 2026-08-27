@@ -158,23 +158,29 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
                           {t('popularObservatories', 'POPULAR OBSERVATORIES')}
                         </div>
                         {[
-                          { city: 'Bhubaneswar', state: 'Odisha', id: 'od-bhubaneswar' },
-                          { city: 'New Delhi', state: 'Delhi', id: 'dl-delhi' },
-                          { city: 'Mumbai', state: 'Maharashtra', id: 'mh-mumbai' },
-                          { city: 'Kolkata', state: 'West Bengal', id: 'wb-kolkata' },
-                          { city: 'Chennai', state: 'Tamil Nadu', id: 'tn-chennai' },
-                          { city: 'Bengaluru', state: 'Karnataka', id: 'ka-bengaluru' },
+                          { city: 'New Delhi', state: 'Delhi NCR', id: 'delhi-safdarjung' },
+                          { city: 'Bhubaneswar', state: 'Odisha', id: 'odisha-bhubaneswar' },
+                          { city: 'Mumbai', state: 'Maharashtra', id: 'mumbai-colaba' },
+                          { city: 'Kolkata', state: 'West Bengal', id: 'kolkata-alipore' },
+                          { city: 'Chennai', state: 'Tamil Nadu', id: 'chennai-meenambakkam' },
+                          { city: 'Bengaluru', state: 'Karnataka', id: 'bengaluru-city' },
                         ].map((hub) => (
                           <div
                             key={hub.id}
                             onClick={() => {
-                              const matched = locationService.getLocationById(hub.id) || locationService.findLocationByName(hub.city);
-                              if (matched) onSelectLocation(matched);
+                              const matched =
+                                locationService.findLocationById(hub.id) ||
+                                locationService.findLocationByName(hub.city) ||
+                                locationService.getLocationById(hub.id);
+                              if (matched) {
+                                onSelectLocation(matched);
+                              }
                               setIsSearchOpen(false);
+                              setSearchQuery('');
                             }}
                             className="p-2 text-xs text-[#D7DEE8] hover:bg-[#1E2733] cursor-pointer flex justify-between"
                           >
-                            <span>{hub.city}</span>
+                            <span className="font-semibold">{hub.city}</span>
                             <span className="text-[#8A94A6]">{hub.state}</span>
                           </div>
                         ))}
@@ -338,19 +344,25 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
                         {t('popularObservatories', 'POPULAR OBSERVATORIES')}
                       </div>
                       {[
-                        { city: 'Bhubaneswar', state: 'Odisha', id: 'od-bhubaneswar' },
-                        { city: 'New Delhi', state: 'Delhi', id: 'dl-delhi' },
-                        { city: 'Mumbai', state: 'Maharashtra', id: 'mh-mumbai' },
-                        { city: 'Kolkata', state: 'West Bengal', id: 'wb-kolkata' },
-                        { city: 'Chennai', state: 'Tamil Nadu', id: 'tn-chennai' },
-                        { city: 'Bengaluru', state: 'Karnataka', id: 'ka-bengaluru' },
+                        { city: 'New Delhi', state: 'Delhi NCR', id: 'delhi-safdarjung' },
+                        { city: 'Bhubaneswar', state: 'Odisha', id: 'odisha-bhubaneswar' },
+                        { city: 'Mumbai', state: 'Maharashtra', id: 'mumbai-colaba' },
+                        { city: 'Kolkata', state: 'West Bengal', id: 'kolkata-alipore' },
+                        { city: 'Chennai', state: 'Tamil Nadu', id: 'chennai-meenambakkam' },
+                        { city: 'Bengaluru', state: 'Karnataka', id: 'bengaluru-city' },
                       ].map((hub) => (
                         <div
                           key={hub.id}
                           onClick={() => {
-                            const matched = locationService.getLocationById(hub.id) || locationService.findLocationByName(hub.city);
-                            if (matched) onSelectLocation(matched);
+                            const matched =
+                              locationService.findLocationById(hub.id) ||
+                              locationService.findLocationByName(hub.city) ||
+                              locationService.getLocationById(hub.id);
+                            if (matched) {
+                              onSelectLocation(matched);
+                            }
                             setIsSearchOpen(false);
+                            setSearchQuery('');
                           }}
                           className="p-3 text-xs text-[#D7DEE8] hover:bg-[#1E2733] cursor-pointer flex justify-between items-center border-b border-[#334155]/30 min-h-[44px]"
                         >

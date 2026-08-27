@@ -82,6 +82,9 @@ export interface CurrentWeather {
   unit: 'C' | 'F';
   high: number;
   low: number;
+  tempMax?: number;
+  tempMin?: number;
+  feelsLike?: number;
   condition: string;
   normalizedCondition: NormalizedWeatherCondition;
   weatherType: WeatherConditionType;
@@ -89,18 +92,22 @@ export interface CurrentWeather {
   windSpeed: number; // km/h
   windDirection: string;
   windDirectionDeg?: number;
+  windGusts?: number;
   humidity: number; // %
   pressure: number; // hPa
   dewPoint: number; // °C
   uvIndex: number;
+  uvDescription?: string;
   pollen: 'Low' | 'Moderate' | 'High' | 'Very High';
   pollenCount?: number; // grains/m³
   grassPollen?: number; // grains/m³
   treePollen?: number; // grains/m³
   weedPollen?: number; // grains/m³
+  aqi?: number;
   aqiPm25: number; // µg/m³
   aqiPm10?: number; // µg/m³
   aqiIndex?: number; // Indian CPCB / US AQI Index
+  aqiDescription?: string;
   no2?: number; // µg/m³
   so2?: number; // µg/m³
   co?: number; // µg/m³
@@ -108,11 +115,14 @@ export interface CurrentWeather {
   dust?: number; // µg/m³
   aqiStatus: 'Good' | 'Moderate' | 'Unhealthy for Sensitive' | 'Unhealthy' | 'Hazardous';
   precipitation: number; // mm currently
+  precipitationMm?: number;
   precipitationProbability: number; // %
   isRainingNow: boolean;
   rainExpectedSummary?: string;
   cloudCover?: number;
+  visibility?: number;
   visibilityKm?: number;
+  elevation?: string;
   sunrise?: string;
   sunset?: string;
   solarNoon?: string;

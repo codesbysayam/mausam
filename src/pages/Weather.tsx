@@ -6,6 +6,7 @@ import { CurrentWeather } from '../components/weather/CurrentWeather';
 import { WeatherMetrics } from '../components/weather/WeatherMetrics';
 import { HourlyForecast } from '../components/weather/HourlyForecast';
 import { DailyForecast } from '../components/weather/DailyForecast';
+import { PersonaWeatherHub } from '../components/weather/personas/PersonaWeatherHub';
 
 interface WeatherPageProps {
   weatherBundle: WeatherDataBundle;
@@ -123,7 +124,15 @@ export const WeatherPage: React.FC<WeatherPageProps> = ({
       </div>
 
       {/* =========================================================================
-          3. ENVIRONMENT & HEALTH (AQI, Pollen, UV, PM2.5, PM10)
+          3. AUTHORITATIVE MULTI-PERSONA WEATHER INTELLIGENCE HUB (8 USER PERSONAS)
+      ========================================================================= */}
+      <PersonaWeatherHub
+        selectedLocation={selectedLocation}
+        weatherBundle={weatherBundle}
+      />
+
+      {/* =========================================================================
+          4. ENVIRONMENT & HEALTH (AQI, Pollen, UV, PM2.5, PM10)
       ========================================================================= */}
       <div className="mausam-panel p-4 bg-[#17212B] border border-[#334155] rounded-[5px]">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 pb-3 border-b border-[#334155]">

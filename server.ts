@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import { imdRouter } from './server/routes/imdRoutes';
+import { authoritativeRouter } from './server/routes/authoritativeRoutes';
 import {
   buildMausamSystemInstruction,
   generateMausamGroundedFallback,
@@ -95,6 +96,9 @@ async function startServer() {
 
   // Official IMD Data Connector Routes
   app.use('/api/imd', imdRouter);
+
+  // Authoritative Multi-Persona & External Data Services (CPCB, Tides, Marine, Azure Alerts)
+  app.use('/api/authoritative', authoritativeRouter);
 
   // AI Assistant endpoint: Ask Mausam with Search & Maps Grounding
   const handleAskMausam = async (req: express.Request, res: express.Response) => {

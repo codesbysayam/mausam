@@ -80,7 +80,9 @@ export const CurrentWeather: React.FC<CurrentWeatherProps> = ({
             </div>
             <div className="text-xs text-[#8A94A6] mt-1 flex items-center gap-1.5">
               <span>{t('feelsLike', 'Feels like')}</span>
-              <strong className="text-white font-mono">{Math.round(weather.feelsLike)}°C</strong>
+              <strong className="text-white font-mono">
+                {Math.round(weather.feelsLike ?? weather.temp)}°C
+              </strong>
             </div>
           </div>
 
@@ -92,9 +94,19 @@ export const CurrentWeather: React.FC<CurrentWeatherProps> = ({
             </div>
 
             <div className="flex items-center gap-2 text-xs text-[#8A94A6]">
-              <span>{t('high', 'High')}: <strong className="text-white font-mono">{Math.round(weather.tempMax || weather.temp + 2)}°C</strong></span>
+              <span>
+                {t('high', 'High')}:{' '}
+                <strong className="text-white font-mono">
+                  {Math.round(weather.tempMax ?? weather.high ?? weather.temp + 2)}°C
+                </strong>
+              </span>
               <span>•</span>
-              <span>{t('low', 'Low')}: <strong className="text-white font-mono">{Math.round(weather.tempMin || weather.temp - 3)}°C</strong></span>
+              <span>
+                {t('low', 'Low')}:{' '}
+                <strong className="text-white font-mono">
+                  {Math.round(weather.tempMin ?? weather.low ?? weather.temp - 3)}°C
+                </strong>
+              </span>
             </div>
 
             <div className="mt-1">
@@ -135,7 +147,7 @@ export const CurrentWeather: React.FC<CurrentWeatherProps> = ({
           <div className="flex flex-col">
             <span className="text-[11px] text-[#8A94A6]">{t('visibility', 'Visibility')}</span>
             <span className="text-sm font-bold text-white font-mono mt-0.5">
-              {weather.visibility} km
+              {weather.visibility ?? weather.visibilityKm ?? 10} km
             </span>
           </div>
 
