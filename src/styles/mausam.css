@@ -25,6 +25,9 @@
 
   --font:
     "Roboto",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
     Arial,
     Helvetica,
     sans-serif;
@@ -38,7 +41,6 @@
 
   --radius: 6px;
   --radius-small: 4px;
-
   --border-width: 1px;
 }
 
@@ -49,28 +51,85 @@
 html,
 body,
 #root {
-  margin: 0;
   width: 100%;
   min-height: 100%;
-
-  font-family: var(--font);
-
+  min-height: 100dvh;
+  margin: 0;
+  padding: 0;
   background: var(--bg);
   color: var(--text);
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 body {
-  font-size: 14px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  font-size: clamp(0.875rem, 0.85rem + 0.15vw, 1rem);
   line-height: 1.5;
+}
+
+/* Fluid responsive container */
+.mausam-container {
+  width: min(1440px, calc(100% - 48px));
+  margin-inline: auto;
+  max-width: 100%;
+}
+
+@media (max-width: 1023px) {
+  .mausam-container {
+    width: calc(100% - 32px);
+  }
+}
+
+@media (max-width: 767px) {
+  .mausam-container {
+    width: calc(100% - 24px);
+  }
+}
+
+/* Safe area support for iOS notches */
+.safe-area-top {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 /* =========================================
    APPLICATION
 ========================================= */
 
+/* =========================================
+   ASK MAUSAM CUSTOM CURSOR & BUTTON DESIGN
+========================================= */
+
+.cursor-ask-mausam,
+.ask-mausam-cursor,
+#header-ask-mausam-button,
+#floating-ask-mausam-btn,
+.ask-mausam-trigger {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32' fill='none'%3E%3Cpath d='M6 3L18 15L12 16.5L16 25.5L13 27L9 18L5 22L6 3Z' fill='%230B72B9' stroke='%23FFFFFF' stroke-width='1.5' stroke-linejoin='round'/%3E%3Cpath d='M23 5L24.2 9L28.2 10.2L24.2 11.4L23 15.4L21.8 11.4L17.8 10.2L21.8 9L23 5Z' fill='%234FA8E0'/%3E%3Ccircle cx='23' cy='10.2' r='1.5' fill='%23FFFFFF'/%3E%3C/svg%3E") 6 3, pointer !important;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.cursor-ask-mausam:active,
+.ask-mausam-cursor:active,
+#header-ask-mausam-button:active,
+#floating-ask-mausam-btn:active,
+.ask-mausam-trigger:active {
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32' fill='none'%3E%3Ccircle cx='16' cy='16' r='13' stroke='%234FA8E0' stroke-width='1.5' stroke-dasharray='3 3' opacity='0.7'/%3E%3Ccircle cx='16' cy='16' r='8' fill='%230B72B9' stroke='%23FFFFFF' stroke-width='1.5'/%3E%3Cpath d='M16 10L17.2 14.2L21.4 15.4L17.2 16.6L16 20.8L14.8 16.6L10.6 15.4L14.8 14.2L16 10Z' fill='%23FFFFFF'/%3E%3C/svg%3E") 16 16, pointer !important;
+  transform: scale(0.96);
+}
+
 .mausam-app {
   min-height: 100vh;
+  min-height: 100dvh;
   background: var(--bg);
+  display: flex;
+  flex-direction: column;
 }
 
 /* =========================================
@@ -78,48 +137,40 @@ body {
 ========================================= */
 
 .mausam-header {
-  height: 64px;
-
+  min-height: 64px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-
-  padding: 0 24px;
-
+  padding: 0 clamp(12px, 2vw, 24px);
   background: var(--bg);
-
-  border-bottom:
-    1px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 
 .mausam-brand {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: clamp(8px, 1.5vw, 12px);
 }
 
 .mausam-brand-logo {
-  width: 38px;
-  height: 38px;
-
+  width: clamp(34px, 4vw, 40px);
+  height: clamp(34px, 4vw, 40px);
   display: grid;
   place-items: center;
-
   background: var(--primary);
-
   border-radius: 4px;
+  flex-shrink: 0;
 }
 
 .mausam-brand-name {
-  font-size: 19px;
+  font-size: clamp(16px, 2vw, 19px);
   font-weight: 700;
-
   color: var(--text);
+  letter-spacing: -0.01em;
 }
 
 .mausam-brand-subtitle {
-  font-size: 11px;
-
+  font-size: clamp(10px, 1vw, 11px);
   color: var(--text-muted);
 }
 
@@ -128,42 +179,34 @@ body {
 ========================================= */
 
 .mausam-nav {
-  height: 48px;
-
+  min-height: 48px;
   display: flex;
   align-items: center;
-
-  padding: 0 24px;
-
+  padding: 0 clamp(12px, 2vw, 24px);
   background: var(--surface);
-
-  border-bottom:
-    1px solid var(--border);
-
+  border-bottom: 1px solid var(--border);
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.mausam-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .mausam-nav-item {
-  height: 48px;
-
+  min-height: 48px;
   display: flex;
   align-items: center;
-
-  padding: 0 18px;
-
+  padding: 0 clamp(10px, 1.5vw, 18px);
   color: var(--text-muted);
-
   background: transparent;
-
   border: 0;
-
-  border-bottom:
-    2px solid transparent;
-
-  font-size: 13px;
+  border-bottom: 2px solid transparent;
+  font-size: clamp(11px, 1.2vw, 13px);
   font-weight: 500;
-
   white-space: nowrap;
+  cursor: pointer;
+  touch-action: manipulation;
 }
 
 .mausam-nav-item:hover {
@@ -172,9 +215,7 @@ body {
 
 .mausam-nav-item.active {
   color: var(--primary-light);
-
-  border-bottom-color:
-    var(--primary-light);
+  border-bottom-color: var(--primary-light);
 }
 
 /* =========================================
@@ -184,10 +225,9 @@ body {
 .mausam-page {
   width: 100%;
   max-width: 1440px;
-
   margin: 0 auto;
-
-  padding: 24px;
+  padding: clamp(12px, 2.5vw, 24px);
+  flex: 1;
 }
 
 /* =========================================
@@ -195,74 +235,43 @@ body {
 ========================================= */
 
 .mausam-section {
-  margin-bottom: 24px;
+  margin-bottom: clamp(16px, 2.5vw, 24px);
 }
 
 .mausam-section-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-
   margin-bottom: 12px;
-
   padding-bottom: 8px;
-
-  border-bottom:
-    1px solid var(--border);
+  border-bottom: 1px solid var(--border);
 }
 
 .mausam-section-title {
   margin: 0;
-
   color: var(--text);
-
-  font-size: 20px;
+  font-size: clamp(16px, 2vw, 20px);
   font-weight: 700;
 }
 
 /* =========================================
-   INFORMATION BLOCK
+   INFORMATION PANEL & CARD
 ========================================= */
 
 .mausam-panel {
   background: var(--surface);
-
-  border:
-    1px solid var(--border);
-
-  border-radius:
-    var(--radius);
-
-  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: clamp(12px, 2vw, 18px);
 }
 
-/* =========================================
-   GRID
-========================================= */
-
-.mausam-grid {
-  display: grid;
-
-  grid-template-columns:
-    repeat(12, 1fr);
-
-  gap: 16px;
-}
-
-.mausam-col-12 {
-  grid-column: span 12;
-}
-
-.mausam-col-8 {
-  grid-column: span 8;
-}
-
-.mausam-col-6 {
-  grid-column: span 6;
-}
-
-.mausam-col-4 {
-  grid-column: span 4;
+.mausam-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: clamp(12px, 2vw, 16px);
+  width: 100%;
+  min-width: 0;
 }
 
 /* =========================================
@@ -271,19 +280,15 @@ body {
 
 .mausam-data-label {
   display: block;
-
   margin-bottom: 3px;
-
   color: var(--text-muted);
-
-  font-size: 11px;
+  font-size: clamp(10px, 1vw, 11px);
   font-weight: 500;
 }
 
 .mausam-data-value {
   color: var(--text);
-
-  font-size: 16px;
+  font-size: clamp(14px, 1.5vw, 16px);
   font-weight: 600;
 }
 
@@ -292,109 +297,117 @@ body {
 ========================================= */
 
 .mausam-temperature {
-  font-size: 64px;
-
+  font-size: clamp(40px, 8vw, 64px);
   line-height: 1;
-
   font-weight: 400;
-
   color: var(--text);
 }
 
 .mausam-temperature-unit {
-  font-size: 24px;
-
+  font-size: clamp(18px, 3vw, 24px);
   color: var(--primary-light);
-
   vertical-align: top;
 }
 
 /* =========================================
-   BUTTON
+   BUTTON & INTERACTION TARGETS
 ========================================= */
 
+.mausam-btn,
 .mausam-button {
-  min-height: 36px;
-
-  padding: 0 14px;
-
-  border:
-    1px solid var(--primary);
-
-  border-radius:
-    var(--radius-small);
-
-  background:
-    var(--primary);
-
+  min-height: 40px;
+  min-width: 40px;
+  padding: 0 clamp(10px, 1.5vw, 14px);
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-small);
+  background: var(--primary);
   color: #fff;
-
   font-size: 13px;
   font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
+.mausam-btn:hover,
 .mausam-button:hover {
-  background:
-    var(--primary-dark);
+  background: var(--primary-dark);
 }
 
+.mausam-btn--sm {
+  min-height: 34px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.mausam-btn--secondary,
 .mausam-button-outline {
   background: transparent;
+  border-color: var(--border-light);
+  color: var(--text-body);
+}
 
-  border-color:
-    var(--border-light);
+.mausam-btn--secondary:hover,
+.mausam-button-outline:hover {
+  background: var(--surface-2);
+  border-color: var(--primary-light);
+  color: var(--text);
+}
 
-  color:
-    var(--text-body);
+.mausam-select {
+  min-height: 38px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 6px 10px;
+  border-radius: var(--radius-small);
+  outline: none;
+  font-size: 12px;
+}
+
+.mausam-select:focus {
+  border-color: var(--primary-light);
 }
 
 /* =========================================
-   TABLE
+   TABLES
 ========================================= */
 
+.mausam-table-container,
 .mausam-table-wrapper {
+  width: 100%;
+  max-width: 100%;
   overflow-x: auto;
-
-  border:
-    1px solid var(--border);
-
-  border-radius:
-    var(--radius);
+  -webkit-overflow-scrolling: touch;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
 }
 
 .mausam-table {
   width: 100%;
-
+  min-width: 580px;
   border-collapse: collapse;
 }
 
 .mausam-table th {
-  padding: 11px 14px;
-
-  background:
-    var(--surface-2);
-
-  color:
-    var(--text-muted);
-
-  border-bottom:
-    1px solid var(--border);
-
+  padding: clamp(8px, 1.5vw, 11px) clamp(10px, 1.5vw, 14px);
+  background: var(--surface-2);
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
   text-align: left;
-
   font-size: 11px;
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .mausam-table td {
-  padding: 12px 14px;
-
-  color:
-    var(--text-body);
-
-  border-bottom:
-    1px solid var(--border);
-
+  padding: clamp(10px, 1.5vw, 12px) clamp(10px, 1.5vw, 14px);
+  color: var(--text-body);
+  border-bottom: 1px solid var(--border);
   font-size: 13px;
 }
 
@@ -403,108 +416,217 @@ body {
 }
 
 .mausam-table tr:hover td {
-  background:
-    rgba(79, 168, 224, 0.04);
+  background: rgba(79, 168, 224, 0.04);
 }
 
 /* =========================================
-   ALERT
+   ALERT & BULLETIN
 ========================================= */
 
 .mausam-alert {
   display: flex;
   align-items: center;
   gap: 12px;
-
-  min-height: 58px;
-
-  padding: 10px 16px;
-
-  background:
-    rgba(231, 76, 60, 0.08);
-
-  border:
-    1px solid rgba(231, 76, 60, 0.45);
-
-  border-left:
-    4px solid var(--danger);
-
-  border-radius:
-    var(--radius);
+  min-height: 54px;
+  padding: 10px 14px;
+  background: rgba(231, 76, 60, 0.08);
+  border: 1px solid rgba(231, 76, 60, 0.45);
+  border-left: 4px solid var(--danger);
+  border-radius: var(--radius);
 }
 
 .mausam-alert.warning {
-  background:
-    rgba(241, 196, 15, 0.07);
-
-  border-color:
-    rgba(241, 196, 15, 0.4);
-
-  border-left-color:
-    var(--warning);
+  background: rgba(241, 196, 15, 0.07);
+  border-color: rgba(241, 196, 15, 0.4);
+  border-left-color: var(--warning);
 }
 
 .mausam-alert.normal {
-  background:
-    rgba(46, 204, 113, 0.06);
+  background: rgba(46, 204, 113, 0.06);
+  border-color: rgba(46, 204, 113, 0.35);
+  border-left-color: var(--good);
+}
 
-  border-color:
-    rgba(46, 204, 113, 0.35);
+.mausam-bulletin {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
 
-  border-left-color:
-    var(--good);
+@media (min-width: 640px) {
+  .mausam-bulletin {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.mausam-bulletin--danger {
+  background: rgba(231, 76, 60, 0.1);
+  border-color: rgba(231, 76, 60, 0.45);
+  border-left: 4px solid var(--danger);
+}
+
+.mausam-bulletin--warning {
+  background: rgba(241, 196, 15, 0.1);
+  border-color: rgba(241, 196, 15, 0.45);
+  border-left: 4px solid var(--warning);
+}
+
+.mausam-bulletin--good {
+  background: rgba(46, 204, 113, 0.08);
+  border-color: rgba(46, 204, 113, 0.35);
+  border-left: 4px solid var(--good);
 }
 
 /* =========================================
-   STATUS
+   CUSTOM SCROLLBARS (Touch / Subtle)
 ========================================= */
 
-.status-good {
-  color: var(--good);
+.scrollbar-thin::-webkit-scrollbar {
+  height: 5px;
+  width: 5px;
 }
 
-.status-warning {
-  color: var(--warning);
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: #17212B;
 }
 
-.status-alert {
-  color: var(--alert);
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 4px;
 }
 
-.status-danger {
-  color: var(--danger);
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: #4FA8E0;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 /* =========================================
-   RESPONSIVE
+   RESPONSIVE MEDIA QUERIES & TOUCH TARGETS
 ========================================= */
 
-@media (max-width: 900px) {
-  .mausam-col-8,
-  .mausam-col-6,
-  .mausam-col-4 {
-    grid-column: span 12;
+/* Mobile Touch Optimization (Phones & Small Tablets) */
+@media (max-width: 768px) {
+  /* Increase minimum touch targets to at least 44px on mobile */
+  .mausam-btn,
+  .mausam-button,
+  .mausam-select,
+  button:not(.text-btn):not(.inline-chip) {
+    min-height: 44px;
+    touch-action: manipulation;
   }
 
-  .mausam-header {
-    padding: 0 16px;
+  .mausam-btn--sm {
+    min-height: 40px;
+    padding: 0 12px;
   }
 
-  .mausam-page {
-    padding: 16px;
+  /* Safe tap target spacing */
+  .mausam-nav-item {
+    min-height: 44px;
+    padding: 0 14px;
   }
-}
 
-@media (max-width: 600px) {
-  .mausam-brand-subtitle {
-    display: none;
+  /* Fluid typography scaling on small screens */
+  h1 {
+    font-size: clamp(1.25rem, 5vw, 1.75rem) !important;
+    line-height: 1.25 !important;
+  }
+
+  h2 {
+    font-size: clamp(1.1rem, 4vw, 1.4rem) !important;
+    line-height: 1.3 !important;
+  }
+
+  h3 {
+    font-size: clamp(1rem, 3.5vw, 1.2rem) !important;
+    line-height: 1.35 !important;
   }
 
   .mausam-temperature {
-    font-size: 52px;
+    font-size: clamp(38px, 12vw, 56px);
   }
 
-  .mausam-page {
+  .mausam-table th,
+  .mausam-table td {
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+
+  /* Ensure cards and panels don't produce horizontal scroll */
+  .mausam-card,
+  .mausam-panel {
     padding: 12px;
+    border-radius: var(--radius);
+  }
+
+  /* Safe bottom padding for floating actions and home indicator */
+  .safe-area-bottom {
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px);
   }
 }
+
+/* Touch Device Specific Enhancements (Coarse Pointer) */
+@media (pointer: coarse) {
+  .mausam-btn,
+  .mausam-button,
+  .mausam-select,
+  .ask-mausam-cursor,
+  #floating-ask-mausam-btn,
+  #header-ask-mausam-button {
+    min-height: 44px;
+    touch-action: manipulation;
+  }
+
+  /* Expand hit-box for clickable items */
+  input[type="text"],
+  input[type="search"],
+  select {
+    font-size: 16px !important; /* Prevents auto-zoom on iOS Safari */
+    min-height: 44px;
+  }
+}
+
+/* Laptop & Desktop Precision (>= 1024px) */
+@media (min-width: 1024px) {
+  .mausam-page {
+    padding: 24px 32px;
+  }
+
+  .mausam-card,
+  .mausam-panel {
+    padding: 18px 20px;
+  }
+
+  .mausam-table th {
+    font-size: 12px;
+    padding: 12px 16px;
+  }
+
+  .mausam-table td {
+    font-size: 13px;
+    padding: 12px 16px;
+  }
+}
+
+/* Ultra-Wide Screen Constraints (>= 1536px) */
+@media (min-width: 1536px) {
+  .mausam-page,
+  .mausam-container {
+    max-width: 1440px;
+    margin-inline: auto;
+  }
+}
+

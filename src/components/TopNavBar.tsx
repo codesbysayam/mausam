@@ -349,7 +349,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
           {onOpenAskDrawer && (
             <button
               onClick={onOpenAskDrawer}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#0B72B9] hover:bg-[#0A5A94] text-[#FFFFFF] text-xs font-semibold shadow-sm transition-all cursor-pointer"
+              className="ask-mausam-cursor flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-[#0B72B9] hover:bg-[#0A5A94] text-[#FFFFFF] text-xs font-semibold shadow-sm transition-all border border-[#4FA8E0]/40"
             >
               <span className="material-symbols-outlined text-[16px]">smart_toy</span>
               <span className="hidden sm:inline">Ask Mausam</span>

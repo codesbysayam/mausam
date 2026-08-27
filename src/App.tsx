@@ -167,14 +167,17 @@ export default function App() {
 
   return (
     <div className="mausam-app min-h-screen bg-[#0F141A] text-[#D7DEE8] flex flex-col font-sans w-full overflow-x-hidden">
-      {/* 1. Official Government Header with Searchable Language Selector */}
+      {/* 1. Official Government Header with Searchable Language Selector & Mobile Drawer */}
       <GovernmentHeader
         selectedLocation={selectedLocation}
         onSelectLocation={handleSelectLocation}
         onOpenAskMausam={() => setIsAskMausamOpen(true)}
+        activeTab={activeTab}
+        onNavigateTab={(tab) => navigateToTab(tab as AppView)}
+        activeAlertCount={weatherBundle.alerts?.length || 0}
       />
 
-      {/* 2. Primary Navigation Bar */}
+      {/* 2. Primary Navigation Bar (Desktop/Tablet) */}
       <MainNavigation
         activeTab={activeTab}
         onTabChange={(tab) => navigateToTab(tab)}
@@ -182,8 +185,8 @@ export default function App() {
       />
 
       {/* 3. Main Body Content */}
-      <main className="flex-1">
-        <PageContainer>
+      <main id="main-content" className="flex-1 w-full min-w-0">
+        <PageContainer id="mausam-main-page-container">
           {/* HOME: National Weather Overview */}
           {activeTab === 'home' && (
             <HomePage
@@ -202,9 +205,12 @@ export default function App() {
               selectedLocation={selectedLocation}
               onRefresh={() => loadWeatherData(selectedLocation, true)}
               onChangeLocationClick={() => {
-                const searchInput = document.getElementById('station-search-input');
-                if (searchInput) {
-                  searchInput.focus();
+                const desktopInput = document.getElementById('station-search-input-desktop');
+                const mobileInput = document.getElementById('station-search-input-mobile');
+                if (mobileInput && window.innerWidth < 768) {
+                  mobileInput.focus();
+                } else if (desktopInput) {
+                  desktopInput.focus();
                 }
               }}
               onNavigateToTab={(tab) => navigateToTab(tab as AppView)}
@@ -272,7 +278,7 @@ export default function App() {
       {/* 4. Official Institutional Footer with unified FooterNavigation component */}
       <footer className="w-full bg-[#17212B] border-t border-[#334155] py-8 mt-12 text-xs text-[#8A94A6]">
         <div className="max-w-[1440px] mx-auto px-4 lg:px-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 pb-6 border-b border-[#334155]">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 pb-6 border-b border-[#334155]">
             <div>
               <div className="flex items-center gap-2 mb-2">
                 <span className="text-white font-bold text-sm">
@@ -321,7 +327,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="pt-4 flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px]">
+          <div className="pt-4 flex flex-col md:flex-row items-center justify-between gap-3 text-[11px] text-center md:text-left">
             <div>
               {t('allRightsReserved', '© 2026 MAUSAM National Meteorological Platform • Smart India Hackathon (SIH 2026)')}
             </div>
@@ -334,6 +340,22 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {/* Floating Ask MAUSAM AI Quick Trigger */}
+      <button
+        id="floating-ask-mausam-btn"
+        type="button"
+        onClick={() => setIsAskMausamOpen(true)}
+        className="ask-mausam-cursor fixed bottom-4 sm:bottom-5 right-4 sm:right-5 z-40 flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full bg-[#0B72B9] hover:bg-[#0A5A94] text-white text-xs font-bold shadow-xl border border-[#4FA8E0] transition-all hover:scale-105"
+        title="Ask MAUSAM AI Weather & Advisory"
+        aria-label="Open Ask MAUSAM AI Assistant"
+      >
+        <span className="material-symbols-outlined text-[18px] sm:text-[20px] text-[#4FA8E0] animate-spin-slow">
+          auto_awesome
+        </span>
+        <span className="font-semibold tracking-wide text-[11px] sm:text-xs">Ask MAUSAM</span>
+        <span className="w-2 h-2 rounded-full bg-[#2ECC71] animate-ping" />
+      </button>
 
       {/* AI Advisory Drawer */}
       <AskMausamDrawer

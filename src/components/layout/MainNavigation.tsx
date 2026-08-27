@@ -45,7 +45,7 @@ export const MainNavigation: React.FC<MainNavigationProps> = ({
   const { t } = useLanguage();
 
   return (
-    <nav className="w-full bg-[#17212B] border-b border-[#334155] select-none" aria-label="Main Navigation">
+    <nav className="hidden md:block w-full bg-[#17212B] border-b border-[#334155] select-none" aria-label="Main Navigation">
       <div className="max-w-[1440px] mx-auto px-4 lg:px-6">
         <div className="flex items-center space-x-1 sm:space-x-2 overflow-x-auto scrollbar-none py-0">
           {NAV_CONFIG.map((item) => {
@@ -59,7 +59,7 @@ export const MainNavigation: React.FC<MainNavigationProps> = ({
                 id={`nav-tab-${item.id}`}
                 type="button"
                 onClick={() => onTabChange(item.id)}
-                className={`flex items-center gap-1.5 h-12 px-3.5 text-xs font-bold tracking-wider relative transition-colors whitespace-nowrap cursor-pointer ${
+                className={`flex items-center gap-1.5 h-12 px-3 lg:px-4 text-xs font-bold tracking-wider relative transition-colors whitespace-nowrap cursor-pointer ${
                   isActive
                     ? 'text-[#4FA8E0] bg-[#1E2733]/60'
                     : 'text-[#D7DEE8] hover:text-[#4FA8E0] hover:bg-[#1E2733]/30'

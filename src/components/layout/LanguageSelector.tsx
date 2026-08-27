@@ -99,7 +99,7 @@ export const LanguageSelector: React.FC = () => {
         <div
           role="listbox"
           aria-label="Select platform language"
-          className="absolute right-0 mt-1.5 w-64 sm:w-72 bg-[#17212B] border border-[#334155] rounded-[5px] shadow-2xl z-50 overflow-hidden flex flex-col"
+          className="absolute right-0 mt-1.5 w-64 sm:w-72 max-w-[calc(100vw-24px)] bg-[#17212B] border border-[#334155] rounded-[5px] shadow-2xl z-50 overflow-hidden flex flex-col"
           style={{ maxHeight: '380px' }}
         >
           {/* Search Header */}
