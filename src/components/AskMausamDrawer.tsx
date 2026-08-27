@@ -57,8 +57,6 @@ Source: India Meteorological Department (IMD) / MAUSAM Core`,
   const [inputPrompt, setInputPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
-  if (!isOpen) return null;
-
   const supportedLanguages = [
     'English',
     'Hindi (हिन्दी)',
