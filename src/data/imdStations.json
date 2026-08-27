@@ -1,330 +1,169 @@
 [
-  {
-    "id": "42971",
-    "name": "Bhubaneswar",
-    "state": "Odisha",
-    "latitude": 20.2961,
-    "longitude": 85.8245,
-    "type": "city"
-  },
-  {
-    "id": "42970",
-    "name": "Cuttack",
-    "state": "Odisha",
-    "latitude": 20.4625,
-    "longitude": 85.8830,
-    "type": "city"
-  },
-  {
-    "id": "42972",
-    "name": "Puri",
-    "state": "Odisha",
-    "latitude": 19.8135,
-    "longitude": 85.8312,
-    "type": "coastal"
-  },
-  {
-    "id": "42976",
-    "name": "Paradip",
-    "state": "Odisha",
-    "latitude": 20.2644,
-    "longitude": 86.6094,
-    "type": "port"
-  },
-  {
-    "id": "43049",
-    "name": "Gopalpur",
-    "state": "Odisha",
-    "latitude": 19.2600,
-    "longitude": 84.9100,
-    "type": "coastal"
-  },
-  {
-    "id": "42895",
-    "name": "Balasore",
-    "state": "Odisha",
-    "latitude": 21.4934,
-    "longitude": 86.9135,
-    "type": "city"
-  },
-  {
-    "id": "42883",
-    "name": "Sambalpur",
-    "state": "Odisha",
-    "latitude": 21.4669,
-    "longitude": 83.9812,
-    "type": "city"
-  },
-  {
-    "id": "42886",
-    "name": "Jharsuguda",
-    "state": "Odisha",
-    "latitude": 21.8554,
-    "longitude": 84.0062,
-    "type": "city"
-  },
-  {
-    "id": "42887",
-    "name": "Rourkela",
-    "state": "Odisha",
-    "latitude": 22.2604,
-    "longitude": 84.8536,
-    "type": "city"
-  },
-  {
-    "id": "43045",
-    "name": "Koraput",
-    "state": "Odisha",
-    "latitude": 18.8135,
-    "longitude": 82.7123,
-    "type": "hill"
-  },
-  {
-    "id": "42182",
-    "name": "New Delhi (Safdarjung)",
-    "state": "Delhi",
-    "latitude": 28.5850,
-    "longitude": 77.2060,
-    "type": "capital"
-  },
-  {
-    "id": "42181",
-    "name": "New Delhi (Palam)",
-    "state": "Delhi",
-    "latitude": 28.5630,
-    "longitude": 77.1090,
-    "type": "airport"
-  },
-  {
-    "id": "43003",
-    "name": "Mumbai (Santacruz)",
-    "state": "Maharashtra",
-    "latitude": 19.1176,
-    "longitude": 72.8561,
-    "type": "metro"
-  },
-  {
-    "id": "43057",
-    "name": "Mumbai (Colaba)",
-    "state": "Maharashtra",
-    "latitude": 18.9067,
-    "longitude": 72.8147,
-    "type": "coastal"
-  },
-  {
-    "id": "43063",
-    "name": "Pune",
-    "state": "Maharashtra",
-    "latitude": 18.5204,
-    "longitude": 73.8567,
-    "type": "city"
-  },
-  {
-    "id": "42809",
-    "name": "Kolkata (Alipore)",
-    "state": "West Bengal",
-    "latitude": 22.5255,
-    "longitude": 88.3308,
-    "type": "metro"
-  },
-  {
-    "id": "42807",
-    "name": "Kolkata (Dum Dum)",
-    "state": "West Bengal",
-    "latitude": 22.6547,
-    "longitude": 88.4467,
-    "type": "airport"
-  },
-  {
-    "id": "42295",
-    "name": "Darjeeling",
-    "state": "West Bengal",
-    "latitude": 27.0410,
-    "longitude": 88.2663,
-    "type": "hill"
-  },
-  {
-    "id": "43279",
-    "name": "Chennai (Nungambakkam)",
-    "state": "Tamil Nadu",
-    "latitude": 13.0620,
-    "longitude": 80.2410,
-    "type": "coastal"
-  },
-  {
-    "id": "43278",
-    "name": "Chennai (Meenambakkam)",
-    "state": "Tamil Nadu",
-    "latitude": 12.9940,
-    "longitude": 80.1810,
-    "type": "airport"
-  },
-  {
-    "id": "43295",
-    "name": "Bengaluru (City)",
-    "state": "Karnataka",
-    "latitude": 12.9716,
-    "longitude": 77.5946,
-    "type": "metro"
-  },
-  {
-    "id": "43296",
-    "name": "Bengaluru (HAL Airport)",
-    "state": "Karnataka",
-    "latitude": 12.9500,
-    "longitude": 77.6680,
-    "type": "airport"
-  },
-  {
-    "id": "43128",
-    "name": "Hyderabad (Begumpet)",
-    "state": "Telangana",
-    "latitude": 17.4531,
-    "longitude": 78.4677,
-    "type": "metro"
-  },
-  {
-    "id": "42647",
-    "name": "Ahmedabad",
-    "state": "Gujarat",
-    "latitude": 23.0225,
-    "longitude": 72.5714,
-    "type": "city"
-  },
-  {
-    "id": "42348",
-    "name": "Jaipur",
-    "state": "Rajasthan",
-    "latitude": 26.9124,
-    "longitude": 75.7873,
-    "type": "capital"
-  },
-  {
-    "id": "42369",
-    "name": "Lucknow",
-    "state": "Uttar Pradesh",
-    "latitude": 26.8467,
-    "longitude": 80.9462,
-    "type": "capital"
-  },
-  {
-    "id": "42475",
-    "name": "Varanasi",
-    "state": "Uttar Pradesh",
-    "latitude": 25.3176,
-    "longitude": 82.9739,
-    "type": "city"
-  },
-  {
-    "id": "42492",
-    "name": "Patna",
-    "state": "Bihar",
-    "latitude": 25.5941,
-    "longitude": 85.1376,
-    "type": "capital"
-  },
-  {
-    "id": "42667",
-    "name": "Bhopal",
-    "state": "Madhya Pradesh",
-    "latitude": 23.2599,
-    "longitude": 77.4126,
-    "type": "capital"
-  },
-  {
-    "id": "42111",
-    "name": "Chandigarh",
-    "state": "Chandigarh",
-    "latitude": 30.7333,
-    "longitude": 76.7794,
-    "type": "ut"
-  },
-  {
-    "id": "42083",
-    "name": "Shimla",
-    "state": "Himachal Pradesh",
-    "latitude": 31.1048,
-    "longitude": 77.1734,
-    "type": "hill"
-  },
-  {
-    "id": "42112",
-    "name": "Dehradun",
-    "state": "Uttarakhand",
-    "latitude": 30.3165,
-    "longitude": 78.0322,
-    "type": "capital"
-  },
-  {
-    "id": "42027",
-    "name": "Srinagar",
-    "state": "Jammu and Kashmir",
-    "latitude": 34.0837,
-    "longitude": 74.7973,
-    "type": "valley"
-  },
-  {
-    "id": "42410",
-    "name": "Guwahati",
-    "state": "Assam",
-    "latitude": 26.1445,
-    "longitude": 91.7362,
-    "type": "city"
-  },
-  {
-    "id": "43371",
-    "name": "Thiruvananthapuram",
-    "state": "Kerala",
-    "latitude": 8.5241,
-    "longitude": 76.9366,
-    "type": "coastal"
-  },
-  {
-    "id": "43346",
-    "name": "Kochi",
-    "state": "Kerala",
-    "latitude": 9.9312,
-    "longitude": 76.2673,
-    "type": "port"
-  },
-  {
-    "id": "43189",
-    "name": "Visakhapatnam",
-    "state": "Andhra Pradesh",
-    "latitude": 17.6868,
-    "longitude": 83.2185,
-    "type": "port"
-  },
-  {
-    "id": "43314",
-    "name": "Panaji",
-    "state": "Goa",
-    "latitude": 15.4909,
-    "longitude": 73.8278,
-    "type": "coastal"
-  },
-  {
-    "id": "42798",
-    "name": "Ranchi",
-    "state": "Jharkhand",
-    "latitude": 23.3441,
-    "longitude": 85.3096,
-    "type": "capital"
-  },
-  {
-    "id": "42898",
-    "name": "Raipur",
-    "state": "Chhattisgarh",
-    "latitude": 21.2514,
-    "longitude": 81.6296,
-    "type": "capital"
-  },
-  {
-    "id": "43333",
-    "name": "Port Blair",
-    "state": "Andaman and Nicobar Islands",
-    "latitude": 11.6234,
-    "longitude": 92.7265,
-    "type": "island"
-  }
+  { "stationId": "42971", "stationName": "Bhubaneswar", "state": "Odisha", "city": "Bhubaneswar", "latitude": 20.30, "longitude": 85.82, "elevation": 45, "active": true, "verified": true },
+  { "stationId": "42970", "stationName": "Cuttack", "state": "Odisha", "city": "Cuttack", "latitude": 20.46, "longitude": 85.88, "elevation": 37, "active": true, "verified": true },
+  { "stationId": "42972", "stationName": "Puri", "state": "Odisha", "city": "Puri", "latitude": 19.81, "longitude": 85.83, "elevation": 16, "active": true, "verified": true },
+  { "stationId": "42976", "stationName": "Paradip", "state": "Odisha", "city": "Paradip", "latitude": 20.26, "longitude": 86.61, "elevation": 5, "active": true, "verified": true },
+  { "stationId": "43049", "stationName": "Gopalpur", "state": "Odisha", "city": "Gopalpur", "latitude": 19.26, "longitude": 84.91, "elevation": 17, "active": true, "verified": true },
+  { "stationId": "42895", "stationName": "Balasore", "state": "Odisha", "city": "Balasore", "latitude": 21.49, "longitude": 86.91, "elevation": 20, "active": true, "verified": true },
+  { "stationId": "42883", "stationName": "Sambalpur", "state": "Odisha", "city": "Sambalpur", "latitude": 21.47, "longitude": 83.98, "elevation": 151, "active": true, "verified": true },
+  { "stationId": "42886", "stationName": "Jharsuguda", "state": "Odisha", "city": "Jharsuguda", "latitude": 21.86, "longitude": 84.01, "elevation": 231, "active": true, "verified": true },
+  { "stationId": "42887", "stationName": "Rourkela", "state": "Odisha", "city": "Rourkela", "latitude": 22.26, "longitude": 84.85, "elevation": 200, "active": true, "verified": true },
+  { "stationId": "43045", "stationName": "Koraput", "state": "Odisha", "city": "Koraput", "latitude": 18.81, "longitude": 82.71, "elevation": 870, "active": true, "verified": true },
+  { "stationId": "42892", "stationName": "Angul", "state": "Odisha", "city": "Angul", "latitude": 20.84, "longitude": 85.15, "elevation": 139, "active": true, "verified": true },
+  { "stationId": "43048", "stationName": "Berhampur", "state": "Odisha", "city": "Berhampur", "latitude": 19.32, "longitude": 84.79, "elevation": 27, "active": true, "verified": true },
+
+  { "stationId": "42182", "stationName": "New Delhi (Safdarjung)", "state": "Delhi", "city": "New Delhi", "latitude": 28.58, "longitude": 77.21, "elevation": 216, "active": true, "verified": true },
+  { "stationId": "42181", "stationName": "New Delhi (Palam)", "state": "Delhi", "city": "New Delhi", "latitude": 28.56, "longitude": 77.11, "elevation": 237, "active": true, "verified": true },
+  { "stationId": "42183", "stationName": "Delhi (Ridge)", "state": "Delhi", "city": "Delhi", "latitude": 28.67, "longitude": 77.21, "elevation": 230, "active": true, "verified": true },
+  { "stationId": "42184", "stationName": "Delhi (Lodhi Road)", "state": "Delhi", "city": "Delhi", "latitude": 28.59, "longitude": 77.22, "elevation": 215, "active": true, "verified": true },
+  { "stationId": "42185", "stationName": "Delhi (Ayanagar)", "state": "Delhi", "city": "Delhi", "latitude": 28.48, "longitude": 77.13, "elevation": 260, "active": true, "verified": true },
+
+  { "stationId": "43003", "stationName": "Mumbai (Santacruz)", "state": "Maharashtra", "city": "Mumbai", "latitude": 19.12, "longitude": 72.86, "elevation": 14, "active": true, "verified": true },
+  { "stationId": "43057", "stationName": "Mumbai (Colaba)", "state": "Maharashtra", "city": "Mumbai", "latitude": 18.91, "longitude": 72.81, "elevation": 11, "active": true, "verified": true },
+  { "stationId": "43063", "stationName": "Pune", "state": "Maharashtra", "city": "Pune", "latitude": 18.52, "longitude": 73.86, "elevation": 559, "active": true, "verified": true },
+  { "stationId": "42867", "stationName": "Nagpur", "state": "Maharashtra", "city": "Nagpur", "latitude": 21.15, "longitude": 79.09, "elevation": 310, "active": true, "verified": true },
+  { "stationId": "42921", "stationName": "Nashik", "state": "Maharashtra", "city": "Nashik", "latitude": 20.00, "longitude": 73.79, "elevation": 600, "active": true, "verified": true },
+  { "stationId": "42974", "stationName": "Chhatrapati Sambhajinagar", "state": "Maharashtra", "city": "Aurangabad", "latitude": 19.88, "longitude": 75.34, "elevation": 582, "active": true, "verified": true },
+  { "stationId": "43117", "stationName": "Kolhapur", "state": "Maharashtra", "city": "Kolhapur", "latitude": 16.71, "longitude": 74.24, "elevation": 570, "active": true, "verified": true },
+
+  { "stationId": "42809", "stationName": "Kolkata (Alipore)", "state": "West Bengal", "city": "Kolkata", "latitude": 22.53, "longitude": 88.33, "elevation": 6, "active": true, "verified": true },
+  { "stationId": "42807", "stationName": "Kolkata (Dum Dum)", "state": "West Bengal", "city": "Kolkata", "latitude": 22.65, "longitude": 88.45, "elevation": 5, "active": true, "verified": true },
+  { "stationId": "42295", "stationName": "Darjeeling", "state": "West Bengal", "city": "Darjeeling", "latitude": 27.04, "longitude": 88.27, "elevation": 2127, "active": true, "verified": true },
+  { "stationId": "42298", "stationName": "Siliguri", "state": "West Bengal", "city": "Siliguri", "latitude": 26.73, "longitude": 88.40, "elevation": 122, "active": true, "verified": true },
+  { "stationId": "42784", "stationName": "Asansol", "state": "West Bengal", "city": "Asansol", "latitude": 23.67, "longitude": 86.95, "elevation": 126, "active": true, "verified": true },
+  { "stationId": "42903", "stationName": "Digha", "state": "West Bengal", "city": "Digha", "latitude": 21.63, "longitude": 87.51, "elevation": 6, "active": true, "verified": true },
+  { "stationId": "42309", "stationName": "Jalpaiguri", "state": "West Bengal", "city": "Jalpaiguri", "latitude": 26.54, "longitude": 88.72, "elevation": 86, "active": true, "verified": true },
+  { "stationId": "42503", "stationName": "Malda", "state": "West Bengal", "city": "Malda", "latitude": 25.01, "longitude": 88.14, "elevation": 32, "active": true, "verified": true },
+
+  { "stationId": "43279", "stationName": "Chennai (Nungambakkam)", "state": "Tamil Nadu", "city": "Chennai", "latitude": 13.06, "longitude": 80.24, "elevation": 16, "active": true, "verified": true },
+  { "stationId": "43278", "stationName": "Chennai (Meenambakkam)", "state": "Tamil Nadu", "city": "Chennai", "latitude": 12.99, "longitude": 80.18, "elevation": 16, "active": true, "verified": true },
+  { "stationId": "43321", "stationName": "Coimbatore", "state": "Tamil Nadu", "city": "Coimbatore", "latitude": 11.02, "longitude": 76.96, "elevation": 411, "active": true, "verified": true },
+  { "stationId": "43371", "stationName": "Madurai", "state": "Tamil Nadu", "city": "Madurai", "latitude": 9.93, "longitude": 78.12, "elevation": 134, "active": true, "verified": true },
+  { "stationId": "43344", "stationName": "Tiruchirappalli", "state": "Tamil Nadu", "city": "Tiruchirappalli", "latitude": 10.79, "longitude": 78.70, "elevation": 88, "active": true, "verified": true },
+  { "stationId": "43325", "stationName": "Salem", "state": "Tamil Nadu", "city": "Salem", "latitude": 11.66, "longitude": 78.15, "elevation": 278, "active": true, "verified": true },
+  { "stationId": "43379", "stationName": "Kanyakumari", "state": "Tamil Nadu", "city": "Kanyakumari", "latitude": 8.09, "longitude": 77.54, "elevation": 30, "active": true, "verified": true },
+
+  { "stationId": "43295", "stationName": "Bengaluru (City)", "state": "Karnataka", "city": "Bengaluru", "latitude": 12.97, "longitude": 77.59, "elevation": 920, "active": true, "verified": true },
+  { "stationId": "43296", "stationName": "Bengaluru (HAL Airport)", "state": "Karnataka", "city": "Bengaluru", "latitude": 12.95, "longitude": 77.67, "elevation": 888, "active": true, "verified": true },
+  { "stationId": "43284", "stationName": "Mangaluru", "state": "Karnataka", "city": "Mangaluru", "latitude": 12.91, "longitude": 74.86, "elevation": 22, "active": true, "verified": true },
+  { "stationId": "43321", "stationName": "Mysuru", "state": "Karnataka", "city": "Mysuru", "latitude": 12.30, "longitude": 76.64, "elevation": 770, "active": true, "verified": true },
+  { "stationId": "43198", "stationName": "Belagavi", "state": "Karnataka", "city": "Belagavi", "latitude": 15.85, "longitude": 74.50, "elevation": 762, "active": true, "verified": true },
+  { "stationId": "43201", "stationName": "Hubballi-Dharwad", "state": "Karnataka", "city": "Hubballi", "latitude": 15.36, "longitude": 75.12, "elevation": 671, "active": true, "verified": true },
+
+  { "stationId": "43128", "stationName": "Hyderabad (Begumpet)", "state": "Telangana", "city": "Hyderabad", "latitude": 17.45, "longitude": 78.47, "elevation": 545, "active": true, "verified": true },
+  { "stationId": "43129", "stationName": "Hyderabad (RGIA)", "state": "Telangana", "city": "Hyderabad", "latitude": 17.24, "longitude": 78.43, "elevation": 617, "active": true, "verified": true },
+  { "stationId": "43111", "stationName": "Warangal", "state": "Telangana", "city": "Warangal", "latitude": 17.97, "longitude": 79.59, "elevation": 270, "active": true, "verified": true },
+  { "stationId": "43086", "stationName": "Nizamabad", "state": "Telangana", "city": "Nizamabad", "latitude": 18.67, "longitude": 78.09, "elevation": 395, "active": true, "verified": true },
+  { "stationId": "43087", "stationName": "Ramagundam", "state": "Telangana", "city": "Ramagundam", "latitude": 18.76, "longitude": 79.47, "elevation": 179, "active": true, "verified": true },
+  { "stationId": "43152", "stationName": "Khammam", "state": "Telangana", "city": "Khammam", "latitude": 17.25, "longitude": 80.15, "elevation": 112, "active": true, "verified": true },
+
+  { "stationId": "42647", "stationName": "Ahmedabad", "state": "Gujarat", "city": "Ahmedabad", "latitude": 23.02, "longitude": 72.57, "elevation": 53, "active": true, "verified": true },
+  { "stationId": "42840", "stationName": "Surat", "state": "Gujarat", "city": "Surat", "latitude": 21.17, "longitude": 72.83, "elevation": 13, "active": true, "verified": true },
+  { "stationId": "42743", "stationName": "Vadodara", "state": "Gujarat", "city": "Vadodara", "latitude": 22.31, "longitude": 73.18, "elevation": 36, "active": true, "verified": true },
+  { "stationId": "42671", "stationName": "Rajkot", "state": "Gujarat", "city": "Rajkot", "latitude": 22.30, "longitude": 70.80, "elevation": 138, "active": true, "verified": true },
+  { "stationId": "42634", "stationName": "Bhuj", "state": "Gujarat", "city": "Bhuj", "latitude": 23.24, "longitude": 69.67, "elevation": 110, "active": true, "verified": true },
+  { "stationId": "42830", "stationName": "Porbandar", "state": "Gujarat", "city": "Porbandar", "latitude": 21.64, "longitude": 69.63, "elevation": 10, "active": true, "verified": true },
+
+  { "stationId": "42348", "stationName": "Jaipur", "state": "Rajasthan", "city": "Jaipur", "latitude": 26.91, "longitude": 75.79, "elevation": 431, "active": true, "verified": true },
+  { "stationId": "42339", "stationName": "Jodhpur", "state": "Rajasthan", "city": "Jodhpur", "latitude": 26.24, "longitude": 73.02, "elevation": 231, "active": true, "verified": true },
+  { "stationId": "42542", "stationName": "Udaipur", "state": "Rajasthan", "city": "Udaipur", "latitude": 24.59, "longitude": 73.71, "elevation": 600, "active": true, "verified": true },
+  { "stationId": "42165", "stationName": "Bikaner", "state": "Rajasthan", "city": "Bikaner", "latitude": 28.02, "longitude": 73.31, "elevation": 242, "active": true, "verified": true },
+  { "stationId": "42452", "stationName": "Kota", "state": "Rajasthan", "city": "Kota", "latitude": 25.21, "longitude": 75.86, "elevation": 271, "active": true, "verified": true },
+  { "stationId": "42343", "stationName": "Ajmer", "state": "Rajasthan", "city": "Ajmer", "latitude": 26.45, "longitude": 74.64, "elevation": 486, "active": true, "verified": true },
+  { "stationId": "42328", "stationName": "Jaisalmer", "state": "Rajasthan", "city": "Jaisalmer", "latitude": 26.92, "longitude": 70.91, "elevation": 225, "active": true, "verified": true },
+
+  { "stationId": "42369", "stationName": "Lucknow", "state": "Uttar Pradesh", "city": "Lucknow", "latitude": 26.85, "longitude": 80.95, "elevation": 123, "active": true, "verified": true },
+  { "stationId": "42475", "stationName": "Varanasi", "state": "Uttar Pradesh", "city": "Varanasi", "latitude": 25.32, "longitude": 82.97, "elevation": 81, "active": true, "verified": true },
+  { "stationId": "42379", "stationName": "Kanpur", "state": "Uttar Pradesh", "city": "Kanpur", "latitude": 26.45, "longitude": 80.33, "elevation": 126, "active": true, "verified": true },
+  { "stationId": "42473", "stationName": "Prayagraj", "state": "Uttar Pradesh", "city": "Prayagraj", "latitude": 25.44, "longitude": 81.85, "elevation": 98, "active": true, "verified": true },
+  { "stationId": "42260", "stationName": "Agra", "state": "Uttar Pradesh", "city": "Agra", "latitude": 27.18, "longitude": 78.01, "elevation": 169, "active": true, "verified": true },
+  { "stationId": "42139", "stationName": "Meerut", "state": "Uttar Pradesh", "city": "Meerut", "latitude": 28.98, "longitude": 77.71, "elevation": 222, "active": true, "verified": true },
+  { "stationId": "42391", "stationName": "Gorakhpur", "state": "Uttar Pradesh", "city": "Gorakhpur", "latitude": 26.76, "longitude": 83.37, "elevation": 77, "active": true, "verified": true },
+  { "stationId": "42275", "stationName": "Bareilly", "state": "Uttar Pradesh", "city": "Bareilly", "latitude": 28.37, "longitude": 79.43, "elevation": 178, "active": true, "verified": true },
+  { "stationId": "42451", "stationName": "Jhansi", "state": "Uttar Pradesh", "city": "Jhansi", "latitude": 25.45, "longitude": 78.57, "elevation": 284, "active": true, "verified": true },
+
+  { "stationId": "42492", "stationName": "Patna", "state": "Bihar", "city": "Patna", "latitude": 25.59, "longitude": 85.14, "elevation": 53, "active": true, "verified": true },
+  { "stationId": "42591", "stationName": "Gaya", "state": "Bihar", "city": "Gaya", "latitude": 24.79, "longitude": 85.00, "elevation": 116, "active": true, "verified": true },
+  { "stationId": "42498", "stationName": "Bhagalpur", "state": "Bihar", "city": "Bhagalpur", "latitude": 25.24, "longitude": 86.98, "elevation": 52, "active": true, "verified": true },
+  { "stationId": "42398", "stationName": "Muzaffarpur", "state": "Bihar", "city": "Muzaffarpur", "latitude": 26.12, "longitude": 85.36, "elevation": 60, "active": true, "verified": true },
+  { "stationId": "42499", "stationName": "Purnea", "state": "Bihar", "city": "Purnea", "latitude": 25.78, "longitude": 87.48, "elevation": 36, "active": true, "verified": true },
+
+  { "stationId": "42667", "stationName": "Bhopal", "state": "Madhya Pradesh", "city": "Bhopal", "latitude": 23.26, "longitude": 77.41, "elevation": 527, "active": true, "verified": true },
+  { "stationId": "42754", "stationName": "Indore", "state": "Madhya Pradesh", "city": "Indore", "latitude": 22.72, "longitude": 75.86, "elevation": 553, "active": true, "verified": true },
+  { "stationId": "42261", "stationName": "Gwalior", "state": "Madhya Pradesh", "city": "Gwalior", "latitude": 26.22, "longitude": 78.18, "elevation": 207, "active": true, "verified": true },
+  { "stationId": "42675", "stationName": "Jabalpur", "state": "Madhya Pradesh", "city": "Jabalpur", "latitude": 23.18, "longitude": 79.99, "elevation": 411, "active": true, "verified": true },
+  { "stationId": "42750", "stationName": "Ujjain", "state": "Madhya Pradesh", "city": "Ujjain", "latitude": 23.18, "longitude": 75.79, "elevation": 491, "active": true, "verified": true },
+  { "stationId": "42455", "stationName": "Khajuraho", "state": "Madhya Pradesh", "city": "Khajuraho", "latitude": 24.83, "longitude": 79.92, "elevation": 222, "active": true, "verified": true },
+
+  { "stationId": "42027", "stationName": "Srinagar", "state": "Jammu and Kashmir", "city": "Srinagar", "latitude": 34.08, "longitude": 74.80, "elevation": 1587, "active": true, "verified": true },
+  { "stationId": "42056", "stationName": "Jammu", "state": "Jammu and Kashmir", "city": "Jammu", "latitude": 32.73, "longitude": 74.86, "elevation": 327, "active": true, "verified": true },
+  { "stationId": "42026", "stationName": "Gulmarg", "state": "Jammu and Kashmir", "city": "Gulmarg", "latitude": 34.05, "longitude": 74.38, "elevation": 2690, "active": true, "verified": true },
+  { "stationId": "42028", "stationName": "Pahalgam", "state": "Jammu and Kashmir", "city": "Pahalgam", "latitude": 34.02, "longitude": 75.32, "elevation": 2130, "active": true, "verified": true },
+  { "stationId": "42054", "stationName": "Batote", "state": "Jammu and Kashmir", "city": "Batote", "latitude": 33.17, "longitude": 75.32, "elevation": 1560, "active": true, "verified": true },
+  { "stationId": "42055", "stationName": "Katra", "state": "Jammu and Kashmir", "city": "Katra", "latitude": 32.99, "longitude": 74.93, "elevation": 875, "active": true, "verified": true },
+
+  { "stationId": "42018", "stationName": "Leh", "state": "Ladakh", "city": "Leh", "latitude": 34.15, "longitude": 77.58, "elevation": 3514, "active": true, "verified": true },
+  { "stationId": "42019", "stationName": "Kargil", "state": "Ladakh", "city": "Kargil", "latitude": 34.55, "longitude": 76.13, "elevation": 2676, "active": true, "verified": true },
+  { "stationId": "42017", "stationName": "Drass", "state": "Ladakh", "city": "Drass", "latitude": 34.43, "longitude": 75.75, "elevation": 3280, "active": true, "verified": true },
+
+  { "stationId": "42410", "stationName": "Guwahati", "state": "Assam", "city": "Guwahati", "latitude": 26.14, "longitude": 91.74, "elevation": 55, "active": true, "verified": true },
+  { "stationId": "42314", "stationName": "Dibrugarh", "state": "Assam", "city": "Dibrugarh", "latitude": 27.47, "longitude": 94.91, "elevation": 108, "active": true, "verified": true },
+  { "stationId": "42619", "stationName": "Silchar", "state": "Assam", "city": "Silchar", "latitude": 24.83, "longitude": 92.78, "elevation": 25, "active": true, "verified": true },
+  { "stationId": "42412", "stationName": "Tezpur", "state": "Assam", "city": "Tezpur", "latitude": 26.65, "longitude": 92.79, "elevation": 48, "active": true, "verified": true },
+  { "stationId": "42413", "stationName": "Jorhat", "state": "Assam", "city": "Jorhat", "latitude": 26.75, "longitude": 94.20, "elevation": 116, "active": true, "verified": true },
+
+  { "stationId": "42083", "stationName": "Shimla", "state": "Himachal Pradesh", "city": "Shimla", "latitude": 31.10, "longitude": 77.17, "elevation": 2205, "active": true, "verified": true },
+  { "stationId": "42065", "stationName": "Dharamshala", "state": "Himachal Pradesh", "city": "Dharamshala", "latitude": 32.22, "longitude": 76.32, "elevation": 1457, "active": true, "verified": true },
+  { "stationId": "42062", "stationName": "Manali", "state": "Himachal Pradesh", "city": "Manali", "latitude": 32.24, "longitude": 77.19, "elevation": 2050, "active": true, "verified": true },
+  { "stationId": "42063", "stationName": "Kullu", "state": "Himachal Pradesh", "city": "Kullu", "latitude": 31.96, "longitude": 77.11, "elevation": 1279, "active": true, "verified": true },
+  { "stationId": "42084", "stationName": "Solan", "state": "Himachal Pradesh", "city": "Solan", "latitude": 30.90, "longitude": 77.10, "elevation": 1502, "active": true, "verified": true },
+
+  { "stationId": "42112", "stationName": "Dehradun", "state": "Uttarakhand", "city": "Dehradun", "latitude": 30.32, "longitude": 78.03, "elevation": 682, "active": true, "verified": true },
+  { "stationId": "42116", "stationName": "Pantnagar", "state": "Uttarakhand", "city": "Pantnagar", "latitude": 29.02, "longitude": 79.49, "elevation": 244, "active": true, "verified": true },
+  { "stationId": "42114", "stationName": "Mukteshwar", "state": "Uttarakhand", "city": "Mukteshwar", "latitude": 29.47, "longitude": 79.65, "elevation": 2311, "active": true, "verified": true },
+  { "stationId": "42113", "stationName": "Nainital", "state": "Uttarakhand", "city": "Nainital", "latitude": 29.39, "longitude": 79.45, "elevation": 2084, "active": true, "verified": true },
+  { "stationId": "42117", "stationName": "Haridwar", "state": "Uttarakhand", "city": "Haridwar", "latitude": 29.95, "longitude": 78.16, "elevation": 314, "active": true, "verified": true },
+
+  { "stationId": "42111", "stationName": "Chandigarh", "state": "Chandigarh", "city": "Chandigarh", "latitude": 30.73, "longitude": 76.78, "elevation": 321, "active": true, "verified": true },
+
+  { "stationId": "43371", "stationName": "Thiruvananthapuram", "state": "Kerala", "city": "Thiruvananthapuram", "latitude": 8.52, "longitude": 76.94, "elevation": 64, "active": true, "verified": true },
+  { "stationId": "43346", "stationName": "Kochi", "state": "Kerala", "city": "Kochi", "latitude": 9.93, "longitude": 76.27, "elevation": 3, "active": true, "verified": true },
+  { "stationId": "43319", "stationName": "Kozhikode", "state": "Kerala", "city": "Kozhikode", "latitude": 11.26, "longitude": 75.78, "elevation": 5, "active": true, "verified": true },
+  { "stationId": "43315", "stationName": "Kannur", "state": "Kerala", "city": "Kannur", "latitude": 11.87, "longitude": 75.37, "elevation": 12, "active": true, "verified": true },
+  { "stationId": "43353", "stationName": "Alappuzha", "state": "Kerala", "city": "Alappuzha", "latitude": 9.50, "longitude": 76.34, "elevation": 4, "active": true, "verified": true },
+  { "stationId": "43355", "stationName": "Kottayam", "state": "Kerala", "city": "Kottayam", "latitude": 9.59, "longitude": 76.52, "elevation": 18, "active": true, "verified": true },
+
+  { "stationId": "43189", "stationName": "Visakhapatnam", "state": "Andhra Pradesh", "city": "Visakhapatnam", "latitude": 17.69, "longitude": 83.22, "elevation": 3, "active": true, "verified": true },
+  { "stationId": "43185", "stationName": "Vijayawada", "state": "Andhra Pradesh", "city": "Vijayawada", "latitude": 16.51, "longitude": 80.65, "elevation": 20, "active": true, "verified": true },
+  { "stationId": "43371", "stationName": "Tirupati", "state": "Andhra Pradesh", "city": "Tirupati", "latitude": 13.63, "longitude": 79.42, "elevation": 162, "active": true, "verified": true },
+  { "stationId": "43223", "stationName": "Kurnool", "state": "Andhra Pradesh", "city": "Kurnool", "latitude": 15.83, "longitude": 78.04, "elevation": 281, "active": true, "verified": true },
+  { "stationId": "43187", "stationName": "Kakinada", "state": "Andhra Pradesh", "city": "Kakinada", "latitude": 16.99, "longitude": 82.25, "elevation": 2, "active": true, "verified": true },
+
+  { "stationId": "43314", "stationName": "Panaji", "state": "Goa", "city": "Panaji", "latitude": 15.49, "longitude": 73.83, "elevation": 60, "active": true, "verified": true },
+  { "stationId": "43315", "stationName": "Marmagao", "state": "Goa", "city": "Marmagao", "latitude": 15.40, "longitude": 73.80, "elevation": 62, "active": true, "verified": true },
+  { "stationId": "43316", "stationName": "Dabolim Airport", "state": "Goa", "city": "Dabolim", "latitude": 15.38, "longitude": 73.83, "elevation": 56, "active": true, "verified": true },
+
+  { "stationId": "42798", "stationName": "Ranchi", "state": "Jharkhand", "city": "Ranchi", "latitude": 23.34, "longitude": 85.31, "elevation": 655, "active": true, "verified": true },
+  { "stationId": "42799", "stationName": "Jamshedpur", "state": "Jharkhand", "city": "Jamshedpur", "latitude": 22.80, "longitude": 86.20, "elevation": 129, "active": true, "verified": true },
+  { "stationId": "42795", "stationName": "Dhanbad", "state": "Jharkhand", "city": "Dhanbad", "latitude": 23.80, "longitude": 86.43, "elevation": 222, "active": true, "verified": true },
+  { "stationId": "42794", "stationName": "Bokaro", "state": "Jharkhand", "city": "Bokaro", "latitude": 23.67, "longitude": 86.15, "elevation": 210, "active": true, "verified": true },
+  { "stationId": "42599", "stationName": "Deoghar", "state": "Jharkhand", "city": "Deoghar", "latitude": 24.48, "longitude": 86.70, "elevation": 254, "active": true, "verified": true },
+
+  { "stationId": "42898", "stationName": "Raipur", "state": "Chhattisgarh", "city": "Raipur", "latitude": 21.25, "longitude": 81.63, "elevation": 298, "active": true, "verified": true },
+  { "stationId": "42796", "stationName": "Bilaspur", "state": "Chhattisgarh", "city": "Bilaspur", "latitude": 22.08, "longitude": 82.14, "elevation": 262, "active": true, "verified": true },
+  { "stationId": "43041", "stationName": "Jagdalpur", "state": "Chhattisgarh", "city": "Jagdalpur", "latitude": 19.07, "longitude": 82.01, "elevation": 553, "active": true, "verified": true },
+  { "stationId": "42697", "stationName": "Ambikapur", "state": "Chhattisgarh", "city": "Ambikapur", "latitude": 23.12, "longitude": 83.20, "elevation": 623, "active": true, "verified": true },
+
+  { "stationId": "43333", "stationName": "Port Blair", "state": "Andaman and Nicobar Islands", "city": "Port Blair", "latitude": 11.62, "longitude": 92.73, "elevation": 79, "active": true, "verified": true },
+  { "stationId": "43335", "stationName": "Car Nicobar", "state": "Andaman and Nicobar Islands", "city": "Car Nicobar", "latitude": 9.16, "longitude": 92.82, "elevation": 14, "active": true, "verified": true },
+  { "stationId": "43334", "stationName": "Hut Bay", "state": "Andaman and Nicobar Islands", "city": "Hut Bay", "latitude": 10.60, "longitude": 92.54, "elevation": 12, "active": true, "verified": true },
+
+  { "stationId": "43369", "stationName": "Minicoy", "state": "Lakshadweep", "city": "Minicoy", "latitude": 8.28, "longitude": 73.05, "elevation": 2, "active": true, "verified": true },
+  { "stationId": "43368", "stationName": "Amini Divi", "state": "Lakshadweep", "city": "Amini Divi", "latitude": 11.12, "longitude": 72.73, "elevation": 3, "active": true, "verified": true },
+  { "stationId": "43367", "stationName": "Agatti Island", "state": "Lakshadweep", "city": "Agatti", "latitude": 10.85, "longitude": 72.19, "elevation": 4, "active": true, "verified": true },
+
+  { "stationId": "43341", "stationName": "Puducherry", "state": "Puducherry", "city": "Puducherry", "latitude": 11.94, "longitude": 79.81, "elevation": 4, "active": true, "verified": true },
+  { "stationId": "43343", "stationName": "Karaikal", "state": "Puducherry", "city": "Karaikal", "latitude": 10.93, "longitude": 79.84, "elevation": 4, "active": true, "verified": true },
+  { "stationId": "43318", "stationName": "Mahe", "state": "Puducherry", "city": "Mahe", "latitude": 11.70, "longitude": 75.53, "elevation": 8, "active": true, "verified": true },
+  { "stationId": "43188", "stationName": "Yanam", "state": "Puducherry", "city": "Yanam", "latitude": 16.73, "longitude": 82.22, "elevation": 3, "active": true, "verified": true }
 ]

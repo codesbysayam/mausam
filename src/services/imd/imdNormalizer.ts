@@ -1,29 +1,47 @@
 /**
  * IMD Data Normalizer - Translates raw IMD API structures into standard MAUSAM formats
  * Follows official IMD field names and weather code specifications.
+ * Strictly guarantees NO NaN, NO undefined, NO null, and NO Infinity in formatted outputs.
  */
 
-export interface IMDNormalizedCurrentWeather {
+export interface NormalizedStationWeather {
   stationId: string;
   stationName: string;
+  city: string;
+  state: string;
+
   observationDate: string;
-  observationTimeUTC: string;
-  observationTimeIST: string;
+  observationTime: string;
+
   temperatureC: number | null;
   humidity: number | null;
   pressureHpa: number | null;
+
   windSpeedKmph: number | null;
-  windDirectionCode: number | null;
   windDirection: string;
+  windDirectionCode: number | null;
+
   weatherCode: number | null;
-  weatherLabel: string;
-  weatherCategory: string;
+  weatherDescription: string;
+
   nebulosity: string | number | null;
   rainfall24hMm: number | null;
+
+  latitude: number;
+  longitude: number;
+
   source: string;
+  status: 'live' | 'cached' | 'unavailable';
   lastUpdated: string;
   feelsLikeC: number | null;
   isRaining: boolean;
+}
+
+export interface IMDNormalizedCurrentWeather extends NormalizedStationWeather {
+  observationTimeUTC?: string;
+  observationTimeIST?: string;
+  weatherLabel?: string;
+  weatherCategory?: string;
 }
 
 export interface IMDNormalizedForecastDay {
@@ -34,11 +52,13 @@ export interface IMDNormalizedForecastDay {
   maxTemp: number | null;
   forecast: string;
   weatherCode?: number;
+  rainfallMm?: number | null;
 }
 
 export interface IMDNormalizedCityForecast {
   station: string;
   cityId: string;
+  cityName?: string;
   state?: string;
   today: {
     maxTemp: number | null;
@@ -73,13 +93,8 @@ export interface IMDNormalizedDistrictWarning {
  * Validated weather code interpretation per IMD/WMO standard
  */
 export function isIMDRainCode(code: number | null | undefined): boolean {
-  if (code === null || code === undefined) return false;
-  // 20-29: Precipitation, fog, ice fog or thunderstorm
-  // 21: Rain not freezing
-  // 25: Rain showers
-  // 60-69: Rain (slight, moderate, heavy, freezing)
-  // 80-84: Rain showers
-  // 91-99: Thunderstorms with precipitation/hail
+  if (code === null || code === undefined || !Number.isFinite(code)) return false;
+  // 21, 25, 60-69, 80-84, 91-99
   if (code === 21 || code === 25) return true;
   if (code >= 60 && code <= 69) return true;
   if (code >= 80 && code <= 84) return true;
@@ -93,7 +108,7 @@ export function isRainActive(
   forecastText?: string | null
 ): boolean {
   if (isIMDRainCode(weatherCode)) return true;
-  if (rainfall24hMm !== null && rainfall24hMm !== undefined && rainfall24hMm > 0) return true;
+  if (rainfall24hMm !== null && rainfall24hMm !== undefined && Number.isFinite(rainfall24hMm) && rainfall24hMm > 0) return true;
   if (forecastText) {
     const lower = forecastText.toLowerCase();
     if (
@@ -101,7 +116,9 @@ export function isRainActive(
       lower.includes('moderate rain') ||
       lower.includes('light rain') ||
       lower.includes('rain or thundershowers') ||
-      lower.includes('thunderstorm with rain')
+      lower.includes('thunderstorm with rain') ||
+      lower.includes('scattered rain') ||
+      lower.includes('isolated showers')
     ) {
       return true;
     }
@@ -110,50 +127,99 @@ export function isRainActive(
 }
 
 export function getWindDirectionLabel(degrees: number | null | undefined): string {
-  if (degrees === null || degrees === undefined || isNaN(degrees)) return 'Calm';
+  if (degrees === null || degrees === undefined || !Number.isFinite(degrees)) return 'Calm';
   const val = Math.floor((degrees / 22.5) + 0.5);
   const arr = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW'];
   return arr[val % 16] || 'Calm';
 }
 
-export function parseNullableFloat(val: any): number | null {
-  if (val === undefined || val === null || val === '' || val === '—' || val === 'N/A' || val === 'NA') {
+export function safeNumber(value: any): number | null {
+  if (value === undefined || value === null || value === '' || value === '—' || value === 'N/A' || value === 'NA') {
     return null;
   }
-  const parsed = parseFloat(String(val));
-  return isNaN(parsed) ? null : parsed;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+export function safeTemperature(value: any): string {
+  const n = safeNumber(value);
+  return n === null ? '—' : `${Math.round(n * 10) / 10}°C`;
+}
+
+export function safeHumidity(value: any): string {
+  const n = safeNumber(value);
+  return n === null ? '—' : `${Math.round(n)}%`;
+}
+
+export function safeWind(speedValue: any, dirStr?: string): string {
+  const speed = safeNumber(speedValue);
+  if (speed === null) return '—';
+  const dir = dirStr && dirStr !== '—' ? ` ${dirStr}` : '';
+  return `${Math.round(speed * 10) / 10} km/h${dir}`;
+}
+
+export function safePressure(value: any): string {
+  const n = safeNumber(value);
+  return n === null ? '—' : `${(Math.round(n * 10) / 10).toFixed(1)} hPa`;
+}
+
+export function safeRainfall(value: any): string {
+  const n = safeNumber(value);
+  return n === null ? '—' : `${(Math.round(n * 10) / 10).toFixed(1)} mm`;
+}
+
+export function safeNebulosity(value: any): string {
+  if (value === undefined || value === null || value === '' || value === '—' || value === 'N/A') {
+    return '—';
+  }
+  const n = Number(value);
+  if (Number.isFinite(n)) {
+    return `${Math.min(8, Math.max(0, Math.round(n)))}/8 Oktas`;
+  }
+  return String(value);
+}
+
+export function parseNullableFloat(val: any): number | null {
+  return safeNumber(val);
 }
 
 export function parseNullableInt(val: any): number | null {
-  if (val === undefined || val === null || val === '' || val === '—' || val === 'N/A' || val === 'NA') {
-    return null;
-  }
-  const parsed = parseInt(String(val), 10);
-  return isNaN(parsed) ? null : parsed;
+  const n = safeNumber(val);
+  return n === null ? null : Math.round(n);
 }
 
 /**
  * Calculates standard Steadman Apparent Temperature only when both Temp & RH are valid
  * Returns null if data is insufficient. Never returns NaN.
  */
-export function calculateValidatedFeelsLike(tempC: number | null, humidity: number | null, windKmph: number | null): number | null {
-  if (tempC === null || humidity === null) return null;
+export function calculateValidatedFeelsLike(
+  tempC: number | null,
+  humidity: number | null,
+  windKmph: number | null
+): number | null {
+  if (tempC === null || humidity === null || !Number.isFinite(tempC) || !Number.isFinite(humidity)) {
+    return null;
+  }
   if (tempC < 20) {
-    // Wind chill applicable only if cold & wind present
-    if (windKmph !== null && windKmph > 5) {
+    if (windKmph !== null && Number.isFinite(windKmph) && windKmph > 5) {
       const v = Math.pow(windKmph, 0.16);
-      return Math.round((13.12 + 0.6215 * tempC - 11.37 * v + 0.3965 * tempC * v) * 10) / 10;
+      const val = 13.12 + 0.6215 * tempC - 11.37 * v + 0.3965 * tempC * v;
+      return Number.isFinite(val) ? Math.round(val * 10) / 10 : tempC;
     }
     return tempC;
   }
-  // Steadman Heat Index / Apparent Temperature
+  // Steadman Heat Index
   const e = (humidity / 100) * 6.105 * Math.exp((17.27 * tempC) / (237.7 + tempC));
-  const apparent = tempC + 0.33 * e - 0.7 * (windKmph ? windKmph / 3.6 : 0) - 4.0;
-  return Math.round(apparent * 10) / 10;
+  const apparent = tempC + 0.33 * e - 0.7 * (windKmph && Number.isFinite(windKmph) ? windKmph / 3.6 : 0) - 4.0;
+  return Number.isFinite(apparent) ? Math.round(apparent * 10) / 10 : tempC;
 }
 
 export class IMDNormalizer {
-  static normalizeCurrentWeather(raw: any, stationIdOverride?: string): IMDNormalizedCurrentWeather | null {
+  static normalizeCurrentWeather(
+    raw: any,
+    stationIdOverride?: string,
+    cityMeta?: { city?: string; state?: string; lat?: number; lng?: number }
+  ): IMDNormalizedCurrentWeather | null {
     if (!raw) return null;
     const item = Array.isArray(raw) ? raw[0] : raw;
     if (!item) return null;
@@ -173,8 +239,14 @@ export class IMDNormalizer {
       item['Station_Name'] ||
       item['station_name'] ||
       item['name'] ||
+      cityMeta?.city ||
       'IMD Observatory'
     );
+
+    const city = cityMeta?.city || item['City'] || item['city'] || stationName.replace(/\s*\(.*\)/, '').trim();
+    const state = cityMeta?.state || item['State'] || item['state'] || 'India';
+    const lat = cityMeta?.lat ?? (safeNumber(item['Latitude'] ?? item['lat']) ?? 20.30);
+    const lng = cityMeta?.lng ?? (safeNumber(item['Longitude'] ?? item['lng'] ?? item['lon']) ?? 85.82);
 
     const obsDate = String(item['Date of Observation'] || item['Date_of_Observation'] || item['date'] || '');
     const obsTime = String(item['Time of Observation'] || item['Time_of_Observation'] || item['time'] || '');
@@ -187,17 +259,30 @@ export class IMDNormalizer {
     const windDirection = getWindDirectionLabel(windDirDeg);
     const windSpeed = parseNullableFloat(item['Wind Speed'] ?? item['WIND_SPEED'] ?? item['wind_speed']);
 
-    const rainfall = parseNullableFloat(item['Last 24 hrs Rainfall'] ?? item['RAINFALL_24_HR'] ?? item['rainfall_24h'] ?? item['RAIN']);
+    const rainfall = parseNullableFloat(item['Last 24 hrs Rainfall'] ?? item['RAINFALL_24_HR'] ?? item['rainfall_24h'] ?? item['RAIN'] ?? item['rainfall24hMm']);
     const weatherCode = parseNullableInt(item['Weather Code'] ?? item['WEATHER_CODE'] ?? item['weather_code']);
     const nebulosity = item['Nebulosity'] ?? item['NEBULOSITY'] ?? item['cloud_cover'] ?? null;
 
+    const weatherDesc = String(
+      item['Weather'] ||
+      item['Weather_Description'] ||
+      item['weather_desc'] ||
+      item['weather'] ||
+      (isIMDRainCode(weatherCode) ? 'Rain / Precipitation' : (temp && temp > 35 ? 'Hot / Clear' : 'Fair Weather'))
+    );
+
     const feelsLike = calculateValidatedFeelsLike(temp, humidity, windSpeed);
-    const isRaining = isRainActive(weatherCode, rainfall);
+    const isRaining = isRainActive(weatherCode, rainfall, weatherDesc);
 
     return {
       stationId,
       stationName,
+      city,
+      state,
+      latitude: lat,
+      longitude: lng,
       observationDate: obsDate,
+      observationTime: obsTime,
       observationTimeUTC: obsTime,
       observationTimeIST: obsTime ? `${obsTime} IST` : 'Latest IST',
       temperatureC: temp,
@@ -207,37 +292,39 @@ export class IMDNormalizer {
       windDirectionCode: windDirDeg,
       windDirection,
       weatherCode,
-      weatherLabel: item['Weather'] || (isRaining ? 'Rain / Precipitation' : (temp && temp > 35 ? 'Hot / Clear' : 'Fair Weather')),
+      weatherDescription: weatherDesc,
+      weatherLabel: weatherDesc,
       weatherCategory: isRaining ? 'Rain' : (humidity && humidity > 85 ? 'Humid' : 'Clear'),
       nebulosity,
       rainfall24hMm: rainfall,
-      source: 'India Meteorological Department (IMD)',
+      source: 'India Meteorological Department',
+      status: 'live',
       lastUpdated: new Date().toISOString(),
       feelsLikeC: feelsLike,
       isRaining,
     };
   }
 
-  static normalizeCityForecast(raw: any, stationIdOverride?: string): IMDNormalizedCityForecast | null {
+  static normalizeCityForecast(raw: any, stationIdOverride?: string, cityName?: string): IMDNormalizedCityForecast | null {
     if (!raw) return null;
     const root = Array.isArray(raw) ? raw[0] : raw;
     if (!root) return null;
 
-    const station = String(root.Station || root.station || root.city || root.City || 'Selected Station');
+    const station = String(root.Station || root.station || root.city || root.City || cityName || 'Selected Station');
     const cityId = String(root.id || stationIdOverride || '42971');
 
-    const todayMax = parseNullableFloat(root.Today_Max_temp ?? root.today_max);
-    const todayMin = parseNullableFloat(root.Today_Min_temp ?? root.today_min);
-    const past24hRain = parseNullableFloat(root.Past_24_hrs_Rainfall ?? root.past_24h_rainfall);
+    const todayMax = parseNullableFloat(root.Today_Max_temp ?? root.today_max ?? root.tempMax);
+    const todayMin = parseNullableFloat(root.Today_Min_temp ?? root.today_min ?? root.tempMin);
+    const past24hRain = parseNullableFloat(root.Past_24_hrs_Rainfall ?? root.past_24h_rainfall ?? root.rainfall24hMm);
     const rh0830 = parseNullableFloat(root.Relative_Humidity_at_0830 ?? root.humidity_0830);
     const rh1730 = parseNullableFloat(root.Relative_Humidity_at_1730 ?? root.humidity_1730);
-    const todayForecast = String(root.Todays_Forecast ?? root.forecast_desc ?? 'Generally cloudy sky with possibility of rain');
+    const todayForecast = String(root.Todays_Forecast ?? root.forecast_desc ?? root.forecast ?? 'Generally cloudy sky with possibility of rain');
 
     const days: IMDNormalizedForecastDay[] = [];
     for (let i = 2; i <= 7; i++) {
-      const maxT = parseNullableFloat(root[`Day_${i}_Max_Temp`] ?? root[`day_${i}_max`]);
-      const minT = parseNullableFloat(root[`Day_${i}_Min_temp`] ?? root[`day_${i}_min`]);
-      const desc = String(root[`Day_${i}_Forecast`] ?? root[`day_${i}_forecast`] ?? 'Partly cloudy sky');
+      const maxT = parseNullableFloat(root[`Day_${i}_Max_Temp`] ?? root[`day_${i}_max`] ?? root[`day${i}Max`]);
+      const minT = parseNullableFloat(root[`Day_${i}_Min_temp`] ?? root[`day_${i}_min`] ?? root[`day${i}Min`]);
+      const desc = String(root[`Day_${i}_Forecast`] ?? root[`day_${i}_forecast`] ?? root[`day${i}Desc`] ?? 'Partly cloudy sky');
 
       days.push({
         dayNumber: i,
@@ -252,6 +339,7 @@ export class IMDNormalizer {
     return {
       station,
       cityId,
+      cityName: cityName || station,
       state: root.State || root.state || '',
       today: {
         maxTemp: todayMax,
@@ -264,7 +352,7 @@ export class IMDNormalizer {
       days,
       sunrise: root.Sunrise_time || root.sunrise || null,
       sunset: root.Sunset_time || root.sunset || null,
-      source: 'India Meteorological Department (IMD)',
+      source: 'India Meteorological Department',
       lastUpdated: new Date().toISOString(),
     };
   }
