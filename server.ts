@@ -300,7 +300,7 @@ ${telemetryContext.metadata?.source || 'India Meteorological Department (IMD)'}`
                     },
                   });
                 } catch (stdErr: any) {
-                  console.warn('Standard Gemini generation unavailable:', stdErr?.message || stdErr);
+                  console.warn('Standard message unavailable:', stdErr?.message || stdErr);
                   response = null;
                 }
               }
