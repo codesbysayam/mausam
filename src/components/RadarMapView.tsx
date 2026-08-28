@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { WeatherStation, WeatherAlert, LocationRecord } from '../types';
 import { STATIONS } from '../data/weatherData';
 import { locationService } from '../services/locationService';
-import IndiaWeatherMap, { StateWeatherData, WeatherMapMetric } from './IndiaWeatherMap';
+import { IndiaWeatherMap, StateWeatherData } from './map/IndiaWeatherMap';
+import { WeatherMapMetric } from './map/MapLayerControl';
 import { INDIA_WEATHER_DATA } from '../data/indiaWeatherData';
 
 interface RadarMapViewProps {

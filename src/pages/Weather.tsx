@@ -4,6 +4,7 @@ import { LocationRecord } from '../types';
 import { useLanguage } from '../i18n/LanguageContext';
 import { CurrentWeather } from '../components/weather/CurrentWeather';
 import { WeatherMetrics } from '../components/weather/WeatherMetrics';
+import { WeatherWidgets } from '../components/weather/WeatherWidgets';
 import { HourlyForecast } from '../components/weather/HourlyForecast';
 import { DailyForecast } from '../components/weather/DailyForecast';
 import { PersonaWeatherHub } from '../components/weather/personas/PersonaWeatherHub';
@@ -124,7 +125,12 @@ export const WeatherPage: React.FC<WeatherPageProps> = ({
       </div>
 
       {/* =========================================================================
-          3. AUTHORITATIVE MULTI-PERSONA WEATHER INTELLIGENCE HUB (8 USER PERSONAS)
+          3. MODULAR ATMOSPHERIC OBSERVATION WIDGETS (WITH METRIC/IMPERIAL TOGGLE)
+      ========================================================================= */}
+      <WeatherWidgets weather={current} />
+
+      {/* =========================================================================
+          4. AUTHORITATIVE MULTI-PERSONA WEATHER INTELLIGENCE HUB (8 USER PERSONAS)
       ========================================================================= */}
       <PersonaWeatherHub
         selectedLocation={selectedLocation}

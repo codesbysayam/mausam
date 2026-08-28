@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { WeatherDataBundle } from '../services/weatherService';
 import { LocationRecord } from '../types';
 import { StateWeatherData, IndiaWeatherMap } from '../components/map/IndiaWeatherMap';
+import { WeatherMapMetric } from '../components/map/MapLayerControl';
 import { INDIA_WEATHER_DATA } from '../data/indiaWeatherData';
 import { useLanguage } from '../i18n/LanguageContext';
 import { MainNavTab } from '../components/layout/MainNavigation';
@@ -22,7 +23,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 }) => {
   const { t, tCondition } = useLanguage();
   const { alerts = [], lastFetchedAt } = weatherBundle;
-  const [mapMetric, setMapMetric] = useState<'temp' | 'rainfall' | 'aqi' | 'humidity' | 'pollen'>('temp');
+  const [mapMetric, setMapMetric] = useState<WeatherMapMetric>('temperature');
   const [stateSearch, setStateSearch] = useState('');
 
   const formattedLastUpdated = new Intl.DateTimeFormat('en-IN', {
@@ -390,54 +391,13 @@ export const HomePage: React.FC<HomePageProps> = ({
       {/* =========================================================================
           4. INDIA WEATHER MAP & METEOROLOGICAL TELEMETRY
       ========================================================================= */}
-      <div className="mausam-panel p-4 bg-[#17212B] border border-[#334155] rounded-[5px]">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 pb-3 border-b border-[#334155]">
-          <div>
-            <h2 className="text-sm font-bold uppercase tracking-wider text-white flex items-center gap-2">
-              <span className="material-symbols-outlined text-[#4FA8E0] text-[18px]">
-                map
-              </span>
-              <span>INDIA WEATHER MAP &amp; SYNOPTIC OBSERVATIONS</span>
-            </h2>
-            <p className="text-xs text-[#8A94A6] mt-0.5">
-              State-level meteorological indicators across 28 States and 8 Union Territories
-            </p>
-          </div>
-
-          {/* Layer metric toggles */}
-          <div className="flex items-center gap-1 bg-[#0F141A] p-1 rounded border border-[#334155] overflow-x-auto">
-            {(
-              [
-                { id: 'temp', label: 'Temperature' },
-                { id: 'rainfall', label: 'Rainfall' },
-                { id: 'aqi', label: 'AQI' },
-                { id: 'humidity', label: 'Humidity' },
-                { id: 'pollen', label: 'Pollen' },
-              ] as const
-            ).map((m) => (
-              <button
-                key={m.id}
-                type="button"
-                onClick={() => setMapMetric(m.id)}
-                className={`px-2.5 py-1 text-[11px] font-bold rounded transition-colors whitespace-nowrap ${
-                  mapMetric === m.id
-                    ? 'bg-[#0B72B9] text-white'
-                    : 'text-[#8A94A6] hover:text-white'
-                }`}
-              >
-                {m.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Dynamic Interactive India Weather Map */}
-        <IndiaWeatherMap
-          data={INDIA_WEATHER_DATA}
-          metric={mapMetric}
-          onSelectState={onStateSelect}
-        />
-      </div>
+      <IndiaWeatherMap
+        data={INDIA_WEATHER_DATA}
+        metric={mapMetric}
+        onMetricChange={setMapMetric}
+        selectedState={selectedLocation.state || selectedLocation.name}
+        onStateSelect={onStateSelect}
+      />
 
       {/* =========================================================================
           5. STATE-WISE WEATHER SUMMARY (28 STATES & 8 UNION TERRITORIES)
