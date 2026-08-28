@@ -332,7 +332,7 @@ ${telemetryContext.metadata?.source || 'India Meteorological Department (IMD)'}`
                     },
                   });
                 } catch (stdErr: any) {
-                  console.warn('Standard Gemini generation unavailable:', stdErr?.message || stdErr);
+                  console.warn('Standard message unavailable:', stdErr?.message || stdErr);
                   response = null;
                 }
               }
@@ -349,9 +349,9 @@ ${telemetryContext.metadata?.source || 'India Meteorological Department (IMD)'}`
               });
             } catch (genErr: any) {
               if (isQuotaError(genErr)) {
-                console.warn('Gemini API Quota reached, transitioning to IMD Grounded Telemetry Engine.');
+                console.warn('error reached, transitioning to IMD Grounded Telemetry Engine.');
               } else {
-                console.warn('Gemini generation unavailable:', genErr?.message || genErr);
+                console.warn('Standard generation unavailable:', genErr?.message || genErr);
               }
               response = null;
             }
@@ -361,7 +361,7 @@ ${telemetryContext.metadata?.source || 'India Meteorological Department (IMD)'}`
             groundingSources = extractGroundingSources(response);
           }
         } catch (geminiError: any) {
-          console.warn('Gemini API query completed with fallback:', geminiError?.message || geminiError);
+          console.warn('API query completed with fallback:', geminiError?.message || geminiError);
           response = null;
         }
       }
