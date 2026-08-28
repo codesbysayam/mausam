@@ -134,7 +134,7 @@ export function useIMDWeather(targetLocation?: Partial<IMDLocationInfo>): IMDWea
           status: prev.currentWeather ? 'cached' : 'error',
           error: {
             code: 'FETCH_ERROR',
-            message: err.message || 'Failed to communicate with IMD connector.',
+            message: err.message || 'Failed to communicate with IMD meteorological service.',
           },
         }));
       }

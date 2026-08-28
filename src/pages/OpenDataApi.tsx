@@ -52,7 +52,7 @@ export const OpenDataApi: React.FC<OpenDataApiProps> = ({ onNavigateHome }) => {
               API Status: Prototype / Development
             </span>
             <span className="bg-[#1E2733] text-[#F1C40F] text-[11px] font-mono font-bold px-2 py-0.5 rounded border border-[#334155]">
-              SIH 2026 Reference Build
+              v2.4 Open Data Specification
             </span>
           </div>
 
@@ -435,7 +435,7 @@ export const OpenDataApi: React.FC<OpenDataApiProps> = ({ onNavigateHome }) => {
             10. DISCLAIMER
           </h2>
           <div className="p-4 bg-[#1E2733]/80 rounded border border-[#334155] text-xs text-[#D7DEE8] leading-relaxed">
-            "MAUSAM is an SIH 2026 prototype developed for demonstration and innovation purposes. Weather and environmental information should not be treated as an official emergency warning or substitute for instructions issued by the appropriate authorities."
+            "MAUSAM is a national meteorological intelligence platform developed for observation and research purposes. Weather and environmental information should not be treated as an official emergency warning or substitute for instructions issued by the appropriate disaster management authorities."
           </div>
         </section>
       </div>

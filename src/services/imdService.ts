@@ -166,7 +166,7 @@ class IMDService {
         data: null,
         error: {
           code: 'NETWORK_ERROR',
-          message: err?.message || 'Unable to connect to MAUSAM IMD Connector',
+          message: err?.message || 'Unable to connect to MAUSAM IMD Service',
         },
       };
     }

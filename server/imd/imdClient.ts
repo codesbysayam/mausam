@@ -61,7 +61,7 @@ export class IMDClient {
       try {
         const headers: Record<string, string> = {
           Accept: 'application/json',
-          'User-Agent': 'Mausam-SIH-Client/1.0',
+          'User-Agent': 'Mausam-IMD-Client/1.0',
         };
 
         if (this.apiKey) {

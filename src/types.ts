@@ -243,6 +243,11 @@ export interface HourlyForecastItem {
   windSpeed: number;
   uv: number;
   humidity: number;
+  isNow?: boolean;
+  precipitationProbability?: number;
+  windDirection?: string;
+  cloudCover?: number;
+  qpf?: number;
 }
 
 export interface DailyForecastItem {

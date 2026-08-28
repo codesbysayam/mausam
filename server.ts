@@ -97,6 +97,40 @@ async function startServer() {
   // Official IMD Data Connector Routes
   app.use('/api/imd', imdRouter);
 
+  // Open Data API endpoints (Alias routes matching OpenAPI specification)
+  app.get('/api/weather/current', async (req, res) => {
+    const stationId = (req.query.stationId as string) || (req.query.id as string) || '42971';
+    try {
+      const { imdConnector } = await import('./server/imd/imdConnector');
+      const result = await imdConnector.getCurrentWeather(stationId);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/weather/forecast', async (req, res) => {
+    const stationId = (req.query.stationId as string) || (req.query.id as string) || '42971';
+    try {
+      const { imdConnector } = await import('./server/imd/imdConnector');
+      const result = await imdConnector.getCityForecast(stationId);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/weather/warnings', async (req, res) => {
+    const stationId = (req.query.stationId as string) || (req.query.id as string) || '42971';
+    try {
+      const { imdConnector } = await import('./server/imd/imdConnector');
+      const result = await imdConnector.getDistrictWarnings(stationId);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   // Authoritative Multi-Persona & External Data Services (CPCB, Tides, Marine, Azure Alerts)
   app.use('/api/authoritative', authoritativeRouter);
 

@@ -42,7 +42,7 @@ export const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onNavigateHome }) 
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
             <span className="bg-[#0B72B9]/20 text-[#4FA8E0] text-[11px] font-bold px-2 py-0.5 rounded border border-[#0B72B9]/40">
-              SIH 2026 Prototype
+              Official Open Data Standards
             </span>
             <span className="text-xs text-[#8A94A6] font-mono">
               Last Updated: 26 August 2026

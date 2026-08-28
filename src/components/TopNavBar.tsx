@@ -125,7 +125,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                   MAUSAM
                 </h1>
                 <span className="px-1.5 py-0.5 rounded bg-[#0B72B9]/20 text-[#4FA8E0] text-[10px] font-semibold border border-[#0B72B9]/30">
-                  SIH 2026
+                  OFFICIAL
                 </span>
               </div>
               <p className="text-[13px] text-[#8A94A6] leading-none mt-0.5">

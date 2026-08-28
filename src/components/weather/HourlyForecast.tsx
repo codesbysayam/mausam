@@ -5,17 +5,31 @@ import { useLanguage } from '../../i18n/LanguageContext';
 
 interface HourlyForecastProps {
   hourly: HourlyForecastItem[];
+  modelType?: 'WRF' | 'GEFS' | 'ECMWF';
+  modelSubtitle?: string;
 }
 
-export const HourlyForecast: React.FC<HourlyForecastProps> = ({ hourly }) => {
+export const HourlyForecast: React.FC<HourlyForecastProps> = ({
+  hourly,
+  modelType = 'WRF',
+  modelSubtitle,
+}) => {
   const { t, tCondition, language } = useLanguage();
   const displayItems = hourly.slice(0, 12);
+
+  const modelLabels = {
+    WRF: 'IMD-WRF 3km Mesoscale High-Res Model',
+    GEFS: 'Global Ensemble Forecast System (GEFS 12km)',
+    ECMWF: 'ECMWF Integrated Forecasting System (IFS 9km HRES)',
+  };
+
+  const defaultSubtitle = `Nowcasting projection calibrated via ${modelLabels[modelType]}`;
 
   return (
     <div className="mausam-card">
       <SectionHeader
         title={t('hourlyForecast', '24-Hour Synoptic Hourly Forecast')}
-        subtitle="Nowcasting projection based on numerical weather prediction models (WRF/IMD)"
+        subtitle={modelSubtitle || defaultSubtitle}
         icon="schedule"
       />
 

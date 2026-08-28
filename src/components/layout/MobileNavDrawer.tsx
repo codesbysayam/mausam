@@ -301,7 +301,7 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({
           </div>
 
           <div className="text-[10px] text-[#8A94A6] text-center pt-1 font-mono">
-            MAUSAM SIH 2026 • IMD Data Connect
+            MAUSAM • IMD National Meteorological Platform
           </div>
         </div>
       </div>

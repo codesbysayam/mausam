@@ -201,10 +201,10 @@ export const DynamicIndiaMap: React.FC<DynamicIndiaMapProps> = ({
         ctx.lineTo(width, height - 60);
         ctx.stroke();
 
-        // Footer Metadata & SIH Team details
+        // Footer Metadata details
         ctx.fillStyle = '#8A94A6';
         ctx.font = '500 12px "Noto Sans", sans-serif';
-        ctx.fillText('Team ALGNITE • Smart India Hackathon 2026 (SIH26076) • MAUSAM Atmospheric Intelligence', 32, height - 26);
+        ctx.fillText('MAUSAM Atmospheric Intelligence • India Meteorological Department • Radar Composite', 32, height - 26);
 
         // Reflectivity Legend on Footer Right
         ctx.textAlign = 'right';

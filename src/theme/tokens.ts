@@ -1,14 +1,11 @@
 /**
  * MAUSAM DESIGN SYSTEM TOKENS
- * Team: ALGNITE | Smart India Hackathon 2026 (SIH26076)
  * Product: MAUSAM - Atmospheric Intelligence & Citizen Weather Platform
  */
 
 export const MAUSAM_BRAND = {
   name: 'MAUSAM',
   team: 'ALGNITE',
-  sih: 'Smart India Hackathon 2026',
-  problemStatement: 'SIH26076',
   tagline: 'Atmospheric Intelligence & Citizen Weather Platform',
   descriptor: 'Personalized Weather & Environmental Intelligence for India',
 } as const;

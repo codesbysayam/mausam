@@ -1,6 +1,12 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { DailyForecastItem, HourlyForecastItem } from '../types';
 import { HOURLY_FORECAST, DAILY_FORECAST } from '../data/weatherData';
+import {
+  NWPModelType,
+  NWP_MODELS,
+  getModelHourlyForecast,
+  getModelDailyForecast,
+} from '../services/nwpModelService';
 
 interface ForecastViewProps {
   hourly?: HourlyForecastItem[];
@@ -11,8 +17,63 @@ export const ForecastView: React.FC<ForecastViewProps> = ({
   hourly = HOURLY_FORECAST,
   daily = DAILY_FORECAST,
 }) => {
+  const [modelType, setModelType] = useState<NWPModelType>('WRF');
+
+  const modelHourly = useMemo(() => {
+    return getModelHourlyForecast(hourly, modelType);
+  }, [hourly, modelType]);
+
+  const modelDaily = useMemo(() => {
+    return getModelDailyForecast(daily, modelType);
+  }, [daily, modelType]);
+
+  const activeModelMeta = NWP_MODELS[modelType];
+
   return (
     <div className="flex flex-col gap-6 max-w-[1400px] mx-auto select-none font-sans">
+      {/* Model Selection Header */}
+      <div className="bg-[#1E2733] card-border rounded-xl p-4 shadow-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <div>
+          <span className="text-xs text-[#4FA8E0] font-semibold block">
+            Numerical Weather Prediction Engine
+          </span>
+          <h3 className="font-h3 text-base font-bold text-white">
+            {activeModelMeta.fullName}
+          </h3>
+          <span className="text-xs text-[#8A94A6]">
+            Resolution: {activeModelMeta.gridResolution} • Cycle: {activeModelMeta.updateCycle}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1 bg-[#0F141A] p-1 rounded-lg border border-[#334155]">
+          <span className="text-[10px] text-[#8A94A6] px-2 font-bold uppercase tracking-wider">
+            MODEL:
+          </span>
+          {(['WRF', 'GEFS', 'ECMWF'] as const).map((m) => {
+            const isSelected = modelType === m;
+            return (
+              <button
+                key={m}
+                type="button"
+                onClick={() => setModelType(m)}
+                className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${
+                  isSelected
+                    ? m === 'WRF'
+                      ? 'bg-[#0B72B9] text-white shadow-md'
+                      : m === 'GEFS'
+                      ? 'bg-[#2ECC71] text-black shadow-md'
+                      : 'bg-[#E67E22] text-white shadow-md'
+                    : 'text-[#8A94A6] hover:text-white hover:bg-[#1E2733]'
+                }`}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                <span>{m}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* 24-Hour Timeline */}
       <div className="bg-[#1E2733] card-border rounded-xl p-6 shadow-xl">
         <div className="flex justify-between items-center pb-3 border-b border-[rgba(225,230,235,0.12)] mb-4">
@@ -25,28 +86,28 @@ export const ForecastView: React.FC<ForecastViewProps> = ({
             </h3>
           </div>
           <span className="text-xs text-[#4FA8E0] font-semibold">
-            Hourly Intervals (IMD WRF 3km Model)
+            Hourly Intervals ({activeModelMeta.shortName})
           </span>
         </div>
 
         <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
-          {hourly.map((h, i) => (
+          {modelHourly.map((h, i) => (
             <div
               key={i}
               className="bg-[#0F141A] p-3 rounded-lg card-border flex flex-col items-center gap-2 min-w-[95px] shrink-0 hover:border-[#0B72B9] transition-colors"
             >
               <span className="text-xs text-[#8A94A6] font-semibold">{h.time}</span>
               <span className="material-symbols-outlined text-[#4FA8E0] text-[22px]">
-                {h.icon}
+                {h.icon || 'cloud'}
               </span>
               <span className="text-base font-bold text-[#FFFFFF]">
-                {h.temp}°
+                {Math.round(h.temp)}°
               </span>
               <div className="flex items-center gap-1 text-[11px] text-[#4FA8E0] font-semibold">
                 <span className="material-symbols-outlined text-[12px]">water_drop</span>
-                <span>{h.rainProb}%</span>
+                <span>{h.precipitationProbability || h.rainProb || 0}%</span>
               </div>
-              <span className="text-[10px] text-[#8A94A6]">{h.windSpeed} km/h</span>
+              <span className="text-[10px] text-[#8A94A6]">{h.windSpeed || 10} km/h</span>
             </div>
           ))}
         </div>
@@ -64,12 +125,12 @@ export const ForecastView: React.FC<ForecastViewProps> = ({
             </h3>
           </div>
           <span className="text-xs text-[#2ECC71] font-semibold">
-            Global Ensemble Forecast System (GEFS)
+            {activeModelMeta.fullName}
           </span>
         </div>
 
         <div className="flex flex-col gap-2.5">
-          {daily.map((d, idx) => (
+          {modelDaily.map((d, idx) => (
             <div
               key={idx}
               className="bg-[#0F141A] p-4 rounded-lg card-border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 hover:border-[#0B72B9] transition-colors"
@@ -77,7 +138,7 @@ export const ForecastView: React.FC<ForecastViewProps> = ({
               <div className="flex items-center gap-4 min-w-[160px]">
                 <div className="w-8 h-8 rounded-lg bg-[#1E2733] flex items-center justify-center text-[#4FA8E0]">
                   <span className="material-symbols-outlined text-[20px]">
-                    {d.icon}
+                    {d.icon || 'wb_cloudy'}
                   </span>
                 </div>
                 <div>
@@ -98,7 +159,7 @@ export const ForecastView: React.FC<ForecastViewProps> = ({
                 </div>
                 <div className="hidden md:flex items-center gap-1 text-[#8A94A6]">
                   <span className="material-symbols-outlined text-[14px]">air</span>
-                  <span>{d.wind}</span>
+                  <span>{d.wind || '12 km/h NE'}</span>
                 </div>
               </div>
 

@@ -21,6 +21,8 @@ import { OpenDataApi } from './pages/OpenDataApi';
 import { TermsOfObservation } from './pages/TermsOfObservation';
 import { ApiDebugPage } from './pages/ApiDebug';
 import { AskMausamDrawer } from './components/AskMausamDrawer';
+import { ReportDetailModal } from './components/ReportDetailModal';
+import { OFFICIAL_PUBLICATIONS, MeteorologicalPublication } from './data/reportsAndArticles';
 import { useLanguage } from './i18n/LanguageContext';
 import './styles/mausam.css';
 
@@ -93,6 +95,14 @@ export default function App() {
   });
 
   const [isAskMausamOpen, setIsAskMausamOpen] = useState(false);
+  const [selectedFooterPublication, setSelectedFooterPublication] = useState<MeteorologicalPublication | null>(null);
+
+  const handleOpenFooterArticle = useCallback((pubId: string) => {
+    const pub = OFFICIAL_PUBLICATIONS.find(p => p.id === pubId);
+    if (pub) {
+      setSelectedFooterPublication(pub);
+    }
+  }, []);
 
   // Sync state with browser popstate (back/forward navigation)
   useEffect(() => {
@@ -285,7 +295,7 @@ export default function App() {
                   {t('mausamPortal', 'MAUSAM PORTAL')}
                 </span>
                 <span className="bg-[#0B72B9]/20 text-[#4FA8E0] text-[10px] font-bold px-1.5 py-0.5 rounded border border-[#0B72B9]/40">
-                  SIH 2026
+                  OFFICIAL
                 </span>
               </div>
               <p className="text-[11px] leading-relaxed">
@@ -297,11 +307,63 @@ export default function App() {
               <span className="font-bold text-white uppercase text-[11px] block mb-2">
                 {t('dataProvidersTitle', 'Data Providers & Networks')}
               </span>
-              <ul className="space-y-1 text-[11px]">
-                <li>• {t('imdCredit', 'India Meteorological Department (IMD)')}</li>
-                <li>• {t('ncmrwfCredit', 'NCMRWF Global & Regional Models')}</li>
-                <li>• {t('cpcbCredit', 'Central Pollution Control Board (CPCB)')}</li>
-                <li>• {t('isroCredit', 'ISRO MOSDAC Earth Observation')}</li>
+              <ul className="space-y-1.5 text-[11px]">
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenFooterArticle('dwr-all-india-20260826')}
+                    className="w-full text-left group flex items-center justify-between text-[#B2BDCD] hover:text-white transition-colors cursor-pointer py-0.5"
+                    title="Read official All-India Weather Summary Report"
+                  >
+                    <span className="truncate group-hover:underline">• {t('imdCredit', 'India Meteorological Department (IMD)')}</span>
+                    <span className="inline-flex items-center gap-1 text-[9px] font-semibold text-[#4FA8E0] bg-[#0B72B9]/20 px-1.5 py-0.5 rounded border border-[#0B72B9]/40 group-hover:bg-[#0B72B9] group-hover:text-white transition-colors shrink-0 ml-1.5">
+                      <span className="material-symbols-outlined text-[11px]">description</span>
+                      Article
+                    </span>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenFooterArticle('ncmrwf-unified-model-nwp')}
+                    className="w-full text-left group flex items-center justify-between text-[#B2BDCD] hover:text-white transition-colors cursor-pointer py-0.5"
+                    title="Read NCMRWF Unified Model NWP Monograph"
+                  >
+                    <span className="truncate group-hover:underline">• {t('ncmrwfCredit', 'NCMRWF Global & Regional Models')}</span>
+                    <span className="inline-flex items-center gap-1 text-[9px] font-semibold text-[#4FA8E0] bg-[#0B72B9]/20 px-1.5 py-0.5 rounded border border-[#0B72B9]/40 group-hover:bg-[#0B72B9] group-hover:text-white transition-colors shrink-0 ml-1.5">
+                      <span className="material-symbols-outlined text-[11px]">description</span>
+                      Article
+                    </span>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenFooterArticle('cpcb-air-quality-annual-2026')}
+                    className="w-full text-left group flex items-center justify-between text-[#B2BDCD] hover:text-white transition-colors cursor-pointer py-0.5"
+                    title="Read CPCB / SAFAR National Ambient Air Quality Publication"
+                  >
+                    <span className="truncate group-hover:underline">• {t('cpcbCredit', 'Central Pollution Control Board (CPCB)')}</span>
+                    <span className="inline-flex items-center gap-1 text-[9px] font-semibold text-[#4FA8E0] bg-[#0B72B9]/20 px-1.5 py-0.5 rounded border border-[#0B72B9]/40 group-hover:bg-[#0B72B9] group-hover:text-white transition-colors shrink-0 ml-1.5">
+                      <span className="material-symbols-outlined text-[11px]">description</span>
+                      Article
+                    </span>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenFooterArticle('isro-mosdac-satellite-meteorology')}
+                    className="w-full text-left group flex items-center justify-between text-[#B2BDCD] hover:text-white transition-colors cursor-pointer py-0.5"
+                    title="Read ISRO MOSDAC Satellite Radiometry & Telemetry Monograph"
+                  >
+                    <span className="truncate group-hover:underline">• {t('isroCredit', 'ISRO MOSDAC Earth Observation')}</span>
+                    <span className="inline-flex items-center gap-1 text-[9px] font-semibold text-[#4FA8E0] bg-[#0B72B9]/20 px-1.5 py-0.5 rounded border border-[#0B72B9]/40 group-hover:bg-[#0B72B9] group-hover:text-white transition-colors shrink-0 ml-1.5">
+                      <span className="material-symbols-outlined text-[11px]">description</span>
+                      Article
+                    </span>
+                  </button>
+                </li>
               </ul>
             </div>
 
@@ -309,11 +371,63 @@ export default function App() {
               <span className="font-bold text-white uppercase text-[11px] block mb-2">
                 {t('citizenServicesTitle', 'Citizen Meteorological Services')}
               </span>
-              <ul className="space-y-1 text-[11px]">
-                <li>• Nowcasting &amp; Thunderstorm Warnings</li>
-                <li>• Gramin Krishi Mausam Sewa (Agromet)</li>
-                <li>• National Air Quality Index (NAQI)</li>
-                <li>• Aero-Allergen Pollen Surveillance</li>
+              <ul className="space-y-1.5 text-[11px]">
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenFooterArticle('doppler-radar-nowcasting-techniques')}
+                    className="w-full text-left group flex items-center justify-between text-[#B2BDCD] hover:text-white transition-colors cursor-pointer py-0.5"
+                    title="Read Doppler Radar Nowcasting & Thunderstorm Warning Research"
+                  >
+                    <span className="truncate group-hover:underline">• Nowcasting &amp; Thunderstorm Warnings</span>
+                    <span className="inline-flex items-center gap-1 text-[9px] font-semibold text-[#4FA8E0] bg-[#0B72B9]/20 px-1.5 py-0.5 rounded border border-[#0B72B9]/40 group-hover:bg-[#0B72B9] group-hover:text-white transition-colors shrink-0 ml-1.5">
+                      <span className="material-symbols-outlined text-[11px]">description</span>
+                      Article
+                    </span>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenFooterArticle('agromet-advisory-gkms-odisha-india')}
+                    className="w-full text-left group flex items-center justify-between text-[#B2BDCD] hover:text-white transition-colors cursor-pointer py-0.5"
+                    title="Read Gramin Krishi Mausam Sewa (GKMS) Agromet Advisory Bulletin"
+                  >
+                    <span className="truncate group-hover:underline">• Gramin Krishi Mausam Sewa (Agromet)</span>
+                    <span className="inline-flex items-center gap-1 text-[9px] font-semibold text-[#4FA8E0] bg-[#0B72B9]/20 px-1.5 py-0.5 rounded border border-[#0B72B9]/40 group-hover:bg-[#0B72B9] group-hover:text-white transition-colors shrink-0 ml-1.5">
+                      <span className="material-symbols-outlined text-[11px]">description</span>
+                      Article
+                    </span>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenFooterArticle('cpcb-air-quality-annual-2026')}
+                    className="w-full text-left group flex items-center justify-between text-[#B2BDCD] hover:text-white transition-colors cursor-pointer py-0.5"
+                    title="Read National Air Quality Index (NAQI) & Urban Pollutant Analysis"
+                  >
+                    <span className="truncate group-hover:underline">• National Air Quality Index (NAQI)</span>
+                    <span className="inline-flex items-center gap-1 text-[9px] font-semibold text-[#4FA8E0] bg-[#0B72B9]/20 px-1.5 py-0.5 rounded border border-[#0B72B9]/40 group-hover:bg-[#0B72B9] group-hover:text-white transition-colors shrink-0 ml-1.5">
+                      <span className="material-symbols-outlined text-[11px]">description</span>
+                      Article
+                    </span>
+                  </button>
+                </li>
+                <li>
+                  <button
+                    type="button"
+                    onClick={() => handleOpenFooterArticle('aero-allergen-pollen-surveillance')}
+                    className="w-full text-left group flex items-center justify-between text-[#B2BDCD] hover:text-white transition-colors cursor-pointer py-0.5"
+                    title="Read Aero-Allergen & Pollen Surveillance Research Monograph"
+                  >
+                    <span className="truncate group-hover:underline">• Aero-Allergen Pollen Surveillance</span>
+                    <span className="inline-flex items-center gap-1 text-[9px] font-semibold text-[#4FA8E0] bg-[#0B72B9]/20 px-1.5 py-0.5 rounded border border-[#0B72B9]/40 group-hover:bg-[#0B72B9] group-hover:text-white transition-colors shrink-0 ml-1.5">
+                      <span className="material-symbols-outlined text-[11px]">description</span>
+                      Article
+                    </span>
+                  </button>
+                </li>
               </ul>
             </div>
 
@@ -321,15 +435,24 @@ export default function App() {
               <span className="font-bold text-white uppercase text-[11px] block mb-2">
                 {t('standardProtocolsTitle', 'Standard Protocols')}
               </span>
-              <p className="text-[11px] leading-relaxed">
+              <p className="text-[11px] leading-relaxed mb-2.5">
                 {t('footerStandardNotice', 'Adheres to World Meteorological Organization (WMO) standards for meteorological instrument calibration and NDMA hazard classification.')}
               </p>
+              <button
+                type="button"
+                onClick={() => handleOpenFooterArticle('wmo-instrument-calibration-ndma-standards')}
+                className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-[#4FA8E0] bg-[#0B72B9]/20 hover:bg-[#0B72B9] hover:text-white px-2.5 py-1 rounded border border-[#0B72B9]/40 transition-colors cursor-pointer"
+                title="Read WMO-No. 8 Instrument Calibration & NDMA Standards Document"
+              >
+                <span className="material-symbols-outlined text-[13px]">menu_book</span>
+                <span>Read Standards Protocol &amp; NDMA Matrix</span>
+              </button>
             </div>
           </div>
 
           <div className="pt-4 flex flex-col md:flex-row items-center justify-between gap-3 text-[11px] text-center md:text-left">
             <div>
-              {t('allRightsReserved', '© 2026 MAUSAM National Meteorological Platform • Smart India Hackathon (SIH 2026)')}
+              {t('allRightsReserved', '© 2026 MAUSAM National Meteorological Platform • India Meteorological Department')}
             </div>
             
             {/* Unified FooterNavigation component */}
@@ -340,6 +463,13 @@ export default function App() {
           </div>
         </div>
       </footer>
+
+      {/* Global Publication / Article Modal */}
+      <ReportDetailModal
+        publication={selectedFooterPublication}
+        isOpen={Boolean(selectedFooterPublication)}
+        onClose={() => setSelectedFooterPublication(null)}
+      />
 
       {/* Floating Ask MAUSAM AI Quick Trigger */}
       <button

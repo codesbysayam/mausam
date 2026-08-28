@@ -9,6 +9,8 @@ import { imdCache } from '../imd/imdCache';
 import { AQIProvider } from '../environment/aqiProvider';
 import { PollenProvider } from '../environment/pollenProvider';
 import cityStationMapData from '../imd/cityStationMap.json';
+import imdStationsData from '../../src/data/imdStations.json';
+import indiaLocationsData from '../../src/data/indiaLocations.json';
 
 export const imdRouter = Router();
 
@@ -88,11 +90,32 @@ imdRouter.get('/district-rainfall', async (req: Request, res: Response) => {
   }
 });
 
-// District Warnings
+// District Warnings & Warnings by Station / District ID
+imdRouter.get('/warnings/:stationId?', async (req: Request, res: Response) => {
+  try {
+    const stationId = req.params.stationId || (req.query.id as string);
+    const result = await imdConnector.getDistrictWarnings(stationId);
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 imdRouter.get('/district-warning', async (req: Request, res: Response) => {
   try {
-    const districtId = req.query.id as string;
+    const districtId = (req.query.id as string) || (req.query.districtId as string);
     const result = await imdConnector.getDistrictWarnings(districtId);
+    res.json(result);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// District Nowcast
+imdRouter.get('/district-nowcast/:districtId?', async (req: Request, res: Response) => {
+  try {
+    const districtId = req.params.districtId || (req.query.id as string) || (req.query.districtId as string);
+    const result = await imdConnector.getDistrictNowcast(districtId);
     res.json(result);
   } catch (err: any) {
     res.status(500).json({ error: err.message });
@@ -155,9 +178,9 @@ imdRouter.get('/basin-qpf', async (req: Request, res: Response) => {
 });
 
 // Port Warning
-imdRouter.get('/port-warning', async (req: Request, res: Response) => {
+imdRouter.get('/port-warning/:portId?', async (req: Request, res: Response) => {
   try {
-    const portId = req.query.id as string;
+    const portId = req.params.portId || (req.query.id as string) || (req.query.portId as string);
     const result = await imdClient.portWarning(portId);
     res.json(result);
   } catch (err: any) {
@@ -166,9 +189,9 @@ imdRouter.get('/port-warning', async (req: Request, res: Response) => {
 });
 
 // Sea Bulletin
-imdRouter.get('/sea-bulletin', async (req: Request, res: Response) => {
+imdRouter.get('/sea-bulletin/:areaId?', async (req: Request, res: Response) => {
   try {
-    const areaId = req.query.id as string;
+    const areaId = req.params.areaId || (req.query.id as string) || (req.query.areaId as string);
     const result = await imdClient.seaBulletin(areaId);
     res.json(result);
   } catch (err: any) {
@@ -293,6 +316,27 @@ imdRouter.get('/states', (_req: Request, res: Response) => {
     status: 'success',
     fetchedAt: new Date().toISOString(),
     data: imdConnector.getStates(),
+  });
+});
+
+// IMD Stations Directory (Country -> State -> City -> Station)
+imdRouter.get('/stations', (_req: Request, res: Response) => {
+  res.json({
+    source: 'IMD Station Master Registry',
+    status: 'success',
+    fetchedAt: new Date().toISOString(),
+    count: imdStationsData.length,
+    data: imdStationsData,
+  });
+});
+
+// Hierarchical India Locations
+imdRouter.get('/locations', (_req: Request, res: Response) => {
+  res.json({
+    source: 'IMD / Survey of India Administrative Hierarchy',
+    status: 'success',
+    fetchedAt: new Date().toISOString(),
+    data: indiaLocationsData,
   });
 });
 

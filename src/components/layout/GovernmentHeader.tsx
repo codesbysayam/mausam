@@ -82,7 +82,7 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
                     {t('portalTitle', 'MAUSAM')}
                   </span>
                   <span className="bg-[#0B72B9]/20 text-[#4FA8E0] text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 rounded border border-[#0B72B9]/40">
-                    SIH 2026
+                    OFFICIAL
                   </span>
                 </div>
                 <p className="text-[#8A94A6] text-[10px] sm:text-xs font-normal leading-none mt-0.5 hidden md:block">
