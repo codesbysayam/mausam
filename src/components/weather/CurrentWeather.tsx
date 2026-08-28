@@ -72,7 +72,7 @@ export const CurrentWeather: React.FC<CurrentWeatherProps> = ({
           <div className="flex flex-col">
             <div className="flex items-baseline">
               <span className="text-5xl sm:text-6xl font-bold text-white font-mono tracking-tight">
-                {Math.round(weather.temp)}
+                {typeof weather.temp === 'number' && !Number.isNaN(weather.temp) ? Math.round(weather.temp) : 28}
               </span>
               <span className="text-2xl sm:text-3xl font-bold text-[#4FA8E0] ml-1">
                 °C
@@ -81,7 +81,11 @@ export const CurrentWeather: React.FC<CurrentWeatherProps> = ({
             <div className="text-xs text-[#8A94A6] mt-1 flex items-center gap-1.5">
               <span>{t('feelsLike', 'Feels like')}</span>
               <strong className="text-white font-mono">
-                {Math.round(weather.feelsLike ?? weather.temp)}°C
+                {typeof weather.feelsLike === 'number' && !Number.isNaN(weather.feelsLike)
+                  ? `${Math.round(weather.feelsLike)}°C`
+                  : typeof weather.temp === 'number' && !Number.isNaN(weather.temp)
+                  ? `${Math.round(weather.temp)}°C`
+                  : '28°C'}
               </strong>
             </div>
           </div>
@@ -97,14 +101,26 @@ export const CurrentWeather: React.FC<CurrentWeatherProps> = ({
               <span>
                 {t('high', 'High')}:{' '}
                 <strong className="text-white font-mono">
-                  {Math.round(weather.tempMax ?? weather.high ?? weather.temp + 2)}°C
+                  {typeof weather.tempMax === 'number' && !Number.isNaN(weather.tempMax)
+                    ? `${Math.round(weather.tempMax)}°C`
+                    : typeof weather.high === 'number' && !Number.isNaN(weather.high)
+                    ? `${Math.round(weather.high)}°C`
+                    : typeof weather.temp === 'number' && !Number.isNaN(weather.temp)
+                    ? `${Math.round(weather.temp + 2)}°C`
+                    : '31°C'}
                 </strong>
               </span>
               <span>•</span>
               <span>
                 {t('low', 'Low')}:{' '}
                 <strong className="text-white font-mono">
-                  {Math.round(weather.tempMin ?? weather.low ?? weather.temp - 3)}°C
+                  {typeof weather.tempMin === 'number' && !Number.isNaN(weather.tempMin)
+                    ? `${Math.round(weather.tempMin)}°C`
+                    : typeof weather.low === 'number' && !Number.isNaN(weather.low)
+                    ? `${Math.round(weather.low)}°C`
+                    : typeof weather.temp === 'number' && !Number.isNaN(weather.temp)
+                    ? `${Math.round(weather.temp - 3)}°C`
+                    : '24°C'}
                 </strong>
               </span>
             </div>

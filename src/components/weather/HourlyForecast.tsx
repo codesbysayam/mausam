@@ -55,7 +55,7 @@ export const HourlyForecast: React.FC<HourlyForecastProps> = ({
 
               <div className="my-2 flex flex-col items-center">
                 <span className="text-lg font-bold text-white font-mono">
-                  {Math.round(item.temp)}°C
+                  {typeof item.temp === 'number' && !Number.isNaN(item.temp) ? `${Math.round(item.temp)}°C` : '—'}
                 </span>
                 <span className="text-[11px] text-[#8A94A6] line-clamp-1 mt-0.5 max-w-[80px]">
                   {tCondition(item.condition)}

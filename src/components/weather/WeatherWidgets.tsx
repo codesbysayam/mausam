@@ -45,18 +45,18 @@ export const WeatherWidgets: React.FC<WeatherWidgetsProps> = ({
   const hpaToInHg = (hpa: number): number => +(hpa * 0.02953).toFixed(2);
 
   // Raw values with safe fallbacks
-  const rawUv = typeof weather.uvIndex === 'number' ? weather.uvIndex : 6;
-  const rawHumidity = typeof weather.humidity === 'number' ? weather.humidity : 62;
-  const rawDewPointC = typeof weather.dewPoint === 'number' ? weather.dewPoint : 18;
-  const rawVisibilityKm = typeof weather.visibilityKm === 'number' 
+  const rawUv = typeof weather.uvIndex === 'number' && !Number.isNaN(weather.uvIndex) ? weather.uvIndex : 6;
+  const rawHumidity = typeof weather.humidity === 'number' && !Number.isNaN(weather.humidity) ? weather.humidity : 62;
+  const rawDewPointC = typeof weather.dewPoint === 'number' && !Number.isNaN(weather.dewPoint) ? weather.dewPoint : 18;
+  const rawVisibilityKm = typeof weather.visibilityKm === 'number' && !Number.isNaN(weather.visibilityKm)
     ? weather.visibilityKm 
-    : typeof weather.visibility === 'number' 
+    : typeof weather.visibility === 'number' && !Number.isNaN(weather.visibility)
       ? weather.visibility 
       : 10;
-  const rawPressureHpa = typeof weather.pressure === 'number' ? weather.pressure : 1012;
-  const rawWindSpeedKmh = typeof weather.windSpeed === 'number' ? weather.windSpeed : 14;
-  const rawWindGustsKmh = typeof weather.windGusts === 'number' ? weather.windGusts : rawWindSpeedKmh + 6;
-  const rawCloudCover = typeof weather.cloudCover === 'number' ? weather.cloudCover : 25;
+  const rawPressureHpa = typeof weather.pressure === 'number' && !Number.isNaN(weather.pressure) ? weather.pressure : 1012;
+  const rawWindSpeedKmh = typeof weather.windSpeed === 'number' && !Number.isNaN(weather.windSpeed) ? weather.windSpeed : 14;
+  const rawWindGustsKmh = typeof weather.windGusts === 'number' && !Number.isNaN(weather.windGusts) ? weather.windGusts : rawWindSpeedKmh + 6;
+  const rawCloudCover = typeof weather.cloudCover === 'number' && !Number.isNaN(weather.cloudCover) ? weather.cloudCover : 25;
 
   // Formatted Metric / Imperial Values
   const dewPointDisplay = isMetric ? `${Math.round(rawDewPointC)}°C` : `${cToF(rawDewPointC)}°F`;

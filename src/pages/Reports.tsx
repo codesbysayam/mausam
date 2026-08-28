@@ -160,17 +160,6 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
             >
               Official Bulletins
             </button>
-            <button
-              type="button"
-              onClick={() => setActiveViewMode('articles')}
-              className={`px-3 py-1.5 text-xs font-bold rounded transition-colors cursor-pointer ${
-                activeViewMode === 'articles'
-                  ? 'bg-[#0B72B9] text-white'
-                  : 'bg-[#1E2733] text-[#8A94A6] hover:text-white border border-[#334155]'
-              }`}
-            >
-              Research Articles &amp; Monographs
-            </button>
           </div>
         </div>
 
@@ -308,17 +297,15 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
                 className="mausam-card hover:border-[#0B72B9] transition-all cursor-pointer p-4 group"
               >
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                  {/* Left Column: Icon & Details */}
+                  {/* Left Column: Details */}
                   <div className="flex items-start gap-3 flex-1">
-                    <div className={`w-10 h-10 rounded flex items-center justify-center shrink-0 mt-0.5 ${
-                      isArticle
-                        ? 'bg-[#1ABC9C]/15 border border-[#1ABC9C]/40 text-[#1ABC9C]'
-                        : 'bg-[#0B72B9]/15 border border-[#0B72B9]/40 text-[#4FA8E0]'
-                    }`}>
-                      <span className="material-symbols-outlined text-[22px]">
-                        {isArticle ? 'article' : 'picture_as_pdf'}
-                      </span>
-                    </div>
+                    {!isArticle && (
+                      <div className="w-10 h-10 rounded flex items-center justify-center shrink-0 mt-0.5 bg-[#0B72B9]/15 border border-[#0B72B9]/40 text-[#4FA8E0]">
+                        <span className="material-symbols-outlined text-[22px]">
+                          picture_as_pdf
+                        </span>
+                      </div>
+                    )}
 
                     <div className="flex-1">
                       <div className="flex flex-wrap items-center gap-2 mb-1">

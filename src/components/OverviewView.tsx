@@ -65,15 +65,26 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           { time: '20:00', temp: 28.0, humidity: 76, pressure: 1011.0, windSpeed: 11, rain: 0 },
         ];
 
-  const maxTemp = Math.max(...trendData.map((d) => d.temp));
-  const minTemp = Math.min(...trendData.map((d) => d.temp));
-  const avgHumidity = Math.round(
-    trendData.reduce((acc, d) => acc + d.humidity, 0) / trendData.length
-  );
-  const totalRain24h = trendData.reduce((acc, d) => acc + (d.rain || 0), 0).toFixed(1);
+  const validTemps = trendData
+    .map((d) => d.temp)
+    .filter((t): t is number => typeof t === 'number' && !Number.isNaN(t));
+  const maxTemp = validTemps.length > 0 ? Math.max(...validTemps) : (typeof weather.temp === 'number' && !Number.isNaN(weather.temp) ? Math.round(weather.temp + 3) : 33);
+  const minTemp = validTemps.length > 0 ? Math.min(...validTemps) : (typeof weather.temp === 'number' && !Number.isNaN(weather.temp) ? Math.round(weather.temp - 4) : 23);
+
+  const validHumidities = trendData
+    .map((d) => d.humidity)
+    .filter((h): h is number => typeof h === 'number' && !Number.isNaN(h));
+  const avgHumidity = validHumidities.length > 0
+    ? Math.round(validHumidities.reduce((acc, d) => acc + d, 0) / validHumidities.length)
+    : (typeof weather.humidity === 'number' && !Number.isNaN(weather.humidity) ? weather.humidity : 68);
+
+  const totalRain24h = trendData
+    .reduce((acc, d) => acc + (typeof d.rain === 'number' && !Number.isNaN(d.rain) ? d.rain : 0), 0)
+    .toFixed(1);
 
   // AQI color logic
-  const getAqiColor = (val: number) => {
+  const getAqiColor = (val?: number) => {
+    if (typeof val !== 'number' || Number.isNaN(val)) return tokens.colors.status.neutral;
     if (val <= 50) return tokens.colors.status.success;
     if (val <= 100) return tokens.colors.status.warning;
     return tokens.colors.status.danger;
@@ -232,7 +243,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
                 <div>
                   <span className="font-semibold block text-[#FFFFFF]">
                     {weather.isRainingNow
-                      ? `Active Rain: ${weather.precipitation.toFixed(1)} mm/hr`
+                      ? `Active Rain: ${(typeof weather.precipitation === 'number' && !Number.isNaN(weather.precipitation) ? weather.precipitation : 0).toFixed(1)} mm/hr`
                       : 'No Active Rain Currently'}
                   </span>
                   <span className="text-[11px] text-[#8A94A6]">

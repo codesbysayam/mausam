@@ -61,13 +61,17 @@ export const DailyForecast: React.FC<DailyForecastProps> = ({ daily }) => {
     },
     {
       header: language === 'hi' ? 'अधिकतम / न्यूनतम' : language === 'or' ? 'ସର୍ବୋଚ୍ଚ / ସର୍ବନିମ୍ନ' : 'Max / Min Temp',
-      render: (item) => (
-        <div className="font-mono text-xs">
-          <span className="text-white font-bold">{Math.round(item.high)}°C</span>
-          <span className="text-[#8A94A6] mx-1">/</span>
-          <span className="text-[#8A94A6]">{Math.round(item.low)}°C</span>
-        </div>
-      ),
+      render: (item) => {
+        const highVal = typeof item.high === 'number' && !Number.isNaN(item.high) ? `${Math.round(item.high)}°C` : '—';
+        const lowVal = typeof item.low === 'number' && !Number.isNaN(item.low) ? `${Math.round(item.low)}°C` : '—';
+        return (
+          <div className="font-mono text-xs">
+            <span className="text-white font-bold">{highVal}</span>
+            <span className="text-[#8A94A6] mx-1">/</span>
+            <span className="text-[#8A94A6]">{lowVal}</span>
+          </div>
+        );
+      },
       width: '120px',
     },
     {
