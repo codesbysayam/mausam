@@ -22,11 +22,11 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
 
   // Dynamically generate a live district bulletin customized for the current selected location
   const dynamicDistrictBulletin: MeteorologicalPublication = useMemo(() => {
-    const temp = weatherBundle?.currentWeather?.temperature ?? 28;
-    const humidity = weatherBundle?.currentWeather?.humidity ?? 78;
-    const condition = weatherBundle?.currentWeather?.condition ?? 'Partly Cloudy with Humid Atmospheric Flow';
-    const pressure = weatherBundle?.currentWeather?.pressure ?? 1008;
-    const windSpeed = weatherBundle?.currentWeather?.windSpeed ?? 14;
+    const temp = weatherBundle?.current?.temp ?? 28;
+    const humidity = weatherBundle?.current?.humidity ?? 78;
+    const condition = weatherBundle?.current?.condition ?? 'Partly Cloudy with Humid Atmospheric Flow';
+    const pressure = weatherBundle?.current?.pressure ?? 1008;
+    const windSpeed = weatherBundle?.current?.windSpeed ?? 14;
 
     return {
       id: `district-bulletin-${selectedLocation.id || 'live'}`,

@@ -40,6 +40,8 @@ export interface LocationRecord {
   state: string;
   district: string;
   city: string;
+  name?: string;
+  stationId?: string;
   lat: number;
   lng: number;
   pincode?: string;
@@ -127,6 +129,7 @@ export interface CurrentWeather {
   sunset?: string;
   solarNoon?: string;
   daylightDuration?: string;
+  dayLength?: string;
   dawnTime?: string;
   duskTime?: string;
   solarElevationDeg?: number;
@@ -223,9 +226,10 @@ export interface WeatherAlert {
   id: string;
   agency: string;
   title: string;
-  severity: 'severe' | 'warning' | 'advisory' | 'info';
+  severity: 'severe' | 'warning' | 'advisory' | 'info' | 'Severe' | 'Extreme' | 'Moderate' | 'red' | 'orange' | 'yellow' | 'extreme';
   description: string;
   affectedDistricts: string[];
+  affectedArea?: string;
   issuedAt: string;
   validUntil: string;
   actionItem: string;

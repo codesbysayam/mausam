@@ -1179,13 +1179,19 @@ export function buildMausamSystemInstruction(context?: MausamAIContextPayload): 
   let contextBlock = '';
 
   if (context) {
+    const lang = context.preferredLanguage || 'English';
     contextBlock = `\n\n===============================================================
 CURRENT APPLICATION TELEMETRY CONTEXT (JSON)
 ===============================================================
 ${JSON.stringify(context, null, 2)}
 ===============================================================
-Target Language: ${context.preferredLanguage || 'English'}
-Please adhere strictly to the MASTER SYSTEM PROMPT rules above. Only reference fields present in the telemetry above. If a field is null or missing, declare it data unavailable.`;
+MANDATORY TARGET LANGUAGE: ${lang}
+
+CRITICAL MULTILINGUAL DIRECTIVE:
+1. You MUST generate your ENTIRE response in ${lang} using its native script (e.g., if Odia, write in Odia script ଓଡ଼ିଆ; if Hindi, write in Devanagari हिन्दी; if Bengali, write in Bengali script বাংলা; if Marathi, write in Marathi मराठी; if Tamil, write in Tamil script தமிழ்; if Telugu, write in Telugu script తెలుగు; if Gujarati, write in Gujarati ગુજરાતી; if Kannada, write in Kannada ಕನ್ನಡ; if Malayalam, write in Malayalam മലയാളം; if Punjabi, write in Gurmukhi ਪੰਜਾਬੀ; if Assamese, write in Assamese অসমীয়া; if Urdu, write in Urdu اردو).
+2. Translate all headings, atmospheric observation labels, agricultural advisories, and citizen safety guidance into ${lang}.
+3. Keep meteorological numerical values (e.g. 28°C, 95% RH, 1004 hPa, AQI 65) precise, clear, and easy to read.
+4. Adhere strictly to the MASTER SYSTEM PROMPT rules above. Only reference fields present in the telemetry above. If a field is null or missing, declare it data unavailable.`;
   }
 
   return `${MAUSAM_AI_MASTER_SYSTEM_PROMPT}${contextBlock}`;

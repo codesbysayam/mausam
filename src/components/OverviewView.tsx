@@ -53,16 +53,16 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
   );
 
   // Calculate quick summary metrics from trends
-  const trendData =
+  const trendData: HistoricalTrendPoint[] =
     trends.length > 0
       ? trends
       : [
-          { time: '00:00', temp: 24.2, humidity: 82, pressure: 1011.5, windSpeed: 10, rain: 0 },
-          { time: '04:00', temp: 23.0, humidity: 88, pressure: 1011.2, windSpeed: 8, rain: 0 },
-          { time: '08:00', temp: 27.5, humidity: 74, pressure: 1012.8, windSpeed: 12, rain: 0 },
-          { time: '12:00', temp: 33.1, humidity: 58, pressure: 1010.4, windSpeed: 16, rain: 0 },
-          { time: '16:00', temp: 31.8, humidity: 64, pressure: 1009.8, windSpeed: 14, rain: 0 },
-          { time: '20:00', temp: 28.0, humidity: 76, pressure: 1011.0, windSpeed: 11, rain: 0 },
+          { time: '00:00', hour: 0, temp: 24.2, humidity: 82, pressure: 1011.5, windSpeed: 10, rain: 0 },
+          { time: '04:00', hour: 4, temp: 23.0, humidity: 88, pressure: 1011.2, windSpeed: 8, rain: 0 },
+          { time: '08:00', hour: 8, temp: 27.5, humidity: 74, pressure: 1012.8, windSpeed: 12, rain: 0 },
+          { time: '12:00', hour: 12, temp: 33.1, humidity: 58, pressure: 1010.4, windSpeed: 16, rain: 0 },
+          { time: '16:00', hour: 16, temp: 31.8, humidity: 64, pressure: 1009.8, windSpeed: 14, rain: 0 },
+          { time: '20:00', hour: 20, temp: 28.0, humidity: 76, pressure: 1011.0, windSpeed: 11, rain: 0 },
         ];
 
   const validTemps = trendData
@@ -79,7 +79,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
     : (typeof weather.humidity === 'number' && !Number.isNaN(weather.humidity) ? weather.humidity : 68);
 
   const totalRain24h = trendData
-    .reduce((acc, d) => acc + (typeof d.rain === 'number' && !Number.isNaN(d.rain) ? d.rain : 0), 0)
+    .reduce<number>((acc, d) => acc + (typeof d.rain === 'number' && !Number.isNaN(d.rain) ? d.rain : 0), 0)
     .toFixed(1);
 
   // AQI color logic

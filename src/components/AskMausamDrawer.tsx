@@ -1,12 +1,20 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { CurrentWeather, WeatherStation } from '../types';
 import {
   FAQ_CATEGORIES,
   FAQ_ITEMS,
+  ALL_INDIA_STATES_MET_PROFILES,
   matchMausamQuery,
   GroundingLink,
   MausamContext,
 } from '../services/mausamAiService';
+import {
+  SUPPORTED_MAUSAM_AI_LANGUAGES,
+  resolveLanguageKey,
+  getLocalizedInitialGreeting,
+  getDrawerUiStrings,
+} from '../data/mausamAiLanguages';
+import { MausamMarkdown } from './MausamMarkdown';
 
 interface AskMausamDrawerProps {
   isOpen: boolean;
@@ -32,46 +40,60 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
   weather,
   currentStation,
 }) => {
-  const [activeTab, setActiveTab] = useState<'chat' | 'faqs'>('chat');
-  const [groundingMode, setGroundingMode] = useState<'auto' | 'search' | 'maps'>('auto');
+  const [activeTab, setActiveTab] = useState<'chat' | 'faqs' | 'states'>('chat');
+  const [groundingMode] = useState<'auto' | 'search' | 'maps'>('auto');
   const [language, setLanguage] = useState<string>('English');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [faqSearchQuery, setFaqSearchQuery] = useState<string>('');
+  const [stateSearchQuery, setStateSearchQuery] = useState<string>('');
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
 
-  const initialMessage: Message = useMemo(
-    () => ({
+  // Clean station display string to prevent duplicate state names
+  const stationDisplayName = useMemo(() => {
+    const rawName = currentStation?.name || 'Observatory';
+    const stateName = currentStation?.state || 'India';
+    const matchParen = rawName.match(/\(([^)]+)\)/);
+    if (matchParen && matchParen[1]) {
+      const inside = matchParen[1].replace(/\s*-\s*[A-Z]{2}$/i, '').trim();
+      return `${inside} (${stateName})`;
+    }
+    if (rawName.toLowerCase().includes(stateName.toLowerCase())) {
+      return `${rawName}`;
+    }
+    return `${rawName} (${stateName})`;
+  }, [currentStation]);
+
+  const langKey = useMemo(() => resolveLanguageKey(language), [language]);
+  const uiStrings = useMemo(() => getDrawerUiStrings(langKey), [langKey]);
+
+  const createInitialMessage = useCallback((k: string): Message => {
+    const greeting = getLocalizedInitialGreeting(stationDisplayName, currentStation, weather, k);
+    return {
       id: 'init-1',
       role: 'assistant',
-      content: `### 🏛️ IMD Grounded Telemetry Stream
-**Station**: ${currentStation?.name || 'Observatory'}, ${currentStation?.state || 'India'}
-**Coordinates**: ${typeof currentStation?.lat === 'number' ? currentStation.lat.toFixed(2) : '20.29'}°N, ${typeof currentStation?.lng === 'number' ? currentStation.lng.toFixed(2) : '85.82'}°E (Station ID: ${currentStation?.code || currentStation?.id || '42971'})
-
-• **Temperature**: **${weather.temp}°C** (Feels like: **${weather.feelsLike ?? weather.temp}°C**)
-• **Condition**: **${weather.condition}**
-• **Relative Humidity**: **${weather.humidity}%** | **Dew Point**: **${weather.dewPoint ?? 24.5}°C**
-• **Wind**: **${weather.windSpeed} km/h** ${weather.windDirection}
-• **Barometric Pressure**: **${weather.pressure} hPa**
-• **Air Quality Index**: **${weather.aqiIndex ?? weather.aqiPm25 ?? 65}** (${weather.aqiStatus || 'Satisfactory'})
-• **Pollen Risk**: **${weather.pollen || 'Low Risk'}**
-
-*Ask any meteorological, farming, air quality, or disaster safety question below or explore the FAQ library.*`,
+      content: greeting.content,
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       source: 'India Meteorological Department (IMD) Grounded Core',
-      suggestedFollowUps: [
-        'What is the current weather & conditions?',
-        'Can I go for an outdoor run right now?',
-        'Is there an active rainfall warning?',
-        'Agromet farming advisory for my state',
-      ],
-    }),
-    [currentStation, weather]
-  );
+      suggestedFollowUps: greeting.suggestedFollowUps,
+    };
+  }, [stationDisplayName, currentStation, weather]);
 
-  const [messages, setMessages] = useState<Message[]>([initialMessage]);
+  const [messages, setMessages] = useState<Message[]>(() => [createInitialMessage(resolveLanguageKey(language))]);
   const [inputPrompt, setInputPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // When language is changed, update initial message if only initial message is present
+  const handleLanguageChange = (newLanguage: string) => {
+    setLanguage(newLanguage);
+    const newLangKey = resolveLanguageKey(newLanguage);
+    setMessages((prev) => {
+      if (prev.length === 1 && prev[0].id === 'init-1') {
+        return [createInitialMessage(newLangKey)];
+      }
+      return prev;
+    });
+  };
 
   // Scroll to bottom when new messages arrive
   useEffect(() => {
@@ -79,22 +101,6 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages, isLoading, activeTab]);
-
-  const supportedLanguages = [
-    'English',
-    'Hindi (हिन्दी)',
-    'Odia (ଓଡ଼ିଆ)',
-    'Bengali (বাংলা)',
-    'Marathi (मराठी)',
-    'Tamil (தமிழ்)',
-    'Telugu (తెలుగు)',
-    'Kannada (ಕನ್ನಡ)',
-    'Malayalam (മലയാളം)',
-    'Gujarati (ગુજરાતી)',
-    'Punjabi (ਪੰਜਾਬੀ)',
-    'Assamese (অসমীয়া)',
-    'Urdu (اردو)',
-  ];
 
   // Filtered FAQs based on category and search query
   const filteredFaqs = useMemo(() => {
@@ -108,6 +114,20 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
       return matchCategory && matchSearch;
     });
   }, [selectedCategory, faqSearchQuery]);
+
+  // Filtered States and UTs
+  const filteredStates = useMemo(() => {
+    if (!stateSearchQuery.trim()) return ALL_INDIA_STATES_MET_PROFILES;
+    const q = stateSearchQuery.toLowerCase();
+    return ALL_INDIA_STATES_MET_PROFILES.filter(
+      (s) =>
+        s.name.toLowerCase().includes(q) ||
+        s.capital.toLowerCase().includes(q) ||
+        s.code.toLowerCase().includes(q) ||
+        s.representativeStation.toLowerCase().includes(q) ||
+        s.aliases.some((a) => a.toLowerCase().includes(q))
+    );
+  }, [stateSearchQuery]);
 
   const handleSendMessage = async (textToSend?: string) => {
     const query = textToSend || inputPrompt;
@@ -129,11 +149,11 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
     const context: MausamContext = {
       station: currentStation,
       weather: weather,
-      preferredLanguage: language.split(' ')[0],
+      preferredLanguage: language,
     };
 
     try {
-      // 1. First attempt to call the backend API
+      // 1. First attempt to call the backend API with the preferred language
       const response = await fetch('/api/ask-mausam', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -143,7 +163,7 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
           mode: groundingMode,
           lat: currentStation.lat,
           lng: currentStation.lng,
-          preferredLanguage: language.split(' ')[0],
+          preferredLanguage: language,
           location: {
             country: 'India',
             state: currentStation.state,
@@ -209,7 +229,7 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
 
       // If backend gave an empty or generic error response, use client-side knowledge matcher
       if (!data.response || data.response.includes('temporarily unavailable')) {
-        const clientAiMatch = matchMausamQuery(query, context, language.split(' ')[0]);
+        const clientAiMatch = matchMausamQuery(query, context, language);
         const assistantMsg: Message = {
           id: `asst-${Date.now()}`,
           role: 'assistant',
@@ -225,7 +245,7 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
       }
 
       // Check for follow-up suggestions from client knowledge engine
-      const clientLookup = matchMausamQuery(query, context, language.split(' ')[0]);
+      const clientLookup = matchMausamQuery(query, context, language);
 
       const assistantMsg: Message = {
         id: `asst-${Date.now()}`,
@@ -233,16 +253,19 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
         content: data.response,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         source: data.source || 'India Meteorological Department (IMD)',
-        groundingSources: (data.groundingSources && data.groundingSources.length > 0) ? data.groundingSources : clientLookup.groundingSources,
+        groundingSources:
+          data.groundingSources && data.groundingSources.length > 0
+            ? data.groundingSources
+            : clientLookup.groundingSources,
         suggestedFollowUps: clientLookup.suggestedFollowUps,
         modeUsed: data.modeUsed || 'online-grounded',
       };
 
       setMessages((prev) => [...prev, assistantMsg]);
     } catch (err) {
-      console.warn('Backend /api/ask-mausam unavailable or offline, activating client atmospheric engine:', err);
+      console.warn('Backend /api/ask-mausam unavailable or offline, activating localized atmospheric engine:', err);
       // High-precision offline / static deployment fallback
-      const localResult = matchMausamQuery(query, context, language.split(' ')[0]);
+      const localResult = matchMausamQuery(query, context, language);
 
       const assistantMsg: Message = {
         id: `asst-${Date.now()}`,
@@ -268,7 +291,7 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
   };
 
   const handleClearChat = () => {
-    setMessages([initialMessage]);
+    setMessages([createInitialMessage(langKey)]);
   };
 
   // Lock body scroll and listen for Escape key
@@ -315,12 +338,9 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
                 <span className="px-2 py-0.5 rounded-full bg-[#0B72B9]/20 text-[#4FA8E0] text-[10px] font-bold border border-[#0B72B9]/40 shrink-0">
                   IMD Telemetry
                 </span>
-                <span className="px-1.5 py-0.5 rounded bg-[#2ECC71]/15 text-[#2ECC71] text-[9px] font-semibold border border-[#2ECC71]/30 shrink-0">
-                  Zero Paid Key
-                </span>
               </div>
               <p className="text-[11px] text-[#8A94A6] truncate mt-0.5">
-                Observatory: <span className="text-[#4FA8E0] font-medium">{currentStation?.name || 'Bhubaneswar'}</span> ({currentStation?.state || 'Odisha'})
+                Observatory: <span className="text-[#4FA8E0] font-medium">{stationDisplayName}</span>
               </p>
             </div>
           </div>
@@ -350,25 +370,36 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
           <div className="flex items-center bg-[#17212B] p-0.5 rounded-lg border border-[#202B3B]">
             <button
               onClick={() => setActiveTab('chat')}
-              className={`px-3 py-1 rounded-md transition-all text-xs font-semibold flex items-center gap-1.5 cursor-pointer ${
+              className={`px-2.5 sm:px-3 py-1 rounded-md transition-all text-xs font-semibold flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'chat'
                   ? 'bg-[#0B72B9] text-white shadow-sm'
                   : 'text-[#8A94A6] hover:text-white'
               }`}
             >
               <span className="material-symbols-outlined text-[14px]">chat</span>
-              Chat Stream
+              {uiStrings.chatStream}
             </button>
             <button
               onClick={() => setActiveTab('faqs')}
-              className={`px-3 py-1 rounded-md transition-all text-xs font-semibold flex items-center gap-1.5 cursor-pointer ${
+              className={`px-2.5 sm:px-3 py-1 rounded-md transition-all text-xs font-semibold flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'faqs'
                   ? 'bg-[#0B72B9] text-white shadow-sm'
                   : 'text-[#8A94A6] hover:text-white'
               }`}
             >
               <span className="material-symbols-outlined text-[14px]">menu_book</span>
-              FAQ Library ({FAQ_ITEMS.length})
+              {uiStrings.faqLibrary} ({FAQ_ITEMS.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('states')}
+              className={`px-2.5 sm:px-3 py-1 rounded-md transition-all text-xs font-semibold flex items-center gap-1.5 cursor-pointer ${
+                activeTab === 'states'
+                  ? 'bg-[#0B72B9] text-white shadow-sm'
+                  : 'text-[#8A94A6] hover:text-white'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[14px]">map</span>
+              {uiStrings.statesDirectory}
             </button>
           </div>
 
@@ -377,12 +408,13 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
             <span className="material-symbols-outlined text-[#8A94A6] text-[14px]">translate</span>
             <select
               value={language}
-              onChange={(e) => setLanguage(e.target.value)}
+              onChange={(e) => handleLanguageChange(e.target.value)}
               className="bg-[#17212B] text-[#4FA8E0] text-[11px] font-medium rounded-md border border-[#202B3B] px-2 py-1 focus:outline-none focus:border-[#0B72B9]"
+              aria-label="Select Assistant Language"
             >
-              {supportedLanguages.map((lang) => (
-                <option key={lang} value={lang} className="bg-[#17212B] text-white">
-                  {lang}
+              {SUPPORTED_MAUSAM_AI_LANGUAGES.map((lang) => (
+                <option key={lang.key} value={lang.label} className="bg-[#17212B] text-white">
+                  {lang.label}
                 </option>
               ))}
             </select>
@@ -398,22 +430,24 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
                 className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}
               >
                 <div
-                  className={`p-3 sm:p-4 rounded-xl max-w-[94%] sm:max-w-[92%] text-xs sm:text-[13px] leading-relaxed break-words [overflow-wrap:anywhere] shadow-md ${
+                  className={`p-3.5 sm:p-4 rounded-xl max-w-[94%] sm:max-w-[92%] text-xs sm:text-[13px] leading-relaxed break-words [overflow-wrap:anywhere] shadow-md ${
                     m.role === 'user'
                       ? 'bg-[#0B72B9] text-white font-medium rounded-tr-none'
                       : 'bg-[#131C28] border border-[#202B3B] text-[#D7DEE8] rounded-tl-none'
                   }`}
                 >
-                  <div className="whitespace-pre-line prose-invert font-normal space-y-1">
-                    {m.content}
-                  </div>
+                  {m.role === 'user' ? (
+                    <div className="text-white font-medium whitespace-pre-wrap">{m.content}</div>
+                  ) : (
+                    <MausamMarkdown content={m.content} />
+                  )}
 
                   {/* Grounding Source Citations & Maps links */}
                   {m.groundingSources && m.groundingSources.length > 0 && (
                     <div className="mt-3.5 pt-2.5 border-t border-[#202B3B] flex flex-col gap-1.5">
                       <span className="text-[11px] font-bold text-[#4FA8E0] flex items-center gap-1">
                         <span className="material-symbols-outlined text-[14px]">verified</span>
-                        Official Meteorological References:
+                        {uiStrings.officialReferences}
                       </span>
                       <div className="flex flex-wrap gap-1.5">
                         {m.groundingSources.map((source, sIdx) => (
@@ -444,7 +478,7 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
                     <div className="mt-3.5 pt-2.5 border-t border-[#202B3B] flex flex-col gap-1.5">
                       <span className="text-[10px] font-bold uppercase tracking-wider text-[#8A94A6] flex items-center gap-1">
                         <span className="material-symbols-outlined text-[13px]">lightbulb</span>
-                        Suggested Inquiries:
+                        {uiStrings.suggestedInquiries}
                       </span>
                       <div className="flex flex-wrap gap-1.5">
                         {m.suggestedFollowUps.map((chip, cIdx) => (
@@ -473,12 +507,12 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
                       <button
                         onClick={() => handleCopy(m.id, m.content)}
                         className="hover:text-white flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-[#202B3B] transition-colors cursor-pointer"
-                        title="Copy answer"
+                        title={uiStrings.copy}
                       >
                         <span className="material-symbols-outlined text-[12px]">
                           {copiedMessageId === m.id ? 'done' : 'content_copy'}
                         </span>
-                        <span>{copiedMessageId === m.id ? 'Copied' : 'Copy'}</span>
+                        <span>{copiedMessageId === m.id ? uiStrings.copied : uiStrings.copy}</span>
                       </button>
                     </div>
                   )}
@@ -492,7 +526,7 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
             {isLoading && (
               <div className="flex items-center gap-2.5 text-[#4FA8E0] text-xs p-3.5 bg-[#131C28] rounded-xl border border-[#202B3B] w-fit shadow-md animate-pulse">
                 <span className="material-symbols-outlined text-[18px] animate-spin">autorenew</span>
-                <span>Synthesizing location telemetry for {currentStation?.name || 'Observatory'}...</span>
+                <span>{uiStrings.loadingText} {stationDisplayName}...</span>
               </div>
             )}
             <div ref={messagesEndRef} />
@@ -509,7 +543,7 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
               </span>
               <input
                 type="text"
-                placeholder="Search FAQs (e.g. rain, aqi, running, heatwave, farming)..."
+                placeholder={uiStrings.faqSearchPlaceholder}
                 value={faqSearchQuery}
                 onChange={(e) => setFaqSearchQuery(e.target.value)}
                 className="w-full bg-[#131C28] border border-[#202B3B] rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder-[#8A94A6] focus:outline-none focus:border-[#0B72B9]"
@@ -560,24 +594,100 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-[#0B72B9]/20 text-[#4FA8E0] uppercase tracking-wider">
-                          {FAQ_CATEGORIES.find((c) => c.id === faq.categoryId)?.name || 'General'}
+                        <span className="font-semibold text-white text-xs sm:text-[13px] group-hover:text-[#4FA8E0] transition-colors">
+                          {faq.question}
                         </span>
                       </div>
-                      <h4 className="text-xs sm:text-[13px] font-semibold text-white group-hover:text-[#4FA8E0] transition-colors leading-snug">
-                        {faq.question}
-                      </h4>
-                      <p className="text-[11px] text-[#8A94A6] line-clamp-1">
-                        Keywords: {faq.keywords.slice(0, 4).join(', ')}
+                      <p className="text-[11px] text-[#8A94A6] line-clamp-2">
+                        {faq.shortQuestion}
                       </p>
+                      <div className="flex items-center gap-2 pt-1">
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-[#0B72B9]/15 text-[#4FA8E0] font-medium">
+                          {faq.categoryId.toUpperCase()}
+                        </span>
+                        <span className="text-[10px] text-[#8A94A6]">
+                          {faq.keywords.slice(0, 3).join(', ')}
+                        </span>
+                      </div>
                     </div>
-
-                    <div className="w-7 h-7 rounded-lg bg-[#1B2737] group-hover:bg-[#0B72B9] group-hover:text-white text-[#8A94A6] flex items-center justify-center shrink-0 transition-all">
+                    <div className="w-6 h-6 rounded-full bg-[#1B2737] flex items-center justify-center text-[#8A94A6] group-hover:text-white group-hover:bg-[#0B72B9] shrink-0 transition-colors mt-0.5">
                       <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
                     </div>
                   </div>
                 ))
               )}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 3: All 28 States & 8 UTs Meteorological Directory */}
+        {activeTab === 'states' && (
+          <div className="flex-1 overflow-y-auto p-3 sm:p-4 flex flex-col gap-3 scrollbar-thin">
+            {/* Search States & UTs */}
+            <div className="relative shrink-0">
+              <span className="material-symbols-outlined absolute left-3 top-2.5 text-[#8A94A6] text-[18px]">
+                search
+              </span>
+              <input
+                type="text"
+                placeholder={uiStrings.statesSearchPlaceholder}
+                value={stateSearchQuery}
+                onChange={(e) => setStateSearchQuery(e.target.value)}
+                className="w-full bg-[#131C28] border border-[#202B3B] rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder-[#8A94A6] focus:outline-none focus:border-[#0B72B9]"
+              />
+              {stateSearchQuery && (
+                <button
+                  onClick={() => setStateSearchQuery('')}
+                  className="absolute right-2.5 top-2.5 text-[#8A94A6] hover:text-white"
+                >
+                  <span className="material-symbols-outlined text-[16px]">cancel</span>
+                </button>
+              )}
+            </div>
+
+            <div className="text-[11px] text-[#8A94A6] flex items-center justify-between">
+              <span>Showing {filteredStates.length} Indian States & Union Territories</span>
+              <span className="text-[#4FA8E0] font-medium">Click any region to query IMD AI</span>
+            </div>
+
+            {/* State Cards */}
+            <div className="grid grid-cols-1 gap-2">
+              {filteredStates.map((st) => (
+                <div
+                  key={st.id}
+                  onClick={() => handleSendMessage(`What is the meteorological profile and weather forecast for ${st.name}?`)}
+                  className="p-3 rounded-xl bg-[#131C28] border border-[#202B3B] hover:border-[#0B72B9] hover:bg-[#172332] transition-all cursor-pointer group flex items-start justify-between gap-3 shadow-xs"
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-bold text-white text-xs sm:text-[13px] group-hover:text-[#4FA8E0] transition-colors">
+                        {st.name}
+                      </span>
+                      <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-[#202B3B] text-[#94A3B8]">
+                        {st.code}
+                      </span>
+                      <span className="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-[#0B72B9]/20 text-[#4FA8E0]">
+                        {st.type === 'UNION_TERRITORY' ? 'UT' : 'State'}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-[#CBD5E1]">
+                      Capital / Observatory: <strong className="text-white">{st.capital}</strong> ({st.representativeStation})
+                    </p>
+                    <p className="text-[10px] text-[#8A94A6] line-clamp-1">
+                      Radar: {st.primaryRadar} | Zone: {st.agroZone}
+                    </p>
+                  </div>
+
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <span className="text-xs font-bold text-[#4FA8E0]">
+                      {st.normalTemp.min}° - {st.normalTemp.max}°C
+                    </span>
+                    <span className="text-[10px] text-[#2ECC71]">
+                      AQI {st.typicalAqi}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
@@ -604,7 +714,7 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
         <div className="p-3 sm:p-3.5 border-t border-[#202B3B] bg-[#111923] flex items-center gap-2 shrink-0">
           <input
             type="text"
-            placeholder="Ask about weather, AQI, rain forecast, crop advice, warnings..."
+            placeholder={uiStrings.inputPlaceholder}
             value={inputPrompt}
             onChange={(e) => setInputPrompt(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
@@ -623,4 +733,3 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
     </div>
   );
 };
-

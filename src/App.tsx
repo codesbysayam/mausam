@@ -94,6 +94,7 @@ export default function App() {
     isLive: true,
   });
 
+  const [isLoadingWeather, setIsLoadingWeather] = useState(false);
   const [isAskMausamOpen, setIsAskMausamOpen] = useState(false);
   const [selectedFooterPublication, setSelectedFooterPublication] = useState<MeteorologicalPublication | null>(null);
 
@@ -128,11 +129,14 @@ export default function App() {
 
   // Load weather data for the active location
   const loadWeatherData = useCallback(async (location: LocationRecord, forceRefresh = false) => {
+    setIsLoadingWeather(true);
     try {
       const bundle = await weatherService.getWeatherData(location, forceRefresh);
       setWeatherBundle(bundle);
     } catch (err) {
       console.warn('Weather sync error, using cached telemetry:', err);
+    } finally {
+      setIsLoadingWeather(false);
     }
   }, []);
 
@@ -195,7 +199,20 @@ export default function App() {
       />
 
       {/* 3. Main Body Content */}
-      <main id="main-content" className="flex-1 w-full min-w-0">
+      <main id="main-content" className="relative flex-1 w-full min-w-0">
+        {/* Slim indeterminate progress bar while weather data is syncing */}
+        {isLoadingWeather && (
+          <div
+            id="weather-sync-progress-bar"
+            className="mausam-progress-indeterminate absolute top-0 left-0 right-0"
+            role="progressbar"
+            aria-label="Updating live meteorological telemetry"
+            aria-busy="true"
+          >
+            <div className="mausam-progress-indeterminate-bar" />
+          </div>
+        )}
+
         <PageContainer id="mausam-main-page-container">
           {/* HOME: National Weather Overview */}
           {activeTab === 'home' && (

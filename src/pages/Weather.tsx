@@ -117,10 +117,7 @@ export const WeatherPage: React.FC<WeatherPageProps> = ({
 
         {/* Detailed Weather Metrics Grid */}
         <div className="lg:col-span-6 flex flex-col">
-          <WeatherMetrics
-            weather={current}
-            onMetricClick={() => {}}
-          />
+          <WeatherMetrics weather={current} />
         </div>
       </div>
 
@@ -253,11 +250,7 @@ export const WeatherPage: React.FC<WeatherPageProps> = ({
           4. TODAY'S HOURLY FORECAST (24-Hour Synoptic Timeline)
       ========================================================================= */}
       <div className="w-full">
-        <HourlyForecast
-          hourly={hourly}
-          selectedHour={selectedHourlyHour}
-          onSelectHour={setSelectedHourlyHour}
-        />
+        <HourlyForecast hourly={hourly} />
       </div>
 
       {/* =========================================================================
@@ -266,10 +259,7 @@ export const WeatherPage: React.FC<WeatherPageProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
         {/* 7-Day Outlook */}
         <div className="lg:col-span-8 flex flex-col">
-          <DailyForecast
-            daily={daily}
-            onSelectDay={() => {}}
-          />
+          <DailyForecast daily={daily} />
         </div>
 
         {/* Astronomy / Sun Cycle & Doppler Radar Station Info */}
