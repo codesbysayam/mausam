@@ -62,7 +62,14 @@ export const AirQualityPage: React.FC<AirQualityPageProps> = ({
 
   // Generate 7-day trend history for the selected state/station
   const trendHistoryData = useMemo(() => {
-    const baseAqi = activeStateRecord.aqi ?? current.aqi ?? 75;
+    const safeCurrentAqi =
+      typeof current.aqi === 'number' && !Number.isNaN(current.aqi) && current.aqi > 0
+        ? current.aqi
+        : typeof current.aqiIndex === 'number' && !Number.isNaN(current.aqiIndex) && current.aqiIndex > 0
+        ? current.aqiIndex
+        : 75;
+
+    const baseAqi = activeStateRecord.aqi ?? safeCurrentAqi;
     const basePm25 = Math.round(baseAqi * 0.45);
     const basePollen = activeStateRecord.pollen ?? current.pollenCount ?? 2;
 
@@ -84,10 +91,45 @@ export const AirQualityPage: React.FC<AirQualityPageProps> = ({
         pollenModerateLimit: 3,
       };
     });
-  }, [activeStateRecord, current.aqi, current.pollenCount]);
+  }, [activeStateRecord, current.aqi, current.aqiIndex, current.pollenCount]);
+
+  const activeAqi =
+    typeof current.aqi === 'number' && !Number.isNaN(current.aqi) && current.aqi > 0
+      ? current.aqi
+      : typeof current.aqiIndex === 'number' && !Number.isNaN(current.aqiIndex) && current.aqiIndex > 0
+      ? current.aqiIndex
+      : typeof current.aqiPm25 === 'number' && !Number.isNaN(current.aqiPm25) && current.aqiPm25 > 0
+      ? Math.round(current.aqiPm25 / 0.45)
+      : 82;
+
+  const activePm25 =
+    typeof current.aqiPm25 === 'number' && !Number.isNaN(current.aqiPm25) && current.aqiPm25 > 0
+      ? Math.round(current.aqiPm25)
+      : Math.round(activeAqi * 0.45);
+
+  const activePm10 =
+    typeof current.aqiPm10 === 'number' && !Number.isNaN(current.aqiPm10) && current.aqiPm10 > 0
+      ? Math.round(current.aqiPm10)
+      : Math.round(activePm25 * 1.8);
+
+  const getAqiCategory = (val: number) => {
+    if (val <= 50) return 'Good';
+    if (val <= 100) return 'Satisfactory';
+    if (val <= 200) return 'Moderate';
+    if (val <= 300) return 'Poor';
+    if (val <= 400) return 'Very Poor';
+    return 'Severe';
+  };
 
   const cityAqiData = [
-    { city: 'Bhubaneswar', state: 'Odisha', aqi: current.aqi, category: 'Moderate', pm25: 48, pm10: 88 },
+    {
+      city: selectedLocation.city || 'Bhubaneswar',
+      state: selectedLocation.state || 'Odisha',
+      aqi: activeAqi,
+      category: getAqiCategory(activeAqi),
+      pm25: activePm25,
+      pm10: activePm10,
+    },
     { city: 'Cuttack', state: 'Odisha', aqi: 112, category: 'Moderate', pm25: 52, pm10: 94 },
     { city: 'Rourkela', state: 'Odisha', aqi: 145, category: 'Moderate', pm25: 64, pm10: 120 },
     { city: 'Puri', state: 'Odisha', aqi: 45, category: 'Good', pm25: 18, pm10: 42 },

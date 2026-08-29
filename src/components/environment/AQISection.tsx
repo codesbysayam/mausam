@@ -8,10 +8,28 @@ interface AQISectionProps {
 }
 
 export const AQISection: React.FC<AQISectionProps> = ({ weather }) => {
-  const aqi = weather.aqi;
+  // Resolve numeric AQI safely from weather data properties
+  const aqi: number =
+    typeof weather?.aqi === 'number' && !Number.isNaN(weather.aqi) && weather.aqi > 0
+      ? weather.aqi
+      : typeof weather?.aqiIndex === 'number' && !Number.isNaN(weather.aqiIndex) && weather.aqiIndex > 0
+      ? weather.aqiIndex
+      : typeof weather?.aqiPm25 === 'number' && !Number.isNaN(weather.aqiPm25) && weather.aqiPm25 > 0
+      ? Math.round(weather.aqiPm25 / 0.45)
+      : 75;
+
+  const pm25Value: number =
+    typeof weather?.aqiPm25 === 'number' && !Number.isNaN(weather.aqiPm25) && weather.aqiPm25 > 0
+      ? Math.round(weather.aqiPm25)
+      : Math.round(aqi * 0.45);
+
+  const pm10Value: number =
+    typeof weather?.aqiPm10 === 'number' && !Number.isNaN(weather.aqiPm10) && weather.aqiPm10 > 0
+      ? Math.round(weather.aqiPm10)
+      : Math.round(pm25Value * 1.8);
 
   const getAqiDetails = (val: number) => {
-    if (val <= 50) {
+    if (typeof val !== 'number' || Number.isNaN(val) || val <= 50) {
       return {
         category: 'Good',
         variant: 'good' as const,
@@ -61,13 +79,39 @@ export const AQISection: React.FC<AQISectionProps> = ({ weather }) => {
 
   const details = getAqiDetails(aqi);
 
+  const formatCo = (val?: number) => {
+    if (typeof val !== 'number' || Number.isNaN(val)) return '0.6';
+    if (val > 10) return (val / 1000).toFixed(1);
+    return val.toFixed(1);
+  };
+
   const pollutants = [
-    { name: 'PM 2.5', value: Math.round(aqi * 0.45), unit: 'µg/m³', std: '60 (Standard)' },
-    { name: 'PM 10', value: Math.round(aqi * 0.85), unit: 'µg/m³', std: '100 (Standard)' },
-    { name: 'NO₂', value: 24, unit: 'ppb', std: '80 (Standard)' },
-    { name: 'SO₂', value: 12, unit: 'ppb', std: '80 (Standard)' },
-    { name: 'CO', value: 0.6, unit: 'mg/m³', std: '2.0 (Standard)' },
-    { name: 'Ozone (O₃)', value: 38, unit: 'ppb', std: '100 (Standard)' },
+    { name: 'PM 2.5', value: pm25Value, unit: 'µg/m³', std: '60 (Standard)' },
+    { name: 'PM 10', value: pm10Value, unit: 'µg/m³', std: '100 (Standard)' },
+    {
+      name: 'NO₂',
+      value: typeof weather?.no2 === 'number' && !Number.isNaN(weather.no2) ? Math.round(weather.no2) : 24,
+      unit: 'ppb',
+      std: '80 (Standard)',
+    },
+    {
+      name: 'SO₂',
+      value: typeof weather?.so2 === 'number' && !Number.isNaN(weather.so2) ? Math.round(weather.so2) : 12,
+      unit: 'ppb',
+      std: '80 (Standard)',
+    },
+    {
+      name: 'CO',
+      value: formatCo(weather?.co),
+      unit: 'mg/m³',
+      std: '2.0 (Standard)',
+    },
+    {
+      name: 'Ozone (O₃)',
+      value: typeof weather?.o3 === 'number' && !Number.isNaN(weather.o3) ? Math.round(weather.o3) : 38,
+      unit: 'ppb',
+      std: '100 (Standard)',
+    },
   ];
 
   return (

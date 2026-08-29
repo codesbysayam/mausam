@@ -22,13 +22,22 @@ export const WeatherMetrics: React.FC<WeatherMetricsProps> = ({ weather }) => {
     return { label: 'High Risk', variant: 'alert' as const };
   };
 
-  const aqiStatus = getAqiStatus(weather.aqi);
+  const safeAqi =
+    typeof weather.aqi === 'number' && !Number.isNaN(weather.aqi) && weather.aqi > 0
+      ? weather.aqi
+      : typeof weather.aqiIndex === 'number' && !Number.isNaN(weather.aqiIndex) && weather.aqiIndex > 0
+      ? weather.aqiIndex
+      : typeof weather.aqiPm25 === 'number' && !Number.isNaN(weather.aqiPm25) && weather.aqiPm25 > 0
+      ? Math.round(weather.aqiPm25 / 0.45)
+      : 75;
+
+  const aqiStatus = getAqiStatus(safeAqi);
   const pollenStatus = getPollenStatus(weather.pollenCount || 2);
 
   const metrics = [
     {
       label: 'Air Quality (AQI)',
-      value: String(weather.aqi),
+      value: String(safeAqi),
       unit: 'PM2.5 / PM10',
       badge: <StatusBadge label={aqiStatus.label} variant={aqiStatus.variant} />,
       desc: weather.aqiDescription || 'National Air Monitoring Program (CPCB)',
