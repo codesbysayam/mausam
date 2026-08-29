@@ -25,17 +25,24 @@ export const MapLayerControl: React.FC<MapLayerControlProps> = ({
   onMetricChange,
 }) => {
   return (
-    <div className="flex flex-wrap items-center gap-1.5 p-1 bg-[#1E2733] border border-[#334155] rounded">
+    <div
+      id="synoptic-map-layer-controls"
+      className="flex flex-wrap items-center gap-1.5 p-1 bg-[#1E2733] border border-[#334155] rounded"
+      role="toolbar"
+      aria-label="Meteorological Map Layer Switcher"
+    >
       {METRIC_LAYERS.map((layer) => {
         const isActive = activeMetric === layer.id;
         return (
           <button
             key={layer.id}
+            id={`btn-map-layer-${layer.id}`}
             type="button"
             onClick={() => onMetricChange(layer.id)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold transition-colors cursor-pointer ${
+            aria-pressed={isActive}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-semibold transition-all cursor-pointer select-none ${
               isActive
-                ? 'bg-[#0B72B9] text-white'
+                ? 'bg-[#0B72B9] text-white shadow-md'
                 : 'text-[#D7DEE8] hover:bg-[#17212B] hover:text-[#4FA8E0]'
             }`}
           >
