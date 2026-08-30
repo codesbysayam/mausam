@@ -6,11 +6,10 @@ import {
   RefreshCw,
   Search,
   CheckCircle2,
-  AlertCircle,
-  Globe2,
   Clock,
   Compass,
   X,
+  Sparkles,
 } from 'lucide-react';
 
 interface ForecastStatusBarProps {
@@ -71,44 +70,43 @@ export const ForecastStatusBar: React.FC<ForecastStatusBarProps> = ({
 
   return (
     <div
-      id="forecast-location-status-bar"
-      className="bg-[#1E2733] border border-[#314255] rounded-lg p-3 sm:p-4 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3"
+      id="forecast-location-metadata-strip"
+      className="rounded-2xl bg-[#0B141E] border border-[#162331] p-4 sm:p-5 shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-4"
     >
-      {/* Left: Location & Geo Coordinates */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded bg-[#0B72B9]/20 border border-[#0B72B9]/40 flex items-center justify-center text-[#4FA8E0] shrink-0">
-            <MapPin className="w-4 h-4" />
+      {/* Left: Location & Observatory Metadata */}
+      <div className="flex items-start sm:items-center gap-3.5">
+        <div className="w-10 h-10 rounded-xl bg-[#1499E8]/15 text-[#43C7F4] flex items-center justify-center shrink-0 border border-[#1499E8]/30">
+          <MapPin className="w-5 h-5" />
+        </div>
+
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-base sm:text-lg font-bold text-[#F4F7FA] tracking-tight">
+              {selectedLocation.city}, {selectedLocation.state}
+            </h1>
+            <span className="text-[10px] font-bold uppercase font-mono px-2 py-0.5 rounded-full bg-[#22C7A0]/15 text-[#22C7A0] border border-[#22C7A0]/30">
+              Observatory #{selectedLocation.id || '42971'}
+            </span>
           </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs font-bold text-white uppercase tracking-wider">
-                Target Station:
-              </span>
-              <strong className="text-white text-sm">
-                {selectedLocation.city}, {selectedLocation.state}
-              </strong>
-            </div>
-            <div className="flex items-center gap-2 text-[11px] text-[#8A94A6]">
-              <span className="font-mono">{lat.toFixed(2)}°N, {lng.toFixed(2)}°E</span>
-              <span>•</span>
-              <span>Elevation: <strong className="text-[#D7DEE8]">45m MSL</strong></span>
-              <span>•</span>
-              <span className="text-[#2ECC71] font-semibold flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3" />
-                NWP Model Guidance Available
-              </span>
-            </div>
+
+          <div className="flex items-center gap-2 text-xs text-[#93A4B8] flex-wrap">
+            <span>Detailed atmospheric outlook for the next 7 days</span>
+            <span>•</span>
+            <span className="font-mono text-[#D1DCE8]">
+              {lat.toFixed(2)}°N, {lng.toFixed(2)}°E
+            </span>
+            <span>•</span>
+            <span>Elevation: 45m MSL</span>
           </div>
         </div>
       </div>
 
-      {/* Right: Search & Refresh Control */}
+      {/* Right: Quick Search & Refresh Control */}
       <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap">
-        {/* Quick Search Dropdown */}
-        <div ref={searchRef} className="relative flex-1 sm:w-60">
+        {/* Search Observatory Input */}
+        <div ref={searchRef} className="relative flex-1 sm:w-64">
           <div className="relative">
-            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#8A94A6]" />
+            <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-[#93A4B8]" />
             <input
               type="text"
               value={searchQuery}
@@ -117,61 +115,48 @@ export const ForecastStatusBar: React.FC<ForecastStatusBarProps> = ({
                 setSearchQuery(e.target.value);
                 setIsSearchOpen(true);
               }}
-              placeholder="Switch observatory station..."
-              className="w-full pl-8 pr-7 py-1.5 bg-[#151D26] border border-[#314255] rounded-md text-xs text-white placeholder-[#8A94A6] focus:outline-none focus:border-[#4FA8E0] transition-colors"
+              placeholder="Change location or district..."
+              className="w-full pl-8 pr-7 py-2 bg-[#071018] border border-[#162331] rounded-xl text-xs text-[#F4F7FA] placeholder-[#93A4B8] focus:outline-none focus:border-[#1499E8] transition-colors"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-[#8A94A6] hover:text-white p-0.5"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-[#93A4B8] hover:text-[#F4F7FA] p-0.5"
               >
                 <X className="w-3 h-3" />
               </button>
             )}
           </div>
 
-          {/* Autocomplete Results */}
+          {/* Autocomplete Dropdown */}
           {isSearchOpen && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-[#151D26] border border-[#314255] rounded-md shadow-xl max-h-56 overflow-y-auto z-50 divide-y divide-[#314255]/50">
-              <div className="p-2 text-[10px] uppercase font-bold text-[#8A94A6] bg-[#1E2733]/50">
-                Major IMD AWS &amp; Synoptic Stations
+            <div className="absolute top-full left-0 right-0 mt-1 bg-[#0B141E] border border-[#162331] rounded-xl shadow-2xl max-h-56 overflow-y-auto z-50 divide-y divide-[#162331]">
+              <div className="p-2 text-[10px] uppercase font-bold text-[#93A4B8] bg-[#071018]">
+                Observatory Stations in India
               </div>
               {searchResults.length > 0 ? (
-                searchResults.map((loc) => {
-                  const isCur = loc.id === selectedLocation.id;
-                  return (
-                    <button
-                      key={loc.id}
-                      type="button"
-                      onClick={() => {
-                        if (onSelectLocation) onSelectLocation(loc);
-                        setIsSearchOpen(false);
-                        setSearchQuery('');
-                      }}
-                      className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between transition-colors ${
-                        isCur
-                          ? 'bg-[#0B72B9]/20 text-[#4FA8E0] font-bold'
-                          : 'text-[#D7DEE8] hover:bg-[#1E2733] hover:text-white'
-                      }`}
-                    >
-                      <div className="flex flex-col">
-                        <span>{loc.city}, {loc.state}</span>
-                        <span className="text-[10px] text-[#8A94A6] font-mono">
-                          ID: {loc.id} • {loc.lat?.toFixed(1)}°N, {loc.lng?.toFixed(1)}°E
-                        </span>
-                      </div>
-                      {isCur && (
-                        <span className="text-[10px] bg-[#0B72B9]/30 text-[#4FA8E0] px-1.5 py-0.5 rounded font-mono">
-                          ACTIVE
-                        </span>
-                      )}
-                    </button>
-                  );
-                })
+                searchResults.map((loc) => (
+                  <button
+                    key={loc.id}
+                    type="button"
+                    onClick={() => {
+                      if (onSelectLocation) onSelectLocation(loc);
+                      setIsSearchOpen(false);
+                      setSearchQuery('');
+                    }}
+                    className="w-full px-3 py-2 text-left text-xs hover:bg-[#1499E8]/15 flex items-center justify-between text-[#F4F7FA] transition-colors cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      <MapPin className="w-3 h-3 text-[#43C7F4]" />
+                      <span>{loc.city}, <span className="text-[#93A4B8]">{loc.state}</span></span>
+                    </div>
+                    <span className="text-[10px] font-mono text-[#93A4B8]">{loc.id}</span>
+                  </button>
+                ))
               ) : (
-                <div className="p-3 text-xs text-[#8A94A6] text-center">
-                  No matching weather stations found.
+                <div className="p-3 text-xs text-[#93A4B8] text-center">
+                  No matching station found
                 </div>
               )}
             </div>
@@ -183,17 +168,21 @@ export const ForecastStatusBar: React.FC<ForecastStatusBarProps> = ({
           type="button"
           onClick={handleManualRefresh}
           disabled={isLoading}
-          className={`px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all border shrink-0 ${
-            isLoading
-              ? 'bg-[#151D26] text-[#8A94A6] border-[#314255] cursor-not-allowed'
-              : refreshSuccess
-              ? 'bg-[#2ECC71]/20 text-[#2ECC71] border-[#2ECC71]/40'
-              : 'bg-[#151D26] hover:bg-[#314255] text-[#D7DEE8] hover:text-white border-[#314255]'
+          className={`px-3 py-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all border cursor-pointer ${
+            refreshSuccess
+              ? 'bg-[#22C7A0]/20 text-[#22C7A0] border-[#22C7A0]/40'
+              : 'bg-[#071018] text-[#93A4B8] hover:text-[#F4F7FA] border-[#162331] hover:bg-[#111F30]'
           }`}
-          title="Refresh forecast model predictions"
+          title="Refresh forecast model simulation"
         >
-          <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin text-[#4FA8E0]' : ''}`} />
-          <span>{isLoading ? 'Updating forecast…' : refreshSuccess ? 'Updated' : 'Refresh'}</span>
+          <RefreshCw
+            className={`w-3.5 h-3.5 ${
+              isLoading ? 'animate-spin text-[#1499E8]' : refreshSuccess ? 'text-[#22C7A0]' : ''
+            }`}
+          />
+          <span className="hidden sm:inline">
+            {refreshSuccess ? 'Updated' : isLoading ? 'Updating…' : 'Refresh'}
+          </span>
         </button>
       </div>
     </div>

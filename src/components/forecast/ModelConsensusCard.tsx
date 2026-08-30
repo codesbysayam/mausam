@@ -1,6 +1,6 @@
 import React from 'react';
 import { ModelComparisonMetric } from '../../services/nwpModelService';
-import { Layers, CheckCircle2, AlertCircle, Info, HelpCircle } from 'lucide-react';
+import { Layers, ShieldCheck, CheckCircle2, AlertCircle, Info, Sparkles } from 'lucide-react';
 
 interface ModelConsensusCardProps {
   metrics: ModelComparisonMetric[];
@@ -13,124 +13,145 @@ export const ModelConsensusCard: React.FC<ModelConsensusCardProps> = ({
   consensusAgreementPercent,
   synopticVerdict,
 }) => {
+  const confidenceLabel =
+    consensusAgreementPercent >= 85
+      ? 'High Confidence'
+      : consensusAgreementPercent >= 70
+      ? 'Moderate Confidence'
+      : 'Low Consensus / Model Divergence';
+
+  const confidenceColor =
+    consensusAgreementPercent >= 85
+      ? 'text-[#22C7A0] bg-[#22C7A0]/15 border-[#22C7A0]/40'
+      : consensusAgreementPercent >= 70
+      ? 'text-[#FFC857] bg-[#FFC857]/15 border-[#FFC857]/40'
+      : 'text-[#EF5350] bg-[#EF5350]/15 border-[#EF5350]/40';
+
   return (
     <div
-      id="forecast-model-consensus-section"
-      className="bg-[#1E2733] border border-[#314255] rounded-lg p-4 sm:p-5 shadow-md flex flex-col gap-4"
+      id="forecast-intelligence-consensus-section"
+      className="rounded-2xl bg-[#0B141E] border border-[#162331] p-5 sm:p-6 shadow-xl flex flex-col gap-5"
     >
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#314255]">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded bg-[#0B72B9]/20 border border-[#0B72B9]/40 flex items-center justify-center text-[#4FA8E0]">
-            <Layers className="w-4 h-4" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#162331]">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#9B51E0]/15 text-[#BB6BD9] flex items-center justify-center shrink-0 border border-[#9B51E0]/30">
+            <Layers className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-sm sm:text-base font-bold text-white uppercase tracking-tight">
-              Forecast Model Consensus &amp; Multi-Model Ensemble
-            </h2>
-            <p className="text-xs text-[#8A94A6]">
-              Inter-comparison of operational numerical weather predictions (IMD WRF vs GEFS vs ECMWF)
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-base sm:text-lg font-bold text-[#F4F7FA] tracking-tight">
+                Forecast Model Intelligence &amp; Consensus
+              </h2>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#9B51E0]/15 text-[#BB6BD9] border border-[#9B51E0]/30">
+                Multi-Model Ensemble
+              </span>
+            </div>
+            <p className="text-xs text-[#93A4B8] mt-0.5">
+              Inter-comparison of operational numerical weather predictions (IMD WRF 3km vs GEFS 12km vs ECMWF 9km)
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 bg-[#151D26] px-3 py-1.5 rounded-lg border border-[#314255] self-start sm:self-auto">
-          <span className="w-2 h-2 rounded-full bg-[#2ECC71] animate-pulse"></span>
-          <span className="text-xs font-bold text-white">
-            Model Agreement: <strong className="text-[#2ECC71] font-mono">{consensusAgreementPercent}%</strong>
-          </span>
-        </div>
-      </div>
-
-      {/* Comparison Matrix Table */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs text-left border-collapse min-w-[700px]">
-          <thead>
-            <tr className="bg-[#151D26] border-b border-[#314255] text-[#8A94A6]">
-              <th className="p-3 font-bold">Meteorological Parameter</th>
-              <th className="p-3 font-bold text-[#4FA8E0]">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#0B72B9]" />
-                  <span>IMD WRF (3km)</span>
-                </div>
-              </th>
-              <th className="p-3 font-bold text-[#2ECC71]">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#2ECC71]" />
-                  <span>GEFS Ensemble (12km)</span>
-                </div>
-              </th>
-              <th className="p-3 font-bold text-[#E67E22]">
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-[#E67E22]" />
-                  <span>ECMWF IFS (9km)</span>
-                </div>
-              </th>
-              <th className="p-3 font-bold">Model Spread</th>
-              <th className="p-3 font-bold">Consensus Verdict</th>
-            </tr>
-          </thead>
-          <tbody>
-            {metrics.map((row, idx) => {
-              const isHighAgree = row.consensusStatus === 'High Agreement';
-              const isModSpread = row.consensusStatus === 'Moderate Spread';
-
-              return (
-                <tr
-                  key={idx}
-                  className="border-b border-[#314255]/50 hover:bg-[#151D26] transition-colors"
-                >
-                  <td className="p-3 font-medium text-white">
-                    {row.parameter}
-                  </td>
-                  <td className="p-3 font-mono font-bold text-[#4FA8E0]">
-                    {row.wrfValue}
-                  </td>
-                  <td className="p-3 font-mono font-bold text-[#2ECC71]">
-                    {row.gefsValue}
-                  </td>
-                  <td className="p-3 font-mono font-bold text-[#E67E22]">
-                    {row.ecmwfValue}
-                  </td>
-                  <td className="p-3 font-mono text-[#D7DEE8]">
-                    <span className="px-1.5 py-0.5 rounded bg-[#151D26] border border-[#314255]">
-                      {row.ensembleSpread}
-                    </span>
-                  </td>
-                  <td className="p-3">
-                    <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        isHighAgree
-                          ? 'bg-[#2ECC71]/15 text-[#2ECC71] border border-[#2ECC71]/30'
-                          : isModSpread
-                          ? 'bg-[#F1C40F]/15 text-[#F1C40F] border border-[#F1C40F]/30'
-                          : 'bg-[#E74C3C]/15 text-[#E74C3C] border border-[#E74C3C]/30'
-                      }`}
-                    >
-                      {row.consensusStatus}
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Spread Explanation Note & Synoptic Diagnostic */}
-      <div className="bg-[#151D26] p-3 rounded-lg border border-[#314255] flex flex-col gap-2 text-xs">
-        <div className="flex items-start gap-2 text-[#D7DEE8]">
-          <CheckCircle2 className="w-4 h-4 text-[#4FA8E0] shrink-0 mt-0.5" />
-          <div>
-            <strong className="text-white">Synoptic Consensus Diagnostic: </strong>
-            <span>{synopticVerdict}</span>
+        {/* Global Confidence Indicator */}
+        <div className="flex items-center gap-3 bg-[#071018] px-4 py-2 rounded-xl border border-[#162331] self-start sm:self-auto">
+          <div className="flex flex-col text-right">
+            <span className="text-[10px] uppercase font-bold text-[#93A4B8]">Model Agreement</span>
+            <span className="text-xs font-bold text-[#F4F7FA]">{confidenceLabel}</span>
           </div>
+          <span className="text-2xl font-black font-mono text-[#22C7A0]">{consensusAgreementPercent}%</span>
         </div>
+      </div>
 
-        <div className="flex items-center gap-1 text-[11px] text-[#8A94A6] pt-1 border-t border-[#314255]/60">
-          <HelpCircle className="w-3.5 h-3.5 text-[#8A94A6]" />
-          <span>
-            Spread indicates disagreement between available model forecasts. It is not a probability of forecast accuracy.
+      {/* Clean Visual Model Comparison Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {metrics.map((metric, idx) => {
+          const isHigh = metric.consensusStatus === 'High Agreement';
+          const isMod = metric.consensusStatus === 'Moderate Spread';
+
+          return (
+            <div
+              key={idx}
+              className="p-4 rounded-xl bg-[#071018] border border-[#162331] flex flex-col justify-between gap-3.5"
+            >
+              {/* Card Header: Parameter & Consensus Tag */}
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold uppercase tracking-wider text-[#F4F7FA]">
+                  {metric.parameter}
+                </span>
+                <span
+                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+                    isHigh
+                      ? 'bg-[#22C7A0]/15 text-[#22C7A0] border-[#22C7A0]/30'
+                      : isMod
+                      ? 'bg-[#FFC857]/15 text-[#FFC857] border-[#FFC857]/30'
+                      : 'bg-[#EF5350]/15 text-[#EF5350] border-[#EF5350]/30'
+                  }`}
+                >
+                  {metric.consensusStatus}
+                </span>
+              </div>
+
+              {/* 3 Model Readouts Side-by-Side */}
+              <div className="grid grid-cols-3 gap-2">
+                {/* WRF */}
+                <div className="p-2.5 rounded-lg bg-[#0B141E] border border-[#162331] flex flex-col">
+                  <div className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-[#1499E8]" />
+                    <span className="text-[9px] uppercase font-bold text-[#93A4B8]">IMD WRF</span>
+                  </div>
+                  <span className="text-sm sm:text-base font-bold font-mono text-[#43C7F4] mt-1">
+                    {metric.wrfValue}
+                  </span>
+                </div>
+
+                {/* GEFS */}
+                <div className="p-2.5 rounded-lg bg-[#0B141E] border border-[#162331] flex flex-col">
+                  <div className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-[#22C7A0]" />
+                    <span className="text-[9px] uppercase font-bold text-[#93A4B8]">GEFS Ens</span>
+                  </div>
+                  <span className="text-sm sm:text-base font-bold font-mono text-[#22C7A0] mt-1">
+                    {metric.gefsValue}
+                  </span>
+                </div>
+
+                {/* ECMWF */}
+                <div className="p-2.5 rounded-lg bg-[#0B141E] border border-[#162331] flex flex-col">
+                  <div className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-[#FF9F43]" />
+                    <span className="text-[9px] uppercase font-bold text-[#93A4B8]">ECMWF</span>
+                  </div>
+                  <span className="text-sm sm:text-base font-bold font-mono text-[#FF9F43] mt-1">
+                    {metric.ecmwfValue}
+                  </span>
+                </div>
+              </div>
+
+              {/* Spread & Agreement Visual Bar */}
+              <div className="flex items-center justify-between text-[11px] text-[#93A4B8] pt-2 border-t border-[#162331]">
+                <span>
+                  Model Spread: <strong className="text-[#F4F7FA] font-mono">{metric.ensembleSpread}</strong>
+                </span>
+                <span className="text-[10px] text-[#D1DCE8]">
+                  {isHigh ? 'High Model Consensus' : 'Ensemble Variance Observed'}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Consensus Diagnostic Footer Box */}
+      <div className="p-4 rounded-xl bg-[#071018] border border-[#162331] flex items-start gap-3 text-xs">
+        <CheckCircle2 className="w-4 h-4 text-[#22C7A0] shrink-0 mt-0.5" />
+        <div className="flex flex-col gap-0.5">
+          <span className="font-bold text-[#F4F7FA]">Synoptic Consensus Diagnostic</span>
+          <p className="text-xs text-[#D1DCE8] leading-relaxed">
+            {synopticVerdict}
+          </p>
+          <span className="text-[10px] text-[#93A4B8] mt-1">
+            Ensemble spread measures disagreement between distinct physical parameterization schemes across regional grid cells.
           </span>
         </div>
       </div>

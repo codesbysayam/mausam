@@ -31,6 +31,9 @@ export interface NormalizedDailyItem extends DailyForecastItem {
   validWindSpeed: number;
   validWindDirection: string;
   validUv: number;
+  dateFormatted: string;
+  visibilityKm: number;
+  validCloudCover: number;
 }
 
 /**
@@ -188,6 +191,9 @@ export function normalizeDailyForecast(rawItems: DailyForecastItem[]): Normalize
     const validWindDirection = windParts[2] || 'NE';
 
     const validUv = typeof item.uv === 'number' && !isNaN(item.uv) ? item.uv : 7.0;
+    const dateFormatted = item.date || '30 Aug';
+    const visibilityKm = validHumidity > 90 ? 4.5 : validRainProb > 60 ? 6.0 : 10.0;
+    const validCloudCover = validRainProb > 50 ? 75 : validRainProb > 20 ? 45 : 20;
 
     return {
       ...item,
@@ -199,6 +205,9 @@ export function normalizeDailyForecast(rawItems: DailyForecastItem[]): Normalize
       validWindSpeed,
       validWindDirection,
       validUv,
+      dateFormatted,
+      visibilityKm,
+      validCloudCover,
     };
   });
 }

@@ -11,12 +11,18 @@ import {
 import { normalizeHourlyForecast, normalizeDailyForecast } from '../services/forecastNormalizer';
 import { ForecastControlHeader } from '../components/forecast/ForecastControlHeader';
 import { ForecastStatusBar } from '../components/forecast/ForecastStatusBar';
+import { ForecastSevereWarningBanner } from '../components/forecast/ForecastSevereWarningBanner';
+import { ForecastAtmosphericHero } from '../components/forecast/ForecastAtmosphericHero';
 import { ForecastHourlyTimeline } from '../components/forecast/ForecastHourlyTimeline';
+import { ForecastPrecipitationOutlook } from '../components/forecast/ForecastPrecipitationOutlook';
 import { ForecastSevenDaySection } from '../components/forecast/ForecastSevenDaySection';
+import { ForecastDecisionSupport } from '../components/forecast/ForecastDecisionSupport';
 import { ForecastTrendChart } from '../components/forecast/ForecastTrendChart';
-import { PrecipitationIntelligenceCard } from '../components/forecast/PrecipitationIntelligenceCard';
+import { ForecastAtmosphericConditions } from '../components/forecast/ForecastAtmosphericConditions';
+import { ForecastPersonalizedSection } from '../components/forecast/ForecastPersonalizedSection';
+import { ForecastRadarPreview } from '../components/forecast/ForecastRadarPreview';
+import { ForecastDataProvenance } from '../components/forecast/ForecastDataProvenance';
 import { WindIntelligenceCard } from '../components/forecast/WindIntelligenceCard';
-import { AtmosphericComfortCard } from '../components/forecast/AtmosphericComfortCard';
 import { SolarCycleCard } from '../components/weather/SolarCycleCard';
 import { ModelConsensusCard } from '../components/forecast/ModelConsensusCard';
 import { ForecastMatrixTable } from '../components/forecast/ForecastMatrixTable';
@@ -45,20 +51,23 @@ export const ForecastPage: React.FC<ForecastPageProps> = ({
 
   const rawHourly = weatherBundle?.hourly || [];
   const rawDaily = weatherBundle?.daily || [];
-  const currentWeather = weatherBundle?.current;
+  const currentWeather = weatherBundle?.current || INITIAL_WEATHER;
+  const activeAlerts = weatherBundle?.alerts || [];
 
   // Format last updated timestamp in standard IST
   const lastUpdatedStr = useMemo(() => {
     const d = weatherBundle?.lastFetchedAt ? new Date(weatherBundle.lastFetchedAt) : new Date();
-    return new Intl.DateTimeFormat('en-IN', {
-      timeZone: 'Asia/Kolkata',
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true,
-    }).format(d) + ' IST';
+    return (
+      new Intl.DateTimeFormat('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      }).format(d) + ' IST'
+    );
   }, [weatherBundle?.lastFetchedAt]);
 
   // Compute model-specific dynamically transformed hourly & daily trajectories
@@ -114,9 +123,15 @@ export const ForecastPage: React.FC<ForecastPageProps> = ({
     }
   }, [onRefresh]);
 
+  const handleNavigateToRadar = useCallback(() => {
+    if (onNavigateToTab) {
+      onNavigateToTab('radar');
+    }
+  }, [onNavigateToTab]);
+
   return (
-    <div className="flex flex-col gap-5 w-full max-w-7xl mx-auto pb-10">
-      {/* 1. FORECAST COMMAND CONTROL CENTER HEADER */}
+    <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto pb-12">
+      {/* 1. MODEL SELECTION & EXPORT TOOLBAR */}
       <ForecastControlHeader
         selectedLocation={selectedLocation}
         modelType={modelType}
@@ -126,18 +141,24 @@ export const ForecastPage: React.FC<ForecastPageProps> = ({
         onExportCSV={handleExportCSV}
       />
 
-      {/* Export Notification Toast */}
+      {/* CSV Export Success Notification */}
       {exportNotification && (
-        <div className="bg-[#2ECC71]/15 text-[#2ECC71] border border-[#2ECC71]/40 px-4 py-2 rounded-lg text-xs font-semibold flex items-center justify-between shadow-md animate-fade-in">
+        <div className="bg-[#22C7A0]/15 text-[#22C7A0] border border-[#22C7A0]/40 px-4 py-2.5 rounded-xl text-xs font-semibold flex items-center justify-between shadow-md animate-fade-in">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4" />
             <span>{exportNotification}</span>
           </div>
-          <span className="text-[10px] text-[#8A94A6] uppercase">Downloaded</span>
+          <span className="text-[10px] text-[#93A4B8] uppercase font-mono">Ready in Downloads</span>
         </div>
       )}
 
-      {/* 2. LOCATION + FORECAST STATUS STRIP */}
+      {/* 2. SEVERE WEATHER ALERT BANNER (High Visibility If Active) */}
+      <ForecastSevereWarningBanner
+        alerts={activeAlerts}
+        cityName={selectedLocation.city}
+      />
+
+      {/* 3. LOCATION & OBSERVATORY HEADER STRIP */}
       <ForecastStatusBar
         selectedLocation={selectedLocation}
         lastUpdated={lastUpdatedStr}
@@ -147,56 +168,96 @@ export const ForecastPage: React.FC<ForecastPageProps> = ({
         onSelectLocation={onSelectLocation}
       />
 
-      {/* 3. 24-HOUR HOURLY FORECAST TIMELINE */}
+      {/* 4. ATMOSPHERIC HERO BANNER (Living Canvas + Big Temperature + Human Narrative) */}
+      <ForecastAtmosphericHero
+        weather={currentWeather}
+        location={selectedLocation}
+        hourly={modelHourly}
+        daily={modelDaily}
+        alerts={activeAlerts}
+        modelName={activeModelMeta.shortName}
+      />
+
+      {/* 5. 24-HOUR HOURLY TIMELINE WITH CONTINUOUS TEMP CURVE */}
       <ForecastHourlyTimeline
         hourly={modelHourly}
         modelName={activeModelMeta.shortName}
       />
 
-      {/* 4. 7-DAY EXTENDED SYNOPTIC OUTLOOK (COMPACT / DETAILED VIEWS) */}
+      {/* 6. DEDICATED PRECIPITATION OUTLOOK & QPF INTENSITY TIMELINE */}
+      <ForecastPrecipitationOutlook hourly={modelHourly} />
+
+      {/* 7. 7-DAY SYNOPTIC OUTLOOK WITH EXPANDABLE DIAGNOSTIC ACCORDION */}
       <ForecastSevenDaySection
         daily={modelDaily}
         modelName={activeModelMeta.shortName}
       />
 
-      {/* 5. FORECAST PARAMETER TRENDS (INTERACTIVE SVG AREA/LINE CHARTS) */}
+      {/* 8. DECISION-SUPPORT SUITE ("What to Expect" + "Best Time for Outdoor & Transit") */}
+      <ForecastDecisionSupport
+        hourly={modelHourly}
+        weather={currentWeather}
+        todayForecast={modelDaily[0]}
+      />
+
+      {/* 9. CONTINUOUS PARAMETER TRENDS (Interactive SVG Chart with Temp, Rain, Wind, Humidity) */}
       <ForecastTrendChart
         hourly={modelHourly}
         modelName={activeModelMeta.shortName}
       />
 
-      {/* 6. METEOROLOGICAL INTELLIGENCE GRID (2x2 on Large, 1-col on Mobile) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-stretch">
-        {/* Precipitation Intelligence */}
-        <PrecipitationIntelligenceCard hourly={modelHourly} />
+      {/* 10. COMPACT ATMOSPHERIC CONDITIONS (Humidity, UV, Visibility, Pressure) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
+        <ForecastAtmosphericConditions weather={currentWeather} />
 
-        {/* Wind Intelligence & Rotating Compass */}
+        {/* Wind Intelligence & Boundary Layer Dynamics */}
         <WindIntelligenceCard hourly={modelHourly} />
+      </div>
 
-        {/* Atmospheric Moisture & Psychrometric Comfort */}
-        <AtmosphericComfortCard hourly={modelHourly} />
-
-        {/* Astronomical Solar Ephemeris & Live Sunrise/Sunset Countdown */}
+      {/* 11. SOLAR CYCLE & EPHEMERIS + RADAR PREVIEW */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
         <SolarCycleCard
-          weather={currentWeather || INITIAL_WEATHER}
+          weather={currentWeather}
           location={selectedLocation}
+        />
+
+        <ForecastRadarPreview
+          location={selectedLocation}
+          lastUpdated={lastUpdatedStr}
+          onNavigateToRadar={handleNavigateToRadar}
         />
       </div>
 
-      {/* 7. MULTI-MODEL ENSEMBLE CONSENSUS & SPREAD MATRIX */}
+      {/* 12. FORECAST MODEL CONSENSUS & ENSEMBLE COMPARISON */}
       <ModelConsensusCard
         metrics={comparison.metrics}
         consensusAgreementPercent={comparison.consensusAgreementPercent}
         synopticVerdict={comparison.synopticVerdict}
       />
 
-      {/* 8. COMPLETE 24-HOUR SYNOPTIC TIME-SERIES MATRIX */}
+      {/* 13. PERSONALIZED LIFESTYLE INTERPRETATION (Fitness, Health, Travel, Agriculture, etc.) */}
+      <ForecastPersonalizedSection
+        weather={currentWeather}
+        hourly={modelHourly}
+        daily={modelDaily}
+        alerts={activeAlerts}
+      />
+
+      {/* 14. 24-HOUR SYNOPTIC TABULAR MATRIX (Collapsible with CSV Export) */}
       <ForecastMatrixTable
         hourly={modelHourly}
         modelType={modelType}
         modelName={activeModelMeta.shortName}
         cityName={selectedLocation.city}
         onExportCSV={handleExportCSV}
+      />
+
+      {/* 15. SUBTLE DATA PROVENANCE & ARCHITECTURE FOOTER */}
+      <ForecastDataProvenance
+        lastUpdated={lastUpdatedStr}
+        isLive={weatherBundle?.isLive}
+        stationId={selectedLocation.id}
+        modelName={activeModelMeta.fullName}
       />
     </div>
   );

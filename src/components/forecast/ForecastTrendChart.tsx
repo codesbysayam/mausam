@@ -7,6 +7,8 @@ import {
   CloudRain,
   Wind,
   Droplets,
+  ArrowUpRight,
+  Sparkles,
 } from 'lucide-react';
 
 interface ForecastTrendChartProps {
@@ -30,51 +32,43 @@ export const ForecastTrendChart: React.FC<ForecastTrendChartProps> = ({
     switch (activeMetric) {
       case 'temperature':
         return {
-          title: '24-Hour Temperature Trajectory',
+          title: '24-Hour Thermal Trajectory & Apparent Heat',
           unit: '°C',
-          color: '#FF8C42',
-          strokeColor: '#FF8C42',
-          fillGradient: 'from-[#FF8C42]/20 to-transparent',
+          color: '#FF9F43',
+          strokeColor: '#FF9F43',
+          gradientId: 'tempGrad',
           getValue: (item: NormalizedHourlyItem) => item.validTemp,
           formatValue: (val: number) => `${val}°C`,
-          minThreshold: 15,
-          maxThreshold: 45,
         };
       case 'precipitation':
         return {
           title: 'Precipitation Probability & Convective Risk',
           unit: '%',
-          color: '#4FA8E0',
-          strokeColor: '#4FA8E0',
-          fillGradient: 'from-[#4FA8E0]/25 to-transparent',
+          color: '#43C7F4',
+          strokeColor: '#1499E8',
+          gradientId: 'precipGrad',
           getValue: (item: NormalizedHourlyItem) => item.validRainProb,
           formatValue: (val: number) => `${val}%`,
-          minThreshold: 0,
-          maxThreshold: 100,
         };
       case 'wind':
         return {
-          title: 'Sustained Surface Wind Velocity',
+          title: 'Surface Wind Velocity & Maximum Gusts',
           unit: 'km/h',
-          color: '#2ECC71',
-          strokeColor: '#2ECC71',
-          fillGradient: 'from-[#2ECC71]/20 to-transparent',
+          color: '#22C7A0',
+          strokeColor: '#22C7A0',
+          gradientId: 'windGrad',
           getValue: (item: NormalizedHourlyItem) => item.validWindSpeed,
           formatValue: (val: number) => `${val} km/h`,
-          minThreshold: 0,
-          maxThreshold: 50,
         };
       case 'humidity':
         return {
           title: 'Boundary Layer Relative Humidity',
           unit: '%',
-          color: '#1ABC9C',
-          strokeColor: '#1ABC9C',
-          fillGradient: 'from-[#1ABC9C]/20 to-transparent',
+          color: '#1499E8',
+          strokeColor: '#1499E8',
+          gradientId: 'humidGrad',
           getValue: (item: NormalizedHourlyItem) => item.validHumidity,
           formatValue: (val: number) => `${val}% RH`,
-          minThreshold: 30,
-          maxThreshold: 100,
         };
     }
   }, [activeMetric]);
@@ -97,8 +91,8 @@ export const ForecastTrendChart: React.FC<ForecastTrendChartProps> = ({
     const max = Math.max(...values);
     const avg = Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 10) / 10;
 
-    const chartHeight = 160;
-    const paddingY = 25;
+    const chartHeight = 180;
+    const paddingY = 28;
     const effectiveHeight = chartHeight - paddingY * 2;
     const range = Math.max(1, max - min);
 
@@ -125,177 +119,196 @@ export const ForecastTrendChart: React.FC<ForecastTrendChartProps> = ({
     };
   }, [normalizedItems, config]);
 
-  const activeHoverItem = hoveredIdx !== null && normalizedItems[hoveredIdx] ? normalizedItems[hoveredIdx] : null;
+  const activeHoverItem =
+    hoveredIdx !== null && normalizedItems[hoveredIdx] ? normalizedItems[hoveredIdx] : null;
 
   return (
     <div
       id="forecast-trend-chart-panel"
-      className="bg-[#1E2733] border border-[#314255] rounded-lg p-4 sm:p-5 shadow-md flex flex-col gap-4"
+      className="rounded-2xl bg-[#0B141E] border border-[#162331] p-5 sm:p-6 shadow-xl flex flex-col gap-5"
     >
-      {/* Header & Tabs */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#314255]">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded bg-[#FF8C42]/20 border border-[#FF8C42]/40 flex items-center justify-center text-[#FF8C42]">
-            <TrendingUp className="w-4 h-4" />
+      {/* Header & Metric Selector Tabs */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 pb-3 border-b border-[#162331]">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#FF9F43]/15 text-[#FF9F43] flex items-center justify-center shrink-0 border border-[#FF9F43]/30">
+            <TrendingUp className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-sm sm:text-base font-bold text-white uppercase tracking-tight">
-              Forecast Parameter Trends
-            </h2>
-            <p className="text-xs text-[#8A94A6]">
-              Temporal evolution over next 24h simulated via <strong className="text-[#D7DEE8]">{modelName}</strong>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-base sm:text-lg font-bold text-[#F4F7FA] tracking-tight">
+                Weather Parameter Trends
+              </h2>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#FF9F43]/15 text-[#FF9F43] border border-[#FF9F43]/30">
+                24h Trajectory
+              </span>
+            </div>
+            <p className="text-xs text-[#93A4B8] mt-0.5">
+              Continuous time-series telemetry modeled via{' '}
+              <strong className="text-[#F4F7FA] font-medium">{modelName}</strong>
             </p>
           </div>
         </div>
 
-        {/* Metric Selector Tabs */}
-        <div className="flex items-center gap-1 bg-[#151D26] p-1 rounded-lg border border-[#314255] self-start sm:self-auto flex-wrap">
-          <button
-            type="button"
-            onClick={() => setActiveMetric('temperature')}
-            className={`px-3 py-1 text-xs font-semibold rounded flex items-center gap-1.5 transition-all ${
-              activeMetric === 'temperature'
-                ? 'bg-[#FF8C42] text-black font-bold shadow-sm'
-                : 'text-[#8A94A6] hover:text-white'
-            }`}
-          >
-            <Thermometer className="w-3.5 h-3.5" />
-            <span>Temperature</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveMetric('precipitation')}
-            className={`px-3 py-1 text-xs font-semibold rounded flex items-center gap-1.5 transition-all ${
-              activeMetric === 'precipitation'
-                ? 'bg-[#4FA8E0] text-black font-bold shadow-sm'
-                : 'text-[#8A94A6] hover:text-white'
-            }`}
-          >
-            <CloudRain className="w-3.5 h-3.5" />
-            <span>Rain Prob</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveMetric('wind')}
-            className={`px-3 py-1 text-xs font-semibold rounded flex items-center gap-1.5 transition-all ${
-              activeMetric === 'wind'
-                ? 'bg-[#2ECC71] text-black font-bold shadow-sm'
-                : 'text-[#8A94A6] hover:text-white'
-            }`}
-          >
-            <Wind className="w-3.5 h-3.5" />
-            <span>Wind</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveMetric('humidity')}
-            className={`px-3 py-1 text-xs font-semibold rounded flex items-center gap-1.5 transition-all ${
-              activeMetric === 'humidity'
-                ? 'bg-[#1ABC9C] text-black font-bold shadow-sm'
-                : 'text-[#8A94A6] hover:text-white'
-            }`}
-          >
-            <Droplets className="w-3.5 h-3.5" />
-            <span>Humidity</span>
-          </button>
+        {/* 4 Metric Selector Tabs */}
+        <div className="flex items-center gap-1.5 bg-[#071018] p-1.5 rounded-xl border border-[#162331] overflow-x-auto self-start lg:self-auto">
+          {(
+            [
+              { key: 'temperature', label: 'Temperature', icon: Thermometer },
+              { key: 'precipitation', label: 'Precipitation', icon: CloudRain },
+              { key: 'wind', label: 'Wind & Gusts', icon: Wind },
+              { key: 'humidity', label: 'Humidity', icon: Droplets },
+            ] as const
+          ).map((t) => {
+            const isSelected = activeMetric === t.key;
+            const Icon = t.icon;
+            return (
+              <button
+                key={t.key}
+                type="button"
+                onClick={() => {
+                  setActiveMetric(t.key);
+                  setHoveredIdx(null);
+                }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all whitespace-nowrap cursor-pointer ${
+                  isSelected
+                    ? 'bg-[#1499E8] text-white font-bold shadow-md shadow-[#1499E8]/30'
+                    : 'text-[#93A4B8] hover:text-[#F4F7FA] hover:bg-[#0B141E]'
+                }`}
+              >
+                <Icon className="w-3.5 h-3.5" />
+                <span>{t.label}</span>
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Metrics Summary Strip */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="bg-[#151D26] p-3 rounded-lg border border-[#314255]">
-          <span className="text-[10px] text-[#8A94A6] uppercase font-bold block">Peak Maximum</span>
-          <span className="text-lg font-black font-mono text-white">
-            {config.formatValue(maxValue)}
+      {/* Metric Title & Summary Stats Strip */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
+        <span className="text-xs font-bold text-[#F4F7FA] uppercase tracking-wider">
+          {config.title}
+        </span>
+
+        <div className="flex items-center gap-4 text-xs font-mono text-[#93A4B8]">
+          <span>
+            MIN: <strong className="text-[#43C7F4]">{config.formatValue(minValue)}</strong>
           </span>
-        </div>
-        <div className="bg-[#151D26] p-3 rounded-lg border border-[#314255]">
-          <span className="text-[10px] text-[#8A94A6] uppercase font-bold block">Diurnal Minimum</span>
-          <span className="text-lg font-black font-mono text-[#D7DEE8]">
-            {config.formatValue(minValue)}
+          <span>•</span>
+          <span>
+            AVG: <strong className="text-[#F4F7FA]">{config.formatValue(avgValue)}</strong>
           </span>
-        </div>
-        <div className="bg-[#151D26] p-3 rounded-lg border border-[#314255]">
-          <span className="text-[10px] text-[#8A94A6] uppercase font-bold block">Timeseries Mean</span>
-          <span className="text-lg font-black font-mono" style={{ color: config.color }}>
-            {config.formatValue(avgValue)}
+          <span>•</span>
+          <span>
+            MAX: <strong className="text-[#FF9F43]">{config.formatValue(maxValue)}</strong>
           </span>
         </div>
       </div>
 
-      {/* Interactive SVG Trend Chart */}
-      <div className="bg-[#151D26] p-4 rounded-lg border border-[#314255] flex flex-col gap-2 relative">
-        <div className="flex items-center justify-between text-xs text-[#8A94A6]">
-          <span className="font-semibold text-white">{config.title}</span>
-          <span>Hover data points to inspect continuous timesteps</span>
+      {/* SVG Trend Chart Canvas */}
+      <div className="relative w-full h-[200px] bg-[#071018] rounded-xl border border-[#162331] p-3 overflow-hidden select-none">
+        {/* Horizontal Reference Grid Lines */}
+        <div className="absolute inset-0 p-3 flex flex-col justify-between pointer-events-none opacity-30">
+          <div className="border-b border-[#162331] w-full" />
+          <div className="border-b border-[#162331] w-full" />
+          <div className="border-b border-[#162331] w-full" />
         </div>
 
-        {/* Hover Inspector Tooltip Overlay */}
-        {activeHoverItem && (
-          <div className="absolute top-4 right-4 bg-[#1E2733] border border-[#4FA8E0] p-2.5 rounded-md shadow-xl text-xs z-20 flex items-center gap-3 animate-fade-in">
-            <div>
-              <span className="text-[10px] text-[#8A94A6] uppercase block font-bold">
-                {activeHoverItem.time} IST
-              </span>
-              <span className="font-mono font-bold text-white text-sm">
-                {config.formatValue(config.getValue(activeHoverItem))}
-              </span>
-            </div>
-            <div className="text-[10px] text-[#D7DEE8] border-l border-[#314255] pl-2.5">
-              <span>Condition: <strong>{activeHoverItem.condition}</strong></span>
-              <br />
-              <span>Wind: {activeHoverItem.validWindSpeed}k {activeHoverItem.validWindDirection}</span>
-            </div>
-          </div>
-        )}
+        {/* SVG Drawing Layer */}
+        <svg className="w-full h-full overflow-visible">
+          <defs>
+            <linearGradient id={config.gradientId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={config.strokeColor} stopOpacity={0.35} />
+              <stop offset="100%" stopColor={config.strokeColor} stopOpacity={0.0} />
+            </linearGradient>
+          </defs>
 
-        {/* SVG Chart Canvas */}
-        <div className="h-44 w-full relative pt-2">
-          <svg className="w-full h-full overflow-visible">
-            <defs>
-              <linearGradient id="trendGradient" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={config.color} stopOpacity="0.35" />
-                <stop offset="100%" stopColor={config.color} stopOpacity="0.0" />
-              </linearGradient>
-            </defs>
+          {/* Area Fill */}
+          <path d={svgAreaPath} fill={`url(#${config.gradientId})`} />
 
-            {/* Grid lines */}
-            <line x1="0%" y1="25" x2="100%" y2="25" stroke="#314255" strokeDasharray="3 3" strokeWidth="1" />
-            <line x1="0%" y1="85" x2="100%" y2="85" stroke="#314255" strokeDasharray="3 3" strokeWidth="1" />
-            <line x1="0%" y1="135" x2="100%" y2="135" stroke="#314255" strokeDasharray="3 3" strokeWidth="1" />
+          {/* Line Curve */}
+          <path
+            d={svgPath}
+            fill="none"
+            stroke={config.strokeColor}
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
 
-            {/* Area Fill */}
-            <path d={svgAreaPath} fill="url(#trendGradient)" />
-
-            {/* Line Stroke */}
-            <path d={svgPath} fill="none" stroke={config.strokeColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-
-            {/* Data Points */}
-            {points.map((p, idx) => (
-              <g key={idx} className="cursor-pointer" onMouseEnter={() => setHoveredIdx(idx)} onMouseLeave={() => setHoveredIdx(null)}>
+          {/* Points */}
+          {points.map((p, idx) => {
+            const isHovered = hoveredIdx === idx;
+            return (
+              <g key={idx} className="cursor-pointer">
                 <circle
                   cx={`${p.xPercent}%`}
                   cy={p.y}
-                  r={hoveredIdx === idx ? '6' : '3.5'}
-                  fill={hoveredIdx === idx ? '#FFFFFF' : config.color}
-                  stroke="#151D26"
-                  strokeWidth="2"
+                  r={isHovered ? 6 : 3.5}
+                  fill={isHovered ? config.strokeColor : '#071018'}
+                  stroke={config.strokeColor}
+                  strokeWidth={isHovered ? 3 : 2}
                   className="transition-all"
                 />
               </g>
-            ))}
-          </svg>
-        </div>
+            );
+          })}
+        </svg>
 
-        {/* X-Axis Timestep Labels */}
-        <div className="flex justify-between text-[10px] text-[#8A94A6] font-mono pt-1 border-t border-[#314255]/70">
-          {normalizedItems.filter((_, i) => i % 2 === 0).map((h, i) => (
-            <span key={i}>{h.time}</span>
+        {/* Invisible Click/Hover Columns for Touch/Pointer Events */}
+        <div className="absolute inset-0 flex justify-between">
+          {normalizedItems.map((item, idx) => (
+            <div
+              key={idx}
+              className="flex-1 h-full cursor-pointer hover:bg-white/[0.03] transition-colors"
+              onMouseEnter={() => setHoveredIdx(idx)}
+              onClick={() => setHoveredIdx(idx)}
+            />
           ))}
         </div>
+
+        {/* Interactive Floating Tooltip */}
+        {activeHoverItem && hoveredIdx !== null && (
+          <div
+            className="absolute top-3 pointer-events-none bg-[#0B141E]/95 border border-[#162331] rounded-xl p-3 shadow-2xl backdrop-blur-md text-xs flex flex-col gap-1 z-20"
+            style={{
+              left: `${Math.min(
+                80,
+                Math.max(10, (hoveredIdx / (normalizedItems.length - 1)) * 100)
+              )}%`,
+              transform: 'translateX(-50%)',
+            }}
+          >
+            <div className="flex items-center justify-between gap-3 border-b border-[#162331] pb-1">
+              <span className="font-bold text-[#43C7F4] font-mono">{activeHoverItem.time}</span>
+              <span className="text-[10px] text-[#93A4B8]">{activeHoverItem.condition}</span>
+            </div>
+
+            <div className="flex items-baseline gap-2">
+              <span className="text-lg font-black font-mono text-[#F4F7FA]">
+                {config.formatValue(config.getValue(activeHoverItem))}
+              </span>
+              {activeMetric === 'temperature' && (
+                <span className="text-[10px] text-[#93A4B8]">
+                  Feels like {activeHoverItem.feelsLike}°C
+                </span>
+              )}
+            </div>
+
+            <div className="text-[9px] text-[#93A4B8] flex items-center justify-between gap-2 pt-0.5">
+              <span>Rain: {activeHoverItem.validRainProb}%</span>
+              <span>Wind: {activeHoverItem.validWindSpeed} km/h</span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Time Axis Markers */}
+      <div className="flex justify-between text-[10px] font-mono text-[#93A4B8] px-1">
+        {normalizedItems
+          .filter((_, idx) => idx % 3 === 0 || idx === normalizedItems.length - 1)
+          .map((item, idx) => (
+            <span key={idx}>{item.time}</span>
+          ))}
       </div>
     </div>
   );
