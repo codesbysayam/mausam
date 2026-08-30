@@ -85,7 +85,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
   // AQI color logic
   const getAqiColor = (val?: number) => {
     if (typeof val !== 'number' || Number.isNaN(val)) return tokens.colors.dark.textMuted;
-    if (val <= 50) return tokens.colors.status.success;
+    if (val <= 50) return tokens.colors.status.good;
     if (val <= 100) return tokens.colors.status.warning;
     return tokens.colors.status.danger;
   };

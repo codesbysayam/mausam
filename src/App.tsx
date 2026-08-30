@@ -231,6 +231,7 @@ export default function App() {
               weatherBundle={weatherBundle}
               selectedLocation={selectedLocation}
               onRefresh={() => loadWeatherData(selectedLocation, true)}
+              onSelectLocation={handleSelectLocation}
               onChangeLocationClick={() => {
                 const desktopInput = document.getElementById('station-search-input-desktop');
                 const mobileInput = document.getElementById('station-search-input-mobile');
@@ -249,6 +250,10 @@ export default function App() {
             <ForecastPage
               weatherBundle={weatherBundle}
               selectedLocation={selectedLocation}
+              onRefresh={() => loadWeatherData(selectedLocation, true)}
+              onSelectLocation={handleSelectLocation}
+              onNavigateToTab={(tab) => navigateToTab(tab as AppView)}
+              isLoadingWeather={isLoadingWeather}
             />
           )}
 

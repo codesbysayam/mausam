@@ -1,35 +1,39 @@
 :root {
-  --primary: #0B72B9;
-  --primary-dark: #0A5A94;
-  --primary-light: #4FA8E0;
+  --primary: #1499E8;
+  --primary-dark: #0C78BA;
+  --primary-light: #43C7F4;
+  --teal: #22C7A0;
 
-  --bg: #0F141A;
-  --surface: #17212B;
-  --surface-2: #1E2733;
+  --bg: #071018;
+  --bg-alt: #0A1118;
+  --surface: #111C27;
+  --surface-2: #162331;
+  --surface-hover: #1C2C3E;
 
-  --border: #334155;
-  --border-light: #475569;
+  --border: rgba(147, 164, 184, 0.12);
+  --border-light: rgba(147, 164, 184, 0.22);
+  --border-focus: #1499E8;
 
-  --text: #FFFFFF;
-  --text-body: #D7DEE8;
-  --text-muted: #8A94A6;
+  --text: #F4F7FA;
+  --text-body: #D1DCE8;
+  --text-muted: #93A4B8;
 
-  --good: #2ECC71;
-  --warning: #F1C40F;
-  --alert: #FF8C42;
-  --danger: #E74C3C;
+  --good: #22C7A0;
+  --warning: #FFC857;
+  --alert: #FF9F43;
+  --danger: #EF5350;
 
-  --rain: #3A6EA5;
-  --fog: #8D9CB8;
-  --storm: #4B4453;
+  --rain: #1499E8;
+  --fog: #93A4B8;
+  --storm: #43C7F4;
 
   --font:
-    "Roboto",
+    "Inter",
     -apple-system,
     BlinkMacSystemFont,
     "Segoe UI",
+    Roboto,
     Arial,
-    Helvetica,
     sans-serif;
 
   --font-indic:
@@ -39,8 +43,9 @@
     Arial,
     sans-serif;
 
-  --radius: 6px;
-  --radius-small: 4px;
+  --radius: 12px;
+  --radius-small: 8px;
+  --radius-pill: 9999px;
   --border-width: 1px;
 }
 
@@ -66,8 +71,8 @@ body,
 body {
   overflow-x: hidden;
   overflow-y: auto;
-  font-size: clamp(0.875rem, 0.85rem + 0.15vw, 1rem);
-  line-height: 1.5;
+  font-size: 15px;
+  line-height: 1.6;
 }
 
 /* Fluid responsive container */
@@ -89,7 +94,7 @@ body {
   }
 }
 
-/* Safe area support for iOS notches */
+/* Safe area support for mobile notches */
 .safe-area-top {
   padding-top: env(safe-area-inset-top, 0px);
 }
@@ -99,30 +104,8 @@ body {
 }
 
 /* =========================================
-   APPLICATION
+   APPLICATION CONTAINER & LAYOUT
 ========================================= */
-
-/* =========================================
-   ASK MAUSAM CUSTOM CURSOR & BUTTON DESIGN
-========================================= */
-
-.cursor-ask-mausam,
-.ask-mausam-cursor,
-#header-ask-mausam-button,
-#floating-ask-mausam-btn,
-.ask-mausam-trigger {
-  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32' fill='none'%3E%3Cpath d='M6 3L18 15L12 16.5L16 25.5L13 27L9 18L5 22L6 3Z' fill='%230B72B9' stroke='%23FFFFFF' stroke-width='1.5' stroke-linejoin='round'/%3E%3Cpath d='M23 5L24.2 9L28.2 10.2L24.2 11.4L23 15.4L21.8 11.4L17.8 10.2L21.8 9L23 5Z' fill='%234FA8E0'/%3E%3Ccircle cx='23' cy='10.2' r='1.5' fill='%23FFFFFF'/%3E%3C/svg%3E") 6 3, pointer !important;
-  transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.cursor-ask-mausam:active,
-.ask-mausam-cursor:active,
-#header-ask-mausam-button:active,
-#floating-ask-mausam-btn:active,
-.ask-mausam-trigger:active {
-  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32' viewBox='0 0 32 32' fill='none'%3E%3Ccircle cx='16' cy='16' r='13' stroke='%234FA8E0' stroke-width='1.5' stroke-dasharray='3 3' opacity='0.7'/%3E%3Ccircle cx='16' cy='16' r='8' fill='%230B72B9' stroke='%23FFFFFF' stroke-width='1.5'/%3E%3Cpath d='M16 10L17.2 14.2L21.4 15.4L17.2 16.6L16 20.8L14.8 16.6L10.6 15.4L14.8 14.2L16 10Z' fill='%23FFFFFF'/%3E%3C/svg%3E") 16 16, pointer !important;
-  transform: scale(0.96);
-}
 
 .mausam-app {
   min-height: 100vh;
@@ -133,191 +116,119 @@ body {
 }
 
 /* =========================================
-   HEADER
+   ASK MAUSAM ASSISTANT STYLING
 ========================================= */
 
-.mausam-header {
-  min-height: 64px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 clamp(12px, 2vw, 24px);
-  background: var(--bg);
-  border-bottom: 1px solid var(--border);
-}
-
-.mausam-brand {
-  display: flex;
-  align-items: center;
-  gap: clamp(8px, 1.5vw, 12px);
-}
-
-.mausam-brand-logo {
-  width: clamp(34px, 4vw, 40px);
-  height: clamp(34px, 4vw, 40px);
-  display: grid;
-  place-items: center;
-  background: var(--primary);
-  border-radius: 4px;
-  flex-shrink: 0;
-}
-
-.mausam-brand-name {
-  font-size: clamp(16px, 2vw, 19px);
-  font-weight: 700;
-  color: var(--text);
-  letter-spacing: -0.01em;
-}
-
-.mausam-brand-subtitle {
-  font-size: clamp(10px, 1vw, 11px);
-  color: var(--text-muted);
-}
-
-/* =========================================
-   NAVIGATION
-========================================= */
-
-.mausam-nav {
-  min-height: 48px;
-  display: flex;
-  align-items: center;
-  padding: 0 clamp(12px, 2vw, 24px);
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.mausam-nav::-webkit-scrollbar {
-  display: none;
-}
-
-.mausam-nav-item {
-  min-height: 48px;
-  display: flex;
-  align-items: center;
-  padding: 0 clamp(10px, 1.5vw, 18px);
-  color: var(--text-muted);
-  background: transparent;
-  border: 0;
-  border-bottom: 2px solid transparent;
-  font-size: clamp(11px, 1.2vw, 13px);
-  font-weight: 500;
-  white-space: nowrap;
+.cursor-ask-mausam,
+.ask-mausam-cursor,
+#header-ask-mausam-button,
+#floating-ask-mausam-btn,
+.ask-mausam-trigger {
   cursor: pointer;
-  touch-action: manipulation;
+  transition: transform 0.15s ease, background-color 0.15s ease;
 }
 
-.mausam-nav-item:hover {
-  color: var(--text);
-}
-
-.mausam-nav-item.active {
-  color: var(--primary-light);
-  border-bottom-color: var(--primary-light);
-}
-
-/* =========================================
-   PAGE
-========================================= */
-
-.mausam-page {
-  width: 100%;
-  max-width: 1440px;
-  margin: 0 auto;
-  padding: clamp(12px, 2.5vw, 24px);
-  flex: 1;
+.cursor-ask-mausam:active,
+.ask-mausam-cursor:active,
+#header-ask-mausam-button:active,
+#floating-ask-mausam-btn:active,
+.ask-mausam-trigger:active {
+  transform: scale(0.97);
 }
 
 /* =========================================
-   SECTION
+   DATA PRESENTATION & HERO SURFACES
+   (Replacing repetitive box cards with organic storytelling)
 ========================================= */
 
-.mausam-section {
-  margin-bottom: clamp(16px, 2.5vw, 24px);
+.mausam-hero-environment {
+  position: relative;
+  border-radius: var(--radius);
+  background: linear-gradient(145deg, #111C27 0%, #0A1118 100%);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  transition: border-color 0.2s ease;
 }
 
-.mausam-section-header {
+.mausam-hero-environment:hover {
+  border-color: rgba(20, 153, 232, 0.25);
+}
+
+.mausam-strip {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid var(--border);
+  gap: 16px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  padding: 12px 18px;
 }
-
-.mausam-section-title {
-  margin: 0;
-  color: var(--text);
-  font-size: clamp(16px, 2vw, 20px);
-  font-weight: 700;
-}
-
-/* =========================================
-   INFORMATION PANEL & CARD
-========================================= */
 
 .mausam-panel {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: clamp(12px, 2vw, 18px);
+  padding: clamp(14px, 2vw, 20px);
+}
+
+.mausam-panel-subtle {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-small);
+  padding: 12px 16px;
 }
 
 .mausam-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: clamp(12px, 2vw, 16px);
+  padding: 16px;
   width: 100%;
   min-width: 0;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
-/* =========================================
-   DATA
-========================================= */
-
-.mausam-data-label {
-  display: block;
-  margin-bottom: 3px;
-  color: var(--text-muted);
-  font-size: clamp(10px, 1vw, 11px);
-  font-weight: 500;
+.mausam-card:hover {
+  background: #14202C;
+  border-color: rgba(20, 153, 232, 0.2);
 }
 
-.mausam-data-value {
-  color: var(--text);
-  font-size: clamp(14px, 1.5vw, 16px);
+/* Inline metric items */
+.mausam-inline-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mausam-metric-label {
+  font-size: 11px;
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
 }
 
-/* =========================================
-   CURRENT TEMPERATURE
-========================================= */
-
-.mausam-temperature {
-  font-size: clamp(40px, 8vw, 64px);
-  line-height: 1;
-  font-weight: 400;
+.mausam-metric-val {
+  font-size: 18px;
+  font-weight: 700;
   color: var(--text);
+  letter-spacing: -0.01em;
 }
 
-.mausam-temperature-unit {
-  font-size: clamp(18px, 3vw, 24px);
-  color: var(--primary-light);
-  vertical-align: top;
+.mausam-metric-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.4;
 }
 
 /* =========================================
-   BUTTON & INTERACTION TARGETS
+   BUTTONS & CONTROLS
 ========================================= */
 
 .mausam-btn,
 .mausam-button {
   min-height: 40px;
-  min-width: 40px;
-  padding: 0 clamp(10px, 1.5vw, 14px);
+  padding: 0 16px;
   border: 1px solid var(--primary);
   border-radius: var(--radius-small);
   background: var(--primary);
@@ -327,33 +238,28 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
   cursor: pointer;
   touch-action: manipulation;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition: all 0.15s ease;
 }
 
 .mausam-btn:hover,
 .mausam-button:hover {
   background: var(--primary-dark);
-}
-
-.mausam-btn--sm {
-  min-height: 34px;
-  padding: 0 10px;
-  font-size: 12px;
+  border-color: var(--primary-dark);
 }
 
 .mausam-btn--secondary,
 .mausam-button-outline {
-  background: transparent;
-  border-color: var(--border-light);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
   color: var(--text-body);
 }
 
 .mausam-btn--secondary:hover,
 .mausam-button-outline:hover {
-  background: var(--surface-2);
+  background: var(--surface-hover);
   border-color: var(--primary-light);
   color: var(--text);
 }
@@ -363,49 +269,66 @@ body {
   background: var(--surface-2);
   border: 1px solid var(--border);
   color: var(--text);
-  padding: 6px 10px;
+  padding: 6px 12px;
   border-radius: var(--radius-small);
   outline: none;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .mausam-select:focus {
-  border-color: var(--primary-light);
+  border-color: var(--primary);
+}
+
+/* =========================================
+   BADGES & PILLS
+========================================= */
+
+.mausam-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-pill);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 /* =========================================
    TABLES
 ========================================= */
 
-.mausam-table-container,
 .mausam-table-wrapper {
   width: 100%;
-  max-width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  background: var(--surface);
 }
 
 .mausam-table {
   width: 100%;
-  min-width: 580px;
+  min-width: 540px;
   border-collapse: collapse;
 }
 
 .mausam-table th {
-  padding: clamp(8px, 1.5vw, 11px) clamp(10px, 1.5vw, 14px);
+  padding: 10px 14px;
   background: var(--surface-2);
   color: var(--text-muted);
   border-bottom: 1px solid var(--border);
   text-align: left;
   font-size: 11px;
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   white-space: nowrap;
 }
 
 .mausam-table td {
-  padding: clamp(10px, 1.5vw, 12px) clamp(10px, 1.5vw, 14px);
+  padding: 12px 14px;
   color: var(--text-body);
   border-bottom: 1px solid var(--border);
   font-size: 13px;
@@ -416,93 +339,29 @@ body {
 }
 
 .mausam-table tr:hover td {
-  background: rgba(79, 168, 224, 0.04);
+  background: rgba(20, 153, 232, 0.04);
 }
 
 /* =========================================
-   ALERT & BULLETIN
-========================================= */
-
-.mausam-alert {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  min-height: 54px;
-  padding: 10px 14px;
-  background: rgba(231, 76, 60, 0.08);
-  border: 1px solid rgba(231, 76, 60, 0.45);
-  border-left: 4px solid var(--danger);
-  border-radius: var(--radius);
-}
-
-.mausam-alert.warning {
-  background: rgba(241, 196, 15, 0.07);
-  border-color: rgba(241, 196, 15, 0.4);
-  border-left-color: var(--warning);
-}
-
-.mausam-alert.normal {
-  background: rgba(46, 204, 113, 0.06);
-  border-color: rgba(46, 204, 113, 0.35);
-  border-left-color: var(--good);
-}
-
-.mausam-bulletin {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  padding: 12px 16px;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  background: var(--surface);
-}
-
-@media (min-width: 640px) {
-  .mausam-bulletin {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-  }
-}
-
-.mausam-bulletin--danger {
-  background: rgba(231, 76, 60, 0.1);
-  border-color: rgba(231, 76, 60, 0.45);
-  border-left: 4px solid var(--danger);
-}
-
-.mausam-bulletin--warning {
-  background: rgba(241, 196, 15, 0.1);
-  border-color: rgba(241, 196, 15, 0.45);
-  border-left: 4px solid var(--warning);
-}
-
-.mausam-bulletin--good {
-  background: rgba(46, 204, 113, 0.08);
-  border-color: rgba(46, 204, 113, 0.35);
-  border-left: 4px solid var(--good);
-}
-
-/* =========================================
-   CUSTOM SCROLLBARS (Touch / Subtle)
+   CUSTOM SCROLLBARS
 ========================================= */
 
 .scrollbar-thin::-webkit-scrollbar {
-  height: 5px;
-  width: 5px;
+  height: 6px;
+  width: 6px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-track {
-  background: #17212B;
+  background: #071018;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: #162331;
   border-radius: 4px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
-  background: #4FA8E0;
+  background: #1499E8;
 }
 
 .scrollbar-none::-webkit-scrollbar {
@@ -514,126 +373,39 @@ body {
 }
 
 /* =========================================
-   RESPONSIVE MEDIA QUERIES & TOUCH TARGETS
+   MOBILE TOUCH TARGETS & RESPONSIVENESS
 ========================================= */
 
-/* Mobile Touch Optimization (Phones & Small Tablets) */
 @media (max-width: 768px) {
-  /* Increase minimum touch targets to at least 44px on mobile */
   .mausam-btn,
   .mausam-button,
-  .mausam-select,
-  button:not(.text-btn):not(.inline-chip) {
+  .mausam-select {
     min-height: 44px;
     touch-action: manipulation;
   }
 
-  .mausam-btn--sm {
-    min-height: 40px;
-    padding: 0 12px;
-  }
-
-  /* Safe tap target spacing */
-  .mausam-nav-item {
-    min-height: 44px;
-    padding: 0 14px;
-  }
-
-  /* Fluid typography scaling on small screens */
-  h1 {
-    font-size: clamp(1.25rem, 5vw, 1.75rem) !important;
-    line-height: 1.25 !important;
-  }
-
-  h2 {
-    font-size: clamp(1.1rem, 4vw, 1.4rem) !important;
-    line-height: 1.3 !important;
-  }
-
-  h3 {
-    font-size: clamp(1rem, 3.5vw, 1.2rem) !important;
-    line-height: 1.35 !important;
-  }
-
-  .mausam-temperature {
-    font-size: clamp(38px, 12vw, 56px);
-  }
-
-  .mausam-table th,
-  .mausam-table td {
-    padding: 10px 12px;
-    font-size: 12px;
-  }
-
-  /* Ensure cards and panels don't produce horizontal scroll */
-  .mausam-card,
   .mausam-panel {
-    padding: 12px;
-    border-radius: var(--radius);
+    padding: 14px;
   }
 
-  /* Safe bottom padding for floating actions and home indicator */
   .safe-area-bottom {
     padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px);
   }
 }
 
-/* Touch Device Specific Enhancements (Coarse Pointer) */
-@media (pointer: coarse) {
-  .mausam-btn,
-  .mausam-button,
-  .mausam-select,
-  .ask-mausam-cursor,
-  #floating-ask-mausam-btn,
-  #header-ask-mausam-button {
-    min-height: 44px;
-    touch-action: manipulation;
-  }
-
-  /* Expand hit-box for clickable items */
-  input[type="text"],
-  input[type="search"],
-  select {
-    font-size: 16px !important; /* Prevents auto-zoom on iOS Safari */
-    min-height: 44px;
-  }
-}
-
-/* Laptop & Desktop Precision (>= 1024px) */
-@media (min-width: 1024px) {
-  .mausam-page {
-    padding: 24px 32px;
-  }
-
-  .mausam-card,
-  .mausam-panel {
-    padding: 18px 20px;
-  }
-
-  .mausam-table th {
-    font-size: 12px;
-    padding: 12px 16px;
-  }
-
-  .mausam-table td {
-    font-size: 13px;
-    padding: 12px 16px;
-  }
-}
-
-/* Indeterminate Weather Sync Progress Bar */
-@keyframes mausam-indeterminate-bar {
+/* Indeterminate Sync Bar */
+@keyframes mausam-sync-pulse {
   0% {
     transform: translateX(-100%);
-    width: 35%;
+    width: 30%;
   }
   50% {
-    transform: translateX(60%);
-    width: 65%;
+    transform: translateX(50%);
+    width: 60%;
   }
   100% {
-    transform: translateX(250%);
-    width: 40%;
+    transform: translateX(200%);
+    width: 30%;
   }
 }
 
@@ -641,7 +413,7 @@ body {
   position: relative;
   width: 100%;
   height: 3px;
-  background-color: rgba(11, 114, 185, 0.15);
+  background-color: rgba(20, 153, 232, 0.12);
   overflow: hidden;
   z-index: 40;
 }
@@ -652,9 +424,8 @@ body {
   bottom: 0;
   left: 0;
   height: 100%;
-  background: linear-gradient(90deg, transparent, #00B4D8, #0B72B9, #4FA8E0, transparent);
-  box-shadow: 0 0 10px rgba(79, 168, 224, 0.6);
-  animation: mausam-indeterminate-bar 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  background: linear-gradient(90deg, transparent, #43C7F4, #1499E8, #22C7A0, transparent);
+  box-shadow: 0 0 10px rgba(67, 199, 244, 0.5);
+  animation: mausam-sync-pulse 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
   will-change: transform, width;
 }
-

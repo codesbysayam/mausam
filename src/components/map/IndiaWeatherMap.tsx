@@ -50,7 +50,7 @@ export type IndiaRegion = 'all' | 'north' | 'east' | 'west' | 'south' | 'central
 const REGIONS: { id: IndiaRegion; label: string; icon: string; stateIds: string[] }[] = [
   { id: 'all', label: 'All India', icon: 'public', stateIds: [] },
   { id: 'north', label: 'North', icon: 'north', stateIds: ['in-dl', 'in-pb', 'in-hr', 'in-rj', 'in-up', 'in-hp', 'in-jk', 'in-la', 'in-uk', 'in-ch'] },
-  { id: 'east', label: 'East & Odisha', icon: 'east', stateIds: ['in-od', 'in-wb', 'in-br', 'in-jh'] },
+  { id: 'east', label: 'East', icon: 'east', stateIds: ['in-od', 'in-wb', 'in-br', 'in-jh'] },
   { id: 'west', label: 'West', icon: 'west', stateIds: ['in-mh', 'in-gj', 'in-ga', 'in-dn'] },
   { id: 'south', label: 'South', icon: 'south', stateIds: ['in-ka', 'in-tn', 'in-kl', 'in-ap', 'in-ts', 'in-py', 'in-ld', 'in-an'] },
   { id: 'central', label: 'Central', icon: 'center_focus_strong', stateIds: ['in-mp', 'in-cg'] },
