@@ -710,26 +710,34 @@ export const DopplerRadarViewer: React.FC<DopplerRadarViewerProps> = ({
     if (!containerRef.current || !canvasRef.current) return;
     const container = containerRef.current;
     const canvas = canvasRef.current;
+    let rafId: number | null = null;
 
     const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const width = Math.floor(entry.contentRect.width);
-        const height = Math.max(500, Math.floor(width * 0.72));
-        const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        for (const entry of entries) {
+          const width = Math.floor(entry.contentRect.width);
+          if (width <= 0) continue;
+          const height = Math.max(500, Math.floor(width * 0.72));
+          const dpr = typeof window !== 'undefined' ? window.devicePixelRatio || 1 : 1;
 
-        dimensionsRef.current = { width, height, dpr };
+          dimensionsRef.current = { width, height, dpr };
 
-        canvas.width = Math.round(width * dpr);
-        canvas.height = Math.round(height * dpr);
-        canvas.style.width = `${width}px`;
-        canvas.style.height = `${height}px`;
+          canvas.width = Math.round(width * dpr);
+          canvas.height = Math.round(height * dpr);
+          canvas.style.width = `${width}px`;
+          canvas.style.height = `${height}px`;
 
-        drawRadar();
-      }
+          drawRadar();
+        }
+      });
     });
 
     ro.observe(container);
-    return () => ro.disconnect();
+    return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      ro.disconnect();
+    };
   }, [drawRadar]);
 
   // High-performance animation loop (Zero DOM reflows inside requestAnimationFrame)
@@ -1097,47 +1105,86 @@ export const DopplerRadarViewer: React.FC<DopplerRadarViewerProps> = ({
         )}
 
         {/* Dynamic Color Scale Legend on Bottom Right */}
-        <div className="absolute bottom-3 right-3 bg-[#0F141A]/90 backdrop-blur border border-[#334155] rounded-lg p-2 flex flex-col gap-1 text-[10px] pointer-events-none z-10 max-w-[280px] sm:max-w-none">
-          <span className="font-bold text-white text-[9px] uppercase tracking-wider mb-0.5">
-            {productType === 'MAXZ'
-              ? 'Reflectivity (dBZ)'
-              : productType === 'PPZ'
-              ? 'PPI Reflectivity (dBZ)'
-              : productType === 'PPV'
-              ? 'Radial Velocity (m/s)'
-              : 'Rain Rate (mm/hr)'}
-          </span>
-          <div className="flex items-center gap-1 overflow-x-auto">
+        <div className="absolute bottom-3 right-3 bg-[#071018]/95 backdrop-blur-md border border-[#162331] hover:border-[#1499E8]/50 transition-all rounded-xl p-2.5 sm:p-3 flex flex-col gap-1.5 text-[10px] z-10 max-w-[90vw] sm:max-w-md shadow-2xl">
+          <div className="flex items-center justify-between gap-2 border-b border-[#162331] pb-1.5">
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#1499E8] animate-pulse" />
+              <span className="font-bold text-[#F4F7FA] text-[10px] sm:text-[11px] uppercase tracking-wider">
+                {productType === 'MAXZ'
+                  ? 'Maximum Reflectivity (dBZ)'
+                  : productType === 'PPZ'
+                  ? 'PPI Reflectivity at 0.5° (dBZ)'
+                  : productType === 'PPV'
+                  ? 'Doppler Radial Velocity (m/s)'
+                  : 'Surface Rainfall Intensity (mm/hr)'}
+              </span>
+            </div>
+            <span className="text-[9px] font-mono text-[#43C7F4] bg-[#1499E8]/10 px-1.5 py-0.5 rounded border border-[#1499E8]/30">
+              {productType === 'MAXZ' || productType === 'PPZ'
+                ? '0 – 65+ dBZ'
+                : productType === 'PPV'
+                ? '±32 m/s (±115 km/h)'
+                : '0.1 – 65+ mm/h'}
+            </span>
+          </div>
+
+          {/* Color Ramp Bar */}
+          <div className="flex items-center gap-0.5 sm:gap-1 overflow-x-auto py-0.5 scrollbar-none">
             {productType === 'MAXZ' || productType === 'PPZ' ? (
               REFLECTIVITY_RAMP.map((item) => (
-                <div key={item.dbz} className="flex flex-col items-center shrink-0">
+                <div key={item.dbz} className="flex flex-col items-center shrink-0 group/legend" title={`${item.dbz} dBZ`}>
                   <div
-                    className="w-3.5 sm:w-4 h-2.5 sm:h-3 rounded-xs border border-black/40"
+                    className="w-3 sm:w-4 h-3 sm:h-3.5 rounded-xs border border-black/30 transition-transform group-hover/legend:scale-125"
                     style={{ backgroundColor: item.color }}
-                  ></div>
-                  <span className="text-[7.5px] sm:text-[8px] text-[#8A94A6] mt-0.5">{item.dbz}</span>
+                  />
+                  <span className="text-[7px] sm:text-[8px] font-mono text-[#93A4B8] mt-0.5">{item.dbz}</span>
                 </div>
               ))
             ) : productType === 'PPV' ? (
               VELOCITY_RAMP.map((item) => (
-                <div key={item.vel} className="flex flex-col items-center shrink-0">
+                <div key={item.vel} className="flex flex-col items-center shrink-0 group/legend" title={`${item.vel} m/s`}>
                   <div
-                    className="w-3.5 sm:w-4 h-2.5 sm:h-3 rounded-xs border border-black/40"
+                    className="w-3 sm:w-4 h-3 sm:h-3.5 rounded-xs border border-black/30 transition-transform group-hover/legend:scale-125"
                     style={{ backgroundColor: item.color }}
-                  ></div>
-                  <span className="text-[7.5px] sm:text-[8px] text-[#8A94A6] mt-0.5">{item.vel}</span>
+                  />
+                  <span className="text-[7px] sm:text-[8px] font-mono text-[#93A4B8] mt-0.5">{item.vel}</span>
                 </div>
               ))
             ) : (
               SRI_RAMP.map((item) => (
-                <div key={item.rate} className="flex flex-col items-center shrink-0">
+                <div key={item.rate} className="flex flex-col items-center shrink-0 group/legend" title={`${item.rate} mm/hr`}>
                   <div
-                    className="w-3.5 sm:w-4 h-2.5 sm:h-3 rounded-xs border border-black/40"
+                    className="w-3 sm:w-4 h-3 sm:h-3.5 rounded-xs border border-black/30 transition-transform group-hover/legend:scale-125"
                     style={{ backgroundColor: item.color }}
-                  ></div>
-                  <span className="text-[7.5px] sm:text-[8px] text-[#8A94A6] mt-0.5">{item.rate}</span>
+                  />
+                  <span className="text-[7px] sm:text-[8px] font-mono text-[#93A4B8] mt-0.5">{item.rate}</span>
                 </div>
               ))
+            )}
+          </div>
+
+          {/* Dynamic Meteorological Interpretation Labels */}
+          <div className="flex items-center justify-between text-[8.5px] sm:text-[9.5px] text-[#93A4B8] pt-1 border-t border-[#162331]">
+            {productType === 'MAXZ' || productType === 'PPZ' ? (
+              <>
+                <span className="text-[#43C7F4]">Light (&lt;20)</span>
+                <span className="text-[#22C7A0]">Moderate (25-35)</span>
+                <span className="text-[#FFC857]">Heavy (40-48)</span>
+                <span className="text-[#EF5350] font-semibold">Severe / Hail (50+)</span>
+              </>
+            ) : productType === 'PPV' ? (
+              <>
+                <span className="text-[#22C7A0] font-medium">← Inbound (Towards Radar)</span>
+                <span className="text-[#93A4B8]">0 (Calm / Cross)</span>
+                <span className="text-[#EF5350] font-medium">Outbound (Away) →</span>
+              </>
+            ) : (
+              <>
+                <span className="text-[#43C7F4]">Drizzle (&lt;2.5)</span>
+                <span className="text-[#22C7A0]">Moderate (5-15)</span>
+                <span className="text-[#FF9F43]">Heavy (20-40)</span>
+                <span className="text-[#EF5350] font-semibold">Cloudburst (50+)</span>
+              </>
             )}
           </div>
         </div>
