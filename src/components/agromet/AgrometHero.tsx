@@ -1,24 +1,28 @@
 import React from 'react';
-import { ExtendedAgrometBulletin, INDIAN_STATES_AND_DISTRICTS } from '../../services/agrometService';
+import { ExtendedAgrometBulletin } from '../../services/agrometService';
 import {
   Sprout,
   MapPin,
   Calendar,
-  FileText,
   Clock,
-  Sparkles,
-  ChevronDown,
-  Activity,
+  ShieldCheck,
+  Droplets,
+  Sun,
+  Wind,
   Layers,
-  Radio,
+  Sparkles,
+  ArrowDownRight,
+  TrendingUp,
 } from 'lucide-react';
 
 interface AgrometHeroProps {
   bulletin: ExtendedAgrometBulletin;
   selectedState: string;
   selectedDistrict: string;
-  onStateChange: (state: string) => void;
-  onDistrictChange: (district: string) => void;
+  selectedCropName?: string;
+  onSelectCrop?: (crop: string) => void;
+  onStateChange?: (newState: string) => void;
+  onDistrictChange?: (newDistrict: string) => void;
   isLoading?: boolean;
 }
 
@@ -26,197 +30,245 @@ export const AgrometHero: React.FC<AgrometHeroProps> = ({
   bulletin,
   selectedState,
   selectedDistrict,
+  selectedCropName = 'Rice (Paddy)',
+  onSelectCrop,
   onStateChange,
   onDistrictChange,
-  isLoading = false,
+  isLoading,
 }) => {
-  const states = Object.keys(INDIAN_STATES_AND_DISTRICTS);
-  const districts = INDIAN_STATES_AND_DISTRICTS[selectedState] || [selectedDistrict];
+  const topsoil = bulletin.soilMoisture?.topsoilPct ?? 68;
+  const rootZone = bulletin.soilMoisture?.rootZonePct ?? 72;
+  const subsoil = bulletin.soilMoisture?.subsoilPct ?? 78;
+  const cumulativeRain = bulletin.cumulativeRainfallMm ?? 30;
 
   return (
-    <header className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0E1724] via-[#0B121C] to-[#070D14] border border-[#1E2E40]/90 shadow-2xl p-6 sm:p-8 lg:p-10">
-      {/* Subtle Atmospheric & Crop Horizon Silhouette Graphic */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-30 select-none">
-        <svg
-          className="w-full h-full object-cover"
-          viewBox="0 0 1440 450"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
+    <header
+      id="agromet-intelligence-hero"
+      className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0B131D] via-[#080E16] to-[#04080D] border border-[#1E2E40] shadow-2xl p-6 sm:p-8 lg:p-10"
+    >
+      {/* Background Subtle Coordinate & Field Grid SVG */}
+      <div className="absolute inset-0 pointer-events-none opacity-20">
+        <svg className="w-full h-full" xmlns="http://www.w3.org/2000/svg">
           <defs>
-            <linearGradient id="skyAtmosphere" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#38BDF8" stopOpacity="0.25" />
-              <stop offset="45%" stopColor="#2ECC71" stopOpacity="0.15" />
-              <stop offset="100%" stopColor="#0B121C" stopOpacity="0.0" />
-            </linearGradient>
-            <linearGradient id="fieldRidge1" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#1E3A2B" stopOpacity="0.7" />
-              <stop offset="100%" stopColor="#0E1724" stopOpacity="0.9" />
-            </linearGradient>
-            <linearGradient id="fieldRidge2" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#2ECC71" stopOpacity="0.2" />
-              <stop offset="100%" stopColor="#070D14" stopOpacity="0.8" />
+            <pattern id="agriGrid" width="40" height="40" patternUnits="userSpaceOnUse">
+              <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#38BDF8" strokeWidth="0.5" strokeOpacity="0.3" />
+              <circle cx="20" cy="20" r="0.75" fill="#10B981" fillOpacity="0.4" />
+            </pattern>
+            <linearGradient id="heroGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#10B981" stopOpacity="0.12" />
+              <stop offset="50%" stopColor="#38BDF8" stopOpacity="0.08" />
+              <stop offset="100%" stopColor="#0B131D" stopOpacity="0" />
             </linearGradient>
           </defs>
-
-          {/* Atmospheric Glow */}
-          <rect width="1440" height="450" fill="url(#skyAtmosphere)" />
-
-          {/* Gentle contour waves */}
-          <path
-            d="M0 320 Q 360 260 720 300 T 1440 270 L 1440 450 L 0 450 Z"
-            fill="url(#fieldRidge1)"
-          />
-          <path
-            d="M0 360 Q 420 310 860 345 T 1440 330 L 1440 450 L 0 450 Z"
-            fill="url(#fieldRidge2)"
-          />
-
-          {/* Minimalist crop stalks silhouettes */}
-          <g transform="translate(1020, 220) scale(0.9)" stroke="#2ECC71" strokeWidth="2.5" strokeLinecap="round" opacity="0.4">
-            <path d="M 60 200 Q 55 100 60 20" />
-            <path d="M 60 110 Q 20 80 5 60" />
-            <path d="M 60 80 Q 100 50 115 30" />
-            <path d="M 60 140 Q 15 125 0 95" />
-            <path d="M 60 45 Q 40 20 25 0" />
-            <circle cx="60" cy="18" r="5" fill="#2ECC71" />
-          </g>
-          <g transform="translate(1160, 200) scale(1.1)" stroke="#38BDF8" strokeWidth="2" strokeLinecap="round" opacity="0.35">
-            <path d="M 50 200 Q 60 95 50 10" />
-            <path d="M 50 95 Q 95 65 115 40" />
-            <path d="M 50 65 Q 10 40 0 18" />
-            <path d="M 50 120 Q 100 100 120 75" />
-            <circle cx="50" cy="8" r="4.5" fill="#38BDF8" />
-          </g>
-          <g transform="translate(1290, 240) scale(0.8)" stroke="#2ECC71" strokeWidth="2.5" strokeLinecap="round" opacity="0.4">
-            <path d="M 50 200 Q 45 100 50 20" />
-            <path d="M 50 100 Q 20 75 5 55" />
-            <path d="M 50 70 Q 85 45 100 25" />
-            <circle cx="50" cy="18" r="4" fill="#2ECC71" />
-          </g>
+          <rect width="100%" height="100%" fill="url(#agriGrid)" />
+          <rect width="100%" height="100%" fill="url(#heroGlow)" />
         </svg>
       </div>
 
-      <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
-        {/* Left: Command Header & Title */}
-        <div className="flex-1 max-w-3xl space-y-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#2ECC71]/15 border border-[#2ECC71]/35 text-[#2ECC71] text-xs font-bold uppercase tracking-wider shadow-sm">
-              <Sprout className="w-4 h-4" />
-              <span>National Agromet Service • GKMS</span>
+      <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        {/* LEFT COLUMN: Authority, Location, Purpose & Core Value */}
+        <div className="lg:col-span-7 space-y-5">
+          {/* Top Label & Protocol Tag */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#10B981]/10 border border-[#10B981]/30 text-[#10B981] text-xs font-mono font-bold uppercase tracking-wider">
+              <Sprout className="w-3.5 h-3.5" />
+              <span>Agromet Intelligence</span>
             </div>
-
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#182736] border border-[#2A3E54] text-xs text-[#CBD5E1] font-mono">
-              <span className="w-2 h-2 rounded-full bg-[#2ECC71] animate-pulse" />
-              <span className="text-[#38BDF8] font-bold">LIVE AGRICULTURAL DATA</span>
-              <span className="text-[#64748B]">• Updated 2 min ago</span>
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#38BDF8]/10 border border-[#38BDF8]/25 text-[#38BDF8] text-xs font-mono">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              <span>GKMS • IMD • ICAR</span>
+            </div>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#1E2E40]/60 text-[#94A3B8] text-[11px] font-mono">
+              <Clock className="w-3 h-3 text-[#38BDF8]" />
+              <span>Cycle: August 2026</span>
             </div>
           </div>
 
-          <div>
-            <div className="flex items-baseline gap-3.5 flex-wrap">
-              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white flex items-center gap-3">
-                AGROMET
-              </h1>
-              <span className="text-xs sm:text-sm font-semibold px-3 py-1 rounded-lg bg-[#182635] text-[#38BDF8] border border-[#2A3E54] tracking-wide">
-                Agricultural Weather Command Center
+          {/* Main Title & Value Proposition */}
+          <div className="space-y-2">
+            <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
+              Agricultural Weather <br />
+              <span className="bg-clip-text text-transparent bg-gradient-to-r from-[#38BDF8] via-[#2ECC71] to-[#10B981]">
+                Decision Intelligence
               </span>
-            </div>
-            <p className="text-base sm:text-lg text-[#94A3B8] font-normal mt-2 leading-relaxed max-w-2xl">
-              Weather intelligence for smarter farm decisions — translating high-resolution synoptic forecasts into decisive irrigation, nutrient, disease surveillance, and harvesting actions.
+            </h1>
+            <p className="text-sm sm:text-base text-[#94A3B8] font-medium leading-relaxed max-w-xl">
+              Turn real-time atmospheric telemetry, soil hydrology, and numerical weather models into timely, actionable field decisions.
             </p>
           </div>
 
-          {/* Current Active Location Badge & Bulletin Metadata */}
-          <div className="flex flex-wrap items-center gap-3 pt-2">
-            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#131E2A] border border-[#22354A] text-xs sm:text-sm text-white">
-              <MapPin className="w-4 h-4 text-[#2ECC71] shrink-0" />
-              <span>
-                Location: <strong className="text-[#38BDF8] font-bold font-mono">{selectedDistrict}, {selectedState}</strong>
+          {/* Location & AMFU Node Card */}
+          <div className="p-4 sm:p-5 rounded-2xl bg-[#0F1926]/90 border border-[#1E2E40] shadow-inner space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#1E2E40]">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-[#38BDF8]/15 border border-[#38BDF8]/30 flex items-center justify-center text-[#38BDF8]">
+                  <MapPin className="w-4 h-4" />
+                </div>
+                <div>
+                  <h2 className="text-base sm:text-lg font-bold text-white leading-tight">
+                    {selectedDistrict}, {selectedState}
+                  </h2>
+                  <span className="text-xs font-mono text-[#38BDF8]">
+                    {bulletin.amfuUnit || `AMFU ${selectedDistrict} • State Agricultural University`}
+                  </span>
+                </div>
+              </div>
+
+              <div className="text-right">
+                <span className="text-[10px] font-mono uppercase text-[#64748B] block">
+                  Bulletin Reference
+                </span>
+                <span className="text-xs font-mono font-bold text-[#E2E8F0]">
+                  {bulletin.bulletinNo || 'IMD/GKMS/2026/68'}
+                </span>
+              </div>
+            </div>
+
+            {/* Micro Flow: Weather -> Soil -> Crop -> Risk -> Action */}
+            <div className="pt-1">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-[#64748B] block mb-2">
+                Integrated Agronomic Decision Architecture
               </span>
-            </div>
-
-            <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#131E2A] border border-[#22354A] text-xs text-[#94A3B8]">
-              <FileText className="w-3.5 h-3.5 text-[#F59E0B] shrink-0" />
-              <span>Bulletin: <strong className="text-white font-mono">{bulletin.bulletinNo}</strong></span>
-            </div>
-
-            <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#131E2A] border border-[#22354A] text-xs text-[#94A3B8]">
-              <Calendar className="w-3.5 h-3.5 text-[#38BDF8] shrink-0" />
-              <span>Validity: <strong className="text-white font-mono">{bulletin.validPeriod}</strong></span>
+              <div className="grid grid-cols-5 gap-1.5 text-center font-mono">
+                <div className="p-1.5 rounded-lg bg-[#38BDF8]/10 border border-[#38BDF8]/20">
+                  <span className="text-[10px] font-bold text-[#38BDF8] block">WEATHER</span>
+                  <span className="text-[9px] text-[#94A3B8]">31°C / Rain</span>
+                </div>
+                <div className="p-1.5 rounded-lg bg-[#10B981]/10 border border-[#10B981]/20">
+                  <span className="text-[10px] font-bold text-[#10B981] block">SOIL</span>
+                  <span className="text-[9px] text-[#94A3B8]">{topsoil}% Moist</span>
+                </div>
+                <div className="p-1.5 rounded-lg bg-[#F59E0B]/10 border border-[#F59E0B]/20">
+                  <span className="text-[10px] font-bold text-[#F59E0B] block">CROP</span>
+                  <span className="text-[9px] text-[#94A3B8] truncate">{selectedCropName.split(' ')[0]}</span>
+                </div>
+                <div className="p-1.5 rounded-lg bg-[#EF4444]/10 border border-[#EF4444]/20">
+                  <span className="text-[10px] font-bold text-[#EF4444] block">RISK</span>
+                  <span className="text-[9px] text-[#94A3B8]">Foliar Blast</span>
+                </div>
+                <div className="p-1.5 rounded-lg bg-[#8B5CF6]/10 border border-[#8B5CF6]/20">
+                  <span className="text-[10px] font-bold text-[#A78BFA] block">ACTION</span>
+                  <span className="text-[9px] text-[#94A3B8]">Delay Water</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Right: Prominent Dual Location Selectors */}
-        <div className="w-full lg:w-80 shrink-0 bg-[#0F1722]/90 backdrop-blur-md border border-[#1E2E40] p-5 rounded-2xl shadow-xl flex flex-col gap-4">
-          <div className="flex items-center justify-between pb-2 border-b border-[#1E2E40]">
-            <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-              <Layers className="w-3.5 h-3.5 text-[#38BDF8]" />
-              Select Agricultural Zone
-            </span>
-            {isLoading ? (
-              <span className="text-[10px] text-[#F59E0B] font-mono animate-pulse font-semibold">
-                Syncing...
+        {/* RIGHT COLUMN: Environmental, Crop Canopy & Multi-Tier Soil Profile Visualization */}
+        <div className="lg:col-span-5">
+          <div className="relative rounded-2xl bg-[#09101A] border border-[#1E2E40] p-5 shadow-xl overflow-hidden space-y-4">
+            {/* Header / Field State summary */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Layers className="w-4 h-4 text-[#10B981]" />
+                <span className="text-xs font-mono font-bold text-white">
+                  Field Environment Cross-Section
+                </span>
+              </div>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#10B981]/15 text-[#10B981] border border-[#10B981]/30">
+                Live Sensor Feed
               </span>
-            ) : (
-              <span className="text-[10px] text-[#2ECC71] font-mono font-semibold">
-                IMD Verified
-              </span>
-            )}
-          </div>
-
-          {/* State Dropdown */}
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider flex items-center justify-between">
-              <span>State / Union Territory</span>
-              <span className="text-[10px] font-mono text-[#64748B]">{states.length} States</span>
-            </label>
-            <div className="relative">
-              <select
-                value={selectedState}
-                onChange={(e) => onStateChange(e.target.value)}
-                disabled={isLoading}
-                className="w-full appearance-none px-3.5 py-2.5 rounded-xl bg-[#152230] border border-[#2A3E54] text-sm text-white font-semibold focus:outline-none focus:border-[#2ECC71] focus:ring-2 focus:ring-[#2ECC71]/20 transition-all cursor-pointer disabled:opacity-50"
-              >
-                {states.map((state) => (
-                  <option key={state} value={state} className="bg-[#0F1722] text-white">
-                    {state}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-4 h-4 text-[#94A3B8] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
-          </div>
 
-          {/* District Dropdown */}
-          <div className="space-y-1.5">
-            <label className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider flex items-center justify-between">
-              <span>Agro-Meteorological District</span>
-              <span className="text-[10px] font-mono text-[#64748B]">{districts.length} Districts</span>
-            </label>
-            <div className="relative">
-              <select
-                value={selectedDistrict}
-                onChange={(e) => onDistrictChange(e.target.value)}
-                disabled={isLoading}
-                className="w-full appearance-none px-3.5 py-2.5 rounded-xl bg-[#152230] border border-[#2A3E54] text-sm text-white font-semibold focus:outline-none focus:border-[#38BDF8] focus:ring-2 focus:ring-[#38BDF8]/20 transition-all cursor-pointer disabled:opacity-50"
-              >
-                {districts.map((district) => (
-                  <option key={district} value={district} className="bg-[#0F1722] text-white">
-                    {district}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown className="w-4 h-4 text-[#94A3B8] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+            {/* Visual Cross-Section Graphic */}
+            <div className="space-y-3">
+              {/* Atmospheric Canopy Layer */}
+              <div className="p-3.5 rounded-xl bg-gradient-to-b from-[#38BDF8]/10 to-[#10B981]/5 border border-[#38BDF8]/20">
+                <div className="flex items-center justify-between text-xs mb-2">
+                  <div className="flex items-center gap-1.5 text-[#38BDF8] font-mono font-bold">
+                    <Sun className="w-3.5 h-3.5" />
+                    <span>Atmospheric Boundary Layer</span>
+                  </div>
+                  <span className="text-[11px] font-mono text-[#E2E8F0]">
+                    Max 31.4°C • RH 78%
+                  </span>
+                </div>
+
+                {/* SVG Silhouette of Clouds, Light Showers, Crop Heads */}
+                <div className="h-16 w-full relative overflow-hidden rounded-lg bg-[#071018]/80 border border-[#1E2E40] flex items-end justify-between px-3 pb-1">
+                  {/* Rain drops simulation vector */}
+                  <div className="absolute inset-0 flex justify-around opacity-40">
+                    <div className="w-0.5 h-3 bg-[#38BDF8] animate-pulse self-start mt-2"></div>
+                    <div className="w-0.5 h-4 bg-[#38BDF8] animate-pulse self-start mt-4 delay-100"></div>
+                    <div className="w-0.5 h-3 bg-[#38BDF8] animate-pulse self-start mt-1 delay-200"></div>
+                    <div className="w-0.5 h-4 bg-[#38BDF8] animate-pulse self-start mt-3 delay-300"></div>
+                  </div>
+
+                  {/* Crop Canopy Stems */}
+                  <div className="relative z-10 flex items-end gap-2 w-full justify-around">
+                    {[1, 2, 3, 4, 5, 6, 7].map((stem) => (
+                      <div key={stem} className="flex flex-col items-center">
+                        <div className="w-2 h-2 rounded-full bg-[#10B981] shadow-sm"></div>
+                        <div
+                          className="w-1 bg-[#2ECC71] rounded-t"
+                          style={{ height: `${24 + (stem % 3) * 6}px` }}
+                        ></div>
+                      </div>
+                    ))}
+                  </div>
+                  <span className="absolute bottom-1 right-2 text-[9px] font-mono text-[#64748B]">
+                    Active Growth Stage: Tillering
+                  </span>
+                </div>
+              </div>
+
+              {/* Multi-Tier Soil Horizon Profile */}
+              <div className="space-y-2">
+                <span className="text-[11px] font-mono font-bold text-[#94A3B8] flex items-center gap-1.5">
+                  <Droplets className="w-3.5 h-3.5 text-[#38BDF8]" />
+                  <span>Soil Hydrology Profile</span>
+                </span>
+
+                {/* Layer 1: Topsoil (0-15 cm) */}
+                <div className="p-2.5 rounded-xl bg-[#131D28] border border-[#1E2E40] flex items-center justify-between text-xs font-mono">
+                  <div>
+                    <span className="text-white font-bold block">Topsoil (0–15 cm)</span>
+                    <span className="text-[10px] text-[#64748B]">Seedbed &amp; Active Tiller Zone</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-sm font-black text-[#10B981]">{topsoil}%</span>
+                    <span className="text-[9px] text-[#2ECC71] block">Adequate Moisture</span>
+                  </div>
+                </div>
+
+                {/* Layer 2: Root-Zone (15-45 cm) */}
+                <div className="p-2.5 rounded-xl bg-[#111923] border border-[#1E2E40] flex items-center justify-between text-xs font-mono">
+                  <div>
+                    <span className="text-white font-bold block">Root-Zone (15–45 cm)</span>
+                    <span className="text-[10px] text-[#64748B]">Primary Water Uptake Zone</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-sm font-black text-[#38BDF8]">{rootZone}%</span>
+                    <span className="text-[9px] text-[#38BDF8] block">Optimal Capacity</span>
+                  </div>
+                </div>
+
+                {/* Layer 3: Subsoil (45-100 cm) */}
+                <div className="p-2.5 rounded-xl bg-[#0D141C] border border-[#1E2E40] flex items-center justify-between text-xs font-mono">
+                  <div>
+                    <span className="text-white font-bold block">Deep Subsoil (45–100 cm)</span>
+                    <span className="text-[10px] text-[#64748B]">Water Table &amp; Base Recharge</span>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-sm font-black text-[#A78BFA]">{subsoil}%</span>
+                    <span className="text-[9px] text-[#94A3B8] block">Perched Reservoir</span>
+                  </div>
+                </div>
+              </div>
             </div>
-          </div>
 
-          <div className="pt-2 border-t border-[#1E2E40] flex items-center justify-between text-[11px] text-[#64748B]">
-            <span>AMFU Issuing Node</span>
-            <span className="text-[#38BDF8] font-semibold truncate max-w-[170px]" title={bulletin.amfuUnit}>
-              {bulletin.amfuUnit.split('•')[0] || 'State Univ Node'}
-            </span>
+            {/* Quick Micro Stat Bar */}
+            <div className="pt-2 border-t border-[#1E2E40] grid grid-cols-2 gap-2 text-center text-[10px] font-mono">
+              <div className="p-1.5 rounded-lg bg-[#0F1722] border border-[#1E2E40]">
+                <span className="text-[#64748B] block">5-Day Expected Rain</span>
+                <span className="text-xs font-bold text-[#38BDF8]">{cumulativeRain} mm</span>
+              </div>
+              <div className="p-1.5 rounded-lg bg-[#0F1722] border border-[#1E2E40]">
+                <span className="text-[#64748B] block">Daily ET₀ Loss</span>
+                <span className="text-xs font-bold text-[#10B981]">4.2 mm/day</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

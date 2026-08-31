@@ -542,6 +542,8 @@ export function getAgrometBulletin(state: string, district: string): ExtendedAgr
   };
 }
 
+export const getExtendedAgrometBulletin = getAgrometBulletin;
+
 function parse5DayRainfall(rawString: string): RainfallDay[] {
   // e.g. "Day 1: 15mm | Day 2: 10mm | Day 3: Nil | Day 4: Nil | Day 5: 5mm"
   const dayNames = ['Today', 'Tomorrow', 'Day 3', 'Day 4', 'Day 5'];

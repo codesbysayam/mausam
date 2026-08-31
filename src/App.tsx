@@ -277,7 +277,13 @@ export default function App() {
           )}
 
           {/* AGROMET: Gramin Krishi Mausam Sewa Agricultural Bulletins */}
-          {activeTab === 'agromet' && <AgrometPage />}
+          {activeTab === 'agromet' && (
+            <AgrometPage
+              weatherBundle={weatherBundle}
+              selectedLocation={selectedLocation}
+              onNavigateToTab={(tab) => navigateToTab(tab as AppView)}
+            />
+          )}
 
           {/* REPORTS: Citizen Meteorological Reports & Observation Feeds */}
           {activeTab === 'reports' && (
