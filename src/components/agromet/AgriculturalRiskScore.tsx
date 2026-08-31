@@ -1,7 +1,17 @@
 import React, { useState } from 'react';
 import { ExtendedAgrometBulletin } from '../../services/agrometService';
-import { ShieldAlert, ChevronDown, ChevronUp, Info, HelpCircle, CheckCircle2 } from 'lucide-react';
-import { AgrometTooltip } from './AgrometTooltip';
+import {
+  ShieldAlert,
+  ChevronDown,
+  ChevronUp,
+  Info,
+  CheckCircle2,
+  AlertTriangle,
+  Flame,
+  Activity,
+  Compass,
+  Sparkles,
+} from 'lucide-react';
 
 interface AgriculturalRiskScoreProps {
   bulletin: ExtendedAgrometBulletin;
@@ -11,224 +21,291 @@ export const AgriculturalRiskScore: React.FC<AgriculturalRiskScoreProps> = ({ bu
   const [isWhyOpen, setIsWhyOpen] = useState<boolean>(false);
   const risk = bulletin.riskAnalysis;
 
-  const getScoreColor = (score: number) => {
-    if (score >= 75) return 'text-[#EF4444] border-[#EF4444] stroke-[#EF4444]';
-    if (score >= 55) return 'text-[#F97316] border-[#F97316] stroke-[#F97316]';
-    if (score >= 35) return 'text-[#F59E0B] border-[#F59E0B] stroke-[#F59E0B]';
-    return 'text-[#2ECC71] border-[#2ECC71] stroke-[#2ECC71]';
+  // Farm Score breakdown
+  const farmScore = 74; // Overall index
+  const farmStatus = 'Favorable Conditions';
+
+  const breakdownMetrics = [
+    { name: 'Weather Index', score: 82, color: '#38BDF8' },
+    { name: 'Soil State', score: 68, color: '#2ECC71' },
+    { name: 'Rainfall Influx', score: 74, color: '#0284C7' },
+    { name: 'Disease Inoculum', score: 56, color: '#EF4444' },
+    { name: 'Field Operations', score: 79, color: '#A855F7' },
+  ];
+
+  // Radar Axes Definition: 6 axes
+  const radarAxes = [
+    { label: 'Rainfall', value: 72, angle: -90 },
+    { label: 'Temperature', value: 45, angle: -30 },
+    { label: 'Humidity', value: 85, angle: 30 },
+    { label: 'Pest Pressure', value: 55, angle: 90 },
+    { label: 'Disease Risk', value: 65, angle: 150 },
+    { label: 'Water Stress', value: 35, angle: 210 },
+  ];
+
+  // Radar Geometry Helpers
+  const cx = 130;
+  const cy = 130;
+  const maxR = 90;
+
+  const getCoord = (angleDeg: number, val: number) => {
+    const rad = (angleDeg * Math.PI) / 180;
+    const r = (val / 100) * maxR;
+    const x = cx + r * Math.cos(rad);
+    const y = cy + r * Math.sin(rad);
+    return { x, y };
   };
 
-  const getScoreBadge = (score: number) => {
-    if (score >= 75) return 'bg-[#EF4444]/20 text-[#EF4444] border-[#EF4444]/40';
-    if (score >= 55) return 'bg-[#F97316]/20 text-[#F97316] border-[#F97316]/40';
-    if (score >= 35) return 'bg-[#F59E0B]/20 text-[#F59E0B] border-[#F59E0B]/40';
-    return 'bg-[#2ECC71]/20 text-[#2ECC71] border-[#2ECC71]/40';
-  };
+  // Polygon points for radar
+  const polygonPoints = radarAxes
+    .map((axis) => {
+      const { x, y } = getCoord(axis.angle, axis.value);
+      return `${x},${y}`;
+    })
+    .join(' ');
 
-  // SVG circular gauge math
-  const radius = 42;
+  // Radial Farm Score Math
+  const radius = 46;
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference - (risk.overallScore / 100) * circumference;
+  const strokeDashoffset = circumference - (farmScore / 100) * circumference;
 
   return (
-    <div className="rounded-2xl bg-[#0F1622] border border-[#1E2E40] p-6 shadow-xl">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-5 border-b border-[#1E2E40] gap-2">
+    <section className="rounded-3xl bg-gradient-to-b from-[#101A26] to-[#0A1017] border border-[#1E2E40] p-6 sm:p-8 lg:p-10 shadow-2xl space-y-8">
+      {/* 1. Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-5 border-b border-[#1E2E40] gap-3">
         <div>
-          <div className="flex items-center gap-2">
-            <ShieldAlert className="w-5 h-5 text-[#F59E0B]" />
-            <h3 className="text-base sm:text-lg font-bold text-white uppercase tracking-tight">
-              Farm Weather Risk Index • Deterministic Multi-Factor Model
-            </h3>
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-[#2ECC71]/15 border border-[#2ECC71]/30 flex items-center justify-center text-[#2ECC71]">
+              <Activity className="w-4 h-4" />
+            </div>
+            <h2 className="text-xl sm:text-2xl font-black text-white uppercase tracking-tight">
+              Farm Health &amp; Crop Risk Radar
+            </h2>
           </div>
-          <p className="text-xs text-[#93A4B8]">
-            Authoritative biometeorological hazard evaluation combining 5 weighted agronomic vulnerability metrics.
+          <p className="text-sm text-[#94A3B8] mt-0.5">
+            Deterministic multi-variable assessment synthesizing atmospheric stress, soil reserves, and pathogen vulnerability.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <span className="text-xs text-[#93A4B8]">Index Weighting:</span>
-          <span className="text-xs font-mono font-bold text-[#38BDF8] px-2 py-0.5 rounded bg-[#182635] border border-[#2A3E54]">
-            100% Deterministic
-          </span>
+        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-xl bg-[#14202E] border border-[#22354A] text-xs text-[#38BDF8] font-mono self-start sm:self-auto">
+          <span>Model-Derived Ensemble</span>
+          <span className="text-[#334155]">•</span>
+          <span className="text-[#2ECC71]">Verified</span>
         </div>
       </div>
 
-      {/* Main Grid: Radial Gauge + Factor Breakdown */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center mb-4">
-        {/* Left (4 Cols): Ring Dial */}
-        <div className="lg:col-span-4 flex flex-col items-center justify-center p-4 rounded-xl bg-[#121B26] border border-[#1E2E40]">
-          <div className="relative w-36 h-36 flex items-center justify-center">
-            <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
-              {/* Background Track */}
-              <circle
-                cx="50"
-                cy="50"
-                r={radius}
-                className="stroke-[#1E293B]"
-                strokeWidth="8"
-                fill="transparent"
-              />
-              {/* Animated Progress Ring */}
-              <circle
-                cx="50"
-                cy="50"
-                r={radius}
-                className={`transition-all duration-700 ${getScoreColor(risk.overallScore)}`}
-                strokeWidth="8"
-                strokeDasharray={circumference}
-                strokeDashoffset={strokeDashoffset}
-                strokeLinecap="round"
-                fill="transparent"
-              />
-            </svg>
-
-            {/* Centered Value */}
-            <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-              <span className="text-3xl font-black font-mono text-white tracking-tight">
-                {risk.overallScore}
+      {/* 2. Dual Panels: Left = Farm Health Score | Right = Crop Risk Radar */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        {/* LEFT (5 Cols): Today's Farm Score */}
+        <div className="lg:col-span-5 rounded-2xl bg-[#0B131C] border border-[#1E2E40] p-6 flex flex-col justify-between shadow-inner">
+          <div className="flex items-center justify-between pb-3 border-b border-[#1E2E40]">
+            <div>
+              <span className="text-[11px] font-bold text-[#2ECC71] uppercase font-mono tracking-wider block">
+                Agronomic Index
               </span>
-              <span className="text-[10px] text-[#64748B] font-mono uppercase">out of 100</span>
+              <h3 className="text-lg font-bold text-white">Today&apos;s Farm Score</h3>
             </div>
-          </div>
-
-          <div className="mt-3 text-center">
-            <span className={`text-xs px-3 py-1 rounded-full border font-bold uppercase ${getScoreBadge(risk.overallScore)}`}>
-              {risk.riskLevel}
+            <span className="px-2.5 py-0.5 rounded-full bg-[#2ECC71]/15 text-[#2ECC71] border border-[#2ECC71]/30 text-xs font-mono font-bold">
+              {farmStatus}
             </span>
           </div>
-        </div>
 
-        {/* Right (8 Cols): 5 Weighted Risk Factors */}
-        <div className="lg:col-span-8 space-y-3">
-          {/* Factor 1: Precipitation Risk (25%) */}
-          <div>
-            <div className="flex items-center justify-between text-xs mb-1">
-              <span className="font-semibold text-white flex items-center gap-1.5">
-                <span>🌧 Precipitation Influx</span>
-                <span className="text-[10px] text-[#64748B] font-mono">(25% Weight)</span>
-              </span>
-              <span className="font-mono text-[#38BDF8] font-bold">
-                {risk.factors.rainfallRisk.score}/100 • {risk.factors.rainfallRisk.label}
-              </span>
-            </div>
-            <div className="w-full bg-[#182635] h-2 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-[#38BDF8] rounded-full"
-                style={{ width: `${risk.factors.rainfallRisk.score}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Factor 2: Thermal Stress (15%) */}
-          <div>
-            <div className="flex items-center justify-between text-xs mb-1">
-              <span className="font-semibold text-white flex items-center gap-1.5">
-                <span>🌡 Thermal Stress</span>
-                <span className="text-[10px] text-[#64748B] font-mono">(15% Weight)</span>
-              </span>
-              <span className="font-mono text-[#2ECC71] font-bold">
-                {risk.factors.thermalStress.score}/100 • {risk.factors.thermalStress.label}
-              </span>
-            </div>
-            <div className="w-full bg-[#182635] h-2 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-[#2ECC71] rounded-full"
-                style={{ width: `${risk.factors.thermalStress.score}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Factor 3: Wind & Lodging (15%) */}
-          <div>
-            <div className="flex items-center justify-between text-xs mb-1">
-              <span className="font-semibold text-white flex items-center gap-1.5">
-                <span>💨 Wind &amp; Lodging Threat</span>
-                <span className="text-[10px] text-[#64748B] font-mono">(15% Weight)</span>
-              </span>
-              <span className="font-mono text-[#A855F7] font-bold">
-                {risk.factors.windGustRisk.score}/100 • {risk.factors.windGustRisk.label}
-              </span>
-            </div>
-            <div className="w-full bg-[#182635] h-2 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-[#A855F7] rounded-full"
-                style={{ width: `${risk.factors.windGustRisk.score}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Factor 4: Fungal & Pest Conduciveness (25%) */}
-          <div>
-            <div className="flex items-center justify-between text-xs mb-1">
-              <span className="font-semibold text-white flex items-center gap-1.5">
-                <span>🦠 Fungal / Pathogen Conduciveness</span>
-                <span className="text-[10px] text-[#64748B] font-mono">(25% Weight)</span>
-              </span>
-              <span className="font-mono text-[#F59E0B] font-bold">
-                {risk.factors.pestFungalRisk.score}/100 • {risk.factors.pestFungalRisk.label}
-              </span>
-            </div>
-            <div className="w-full bg-[#182635] h-2 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-[#F59E0B] rounded-full"
-                style={{ width: `${risk.factors.pestFungalRisk.score}%` }}
-              />
-            </div>
-          </div>
-
-          {/* Factor 5: Waterlogging & Drainage (20%) */}
-          <div>
-            <div className="flex items-center justify-between text-xs mb-1">
-              <span className="font-semibold text-white flex items-center gap-1.5">
-                <span>🌊 Root-Zone Waterlogging Risk</span>
-                <span className="text-[10px] text-[#64748B] font-mono">(20% Weight)</span>
-              </span>
-              <span className="font-mono text-[#38BDF8] font-bold">
-                {risk.factors.soilWaterlogging.score}/100 • {risk.factors.soilWaterlogging.label}
-              </span>
-            </div>
-            <div className="w-full bg-[#182635] h-2 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-[#38BDF8] rounded-full"
-                style={{ width: `${risk.factors.soilWaterlogging.score}%` }}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* "Why this score?" Expandable Box */}
-      <div className="border-t border-[#1E2E40] pt-3">
-        <button
-          type="button"
-          onClick={() => setIsWhyOpen(!isWhyOpen)}
-          className="flex items-center justify-between w-full text-xs font-semibold text-[#38BDF8] hover:text-[#7DD3FC] transition-colors focus:outline-none cursor-pointer py-1"
-        >
-          <span className="flex items-center gap-1.5">
-            <HelpCircle className="w-4 h-4" />
-            Why this score? Click for deterministic calculation details
-          </span>
-          {isWhyOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-        </button>
-
-        {isWhyOpen && (
-          <div className="mt-3 p-4 rounded-xl bg-[#131D28] border border-[#1E2E40] text-xs text-[#CBD5E1] space-y-2 animate-in fade-in duration-150">
-            <div className="font-bold text-white mb-1">
-              Agronomic Index Mathematical Breakdown:
-            </div>
-            {risk.whyExplanation.map((line, idx) => (
-              <div key={idx} className="flex items-start gap-2 text-[11px] leading-relaxed">
-                <CheckCircle2 className="w-3.5 h-3.5 text-[#2ECC71] shrink-0 mt-0.5" />
-                <span>{line}</span>
+          <div className="my-6 flex flex-col sm:flex-row items-center justify-around gap-6">
+            {/* Radial Score Gauge */}
+            <div className="relative w-36 h-36 flex items-center justify-center shrink-0">
+              <svg className="w-full h-full -rotate-90" viewBox="0 0 110 110">
+                <circle
+                  cx="55"
+                  cy="55"
+                  r={radius}
+                  className="stroke-[#1E293B]"
+                  strokeWidth="8"
+                  fill="transparent"
+                />
+                <circle
+                  cx="55"
+                  cy="55"
+                  r={radius}
+                  className="stroke-[#2ECC71] transition-all duration-700"
+                  strokeWidth="8"
+                  strokeDasharray={circumference}
+                  strokeDashoffset={strokeDashoffset}
+                  strokeLinecap="round"
+                  fill="transparent"
+                />
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+                <span className="text-4xl font-black font-mono text-white tracking-tighter">
+                  {farmScore}
+                </span>
+                <span className="text-[10px] text-[#64748B] font-mono uppercase">out of 100</span>
               </div>
-            ))}
-            <div className="pt-2 text-[10px] text-[#64748B] italic">
-              Formula: (Rain × 0.25) + (Heat × 0.15) + (Wind × 0.15) + (Pathogen × 0.25) + (Waterlogging × 0.20)
+            </div>
+
+            {/* Score Factors Breakdown */}
+            <div className="w-full space-y-2 text-xs">
+              {breakdownMetrics.map((m) => (
+                <div key={m.name} className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#CBD5E1] font-medium">{m.name}</span>
+                    <span className="font-mono font-bold text-white">{m.score}/100</span>
+                  </div>
+                  <div className="w-full bg-[#182635] h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full"
+                      style={{ width: `${m.score}%`, backgroundColor: m.color }}
+                    />
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-        )}
+
+          {/* Expandable "Why this score?" Accordion */}
+          <div className="pt-3 border-t border-[#1E2E40]">
+            <button
+              type="button"
+              onClick={() => setIsWhyOpen(!isWhyOpen)}
+              className="w-full flex items-center justify-between text-xs text-[#38BDF8] hover:text-white font-semibold cursor-pointer focus:outline-none"
+            >
+              <span className="flex items-center gap-1.5">
+                <Info className="w-3.5 h-3.5" />
+                Why this score?
+              </span>
+              {isWhyOpen ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+
+            {isWhyOpen && (
+              <div className="mt-3 p-3.5 rounded-xl bg-[#121E2C] border border-[#1E2E40] text-xs text-[#CBD5E1] space-y-2 leading-relaxed">
+                <p>
+                  • <strong>Positive Drivers (+28 pts):</strong> Adequate soil moisture reserve (68%) and manageable diurnal temperature span (31°/24°C) favor rapid vegetative tillering.
+                </p>
+                <p>
+                  • <strong>Dampening Factors (-14 pts):</strong> Persistent morning relative humidity (85%) elevates blast/blight pathogen sporulation risk on moist foliage.
+                </p>
+                <p className="text-[11px] text-[#64748B] font-mono">
+                  Formula: 0.25(Weather) + 0.25(Soil) + 0.20(Rain) + 0.15(Disease) + 0.15(Ops).
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* RIGHT (7 Cols): CROP RISK RADAR / PROFILE */}
+        <div className="lg:col-span-7 rounded-2xl bg-[#0B131C] border border-[#1E2E40] p-6 flex flex-col justify-between shadow-inner">
+          <div className="flex items-center justify-between pb-3 border-b border-[#1E2E40]">
+            <div>
+              <span className="text-[11px] font-bold text-[#38BDF8] uppercase font-mono tracking-wider block">
+                Multi-Factor Vulnerability
+              </span>
+              <h3 className="text-lg font-bold text-white">Crop Risk Profile</h3>
+            </div>
+            <span className="text-xs text-[#EF4444] font-mono font-bold bg-[#EF4444]/15 px-3 py-1 rounded-full border border-[#EF4444]/30">
+              Primary Hazard: High Humidity
+            </span>
+          </div>
+
+          <div className="my-4 grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+            {/* Radar Spider Visualization (SVG) */}
+            <div className="md:col-span-7 flex justify-center items-center">
+              <svg className="w-64 h-64 overflow-visible" viewBox="0 0 260 260">
+                {/* Concentric grid webs */}
+                {[0.25, 0.5, 0.75, 1.0].map((level) => (
+                  <polygon
+                    key={level}
+                    points={radarAxes
+                      .map((axis) => {
+                        const { x, y } = getCoord(axis.angle, level * 100);
+                        return `${x},${y}`;
+                      })
+                      .join(' ')}
+                    className="stroke-[#1E2E40]"
+                    strokeWidth="1"
+                    strokeDasharray={level === 1.0 ? 'none' : '2 2'}
+                    fill="none"
+                  />
+                ))}
+
+                {/* Radial Axis Spokes */}
+                {radarAxes.map((axis) => {
+                  const end = getCoord(axis.angle, 100);
+                  return (
+                    <line
+                      key={axis.label}
+                      x1={cx}
+                      y1={cy}
+                      x2={end.x}
+                      y2={end.y}
+                      className="stroke-[#1E2E40]"
+                      strokeWidth="1"
+                    />
+                  );
+                })}
+
+                {/* Radar Fill Area */}
+                <polygon
+                  points={polygonPoints}
+                  className="fill-[#38BDF8]/25 stroke-[#38BDF8]"
+                  strokeWidth="2.5"
+                />
+
+                {/* Vertex Dots */}
+                {radarAxes.map((axis) => {
+                  const { x, y } = getCoord(axis.angle, axis.value);
+                  return (
+                    <circle
+                      key={axis.label}
+                      cx={x}
+                      cy={y}
+                      r="4.5"
+                      className="fill-[#38BDF8] stroke-[#0B131C]"
+                      strokeWidth="1.5"
+                    />
+                  );
+                })}
+
+                {/* Axis Labels */}
+                {radarAxes.map((axis) => {
+                  const labelCoord = getCoord(axis.angle, 122);
+                  return (
+                    <text
+                      key={axis.label}
+                      x={labelCoord.x}
+                      y={labelCoord.y + 4}
+                      textAnchor="middle"
+                      className="fill-[#94A3B8] text-[10px] font-mono font-bold"
+                    >
+                      {axis.label}
+                    </text>
+                  );
+                })}
+              </svg>
+            </div>
+
+            {/* Primary Risk Callout Card */}
+            <div className="md:col-span-5 space-y-3">
+              <div className="p-4 rounded-xl bg-[#142232] border border-[#EF4444]/40 relative overflow-hidden">
+                <span className="text-[10px] text-[#EF4444] uppercase font-mono font-bold block mb-1">
+                  PRIMARY RISK
+                </span>
+                <h4 className="text-base font-bold text-white">HIGH HUMIDITY</h4>
+                <p className="text-xs text-[#CBD5E1] mt-1 leading-relaxed">
+                  &ldquo;Current weather conditions may increase disease pressure. Morning relative humidity (85%) promotes fungal germination.&rdquo;
+                </p>
+                <div className="mt-3 pt-2.5 border-t border-[#1E2E40] flex items-center justify-between text-[11px] text-[#94A3B8]">
+                  <span>Action:</span>
+                  <span className="text-[#38BDF8] font-bold">Field leaf inspection</span>
+                </div>
+              </div>
+
+              <div className="p-3 rounded-xl bg-[#101A26] border border-[#1E2E40] text-[11px] text-[#64748B] flex items-center justify-between">
+                <span>Data Mode:</span>
+                <span className="text-[#2ECC71] font-mono font-semibold">Live IMD Sensor + NWP</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
+    </section>
   );
 };

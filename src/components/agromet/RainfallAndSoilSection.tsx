@@ -1,7 +1,17 @@
 import React, { useState } from 'react';
 import { ExtendedAgrometBulletin } from '../../services/agrometService';
-import { CloudRain, Sprout, Droplets, Layers, Calendar, AlertCircle, ArrowUpRight, CheckCircle2 } from 'lucide-react';
-import { AgrometTooltip } from './AgrometTooltip';
+import {
+  CloudRain,
+  Sprout,
+  Droplets,
+  Layers,
+  ArrowRight,
+  TrendingUp,
+  Clock,
+  CheckCircle2,
+  AlertTriangle,
+  Info,
+} from 'lucide-react';
 
 interface RainfallAndSoilSectionProps {
   bulletin: ExtendedAgrometBulletin;
@@ -16,246 +26,259 @@ export const RainfallAndSoilSection: React.FC<RainfallAndSoilSectionProps> = ({ 
   const maxDailyRain = Math.max(...rainList.map((r) => r.amountMm), 25);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-      {/* LEFT (7 Cols): 5-Day Quantitative Rainfall Outlook */}
-      <div className="lg:col-span-7 rounded-2xl bg-[#0F1622] border border-[#1E2E40] p-6 shadow-xl flex flex-col justify-between">
-        <div>
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 mb-4 border-b border-[#1E2E40] gap-2">
-            <div>
-              <div className="flex items-center gap-2">
-                <CloudRain className="w-4 h-4 text-[#38BDF8]" />
-                <h3 className="text-base font-bold text-white uppercase tracking-tight">
-                  5-Day Quantitative Rainfall Outlook
-                </h3>
-              </div>
-              <p className="text-xs text-[#93A4B8]">
-                Gramin Krishi Mausam Sewa spatial NWF ensemble projection for {bulletin.district}.
-              </p>
+    <section className="space-y-6">
+      {/* 1. Rainfall Influx: "RAIN COMING TO YOUR FARM" */}
+      <div className="rounded-3xl bg-gradient-to-b from-[#0F1722] to-[#0A1017] border border-[#1E2E40] p-6 sm:p-8 shadow-xl">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-5 border-b border-[#1E2E40] gap-2">
+          <div>
+            <div className="flex items-center gap-2">
+              <CloudRain className="w-5 h-5 text-[#38BDF8]" />
+              <h3 className="text-xl font-black text-white uppercase tracking-tight">
+                Rain Coming to Your Farm
+              </h3>
             </div>
-
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-lg bg-[#38BDF8]/10 border border-[#38BDF8]/20 self-start sm:self-auto">
-              <span className="text-[10px] text-[#93A4B8] uppercase font-medium">5-Day Cumulative</span>
-              <span className="text-sm font-bold font-mono text-[#38BDF8]">{cumulative} mm</span>
-            </div>
+            <p className="text-xs text-[#94A3B8] mt-0.5">
+              High-resolution NWP precipitation forecast with day-by-day accumulation and rain probability in {bulletin.district}.
+            </p>
           </div>
 
-          {/* Interactive Rainfall Bar Timeline */}
-          <div className="grid grid-cols-5 gap-2.5 my-4">
-            {rainList.map((item, idx) => {
-              const isSelected = activeRainDayIndex === idx;
-              const barHeightPct = Math.max(12, (item.amountMm / maxDailyRain) * 100);
+          <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-xl bg-[#142232] border border-[#22354A] text-xs self-start sm:self-auto">
+            <span className="text-[#94A3B8] font-mono uppercase">5-Day Total Accumulation:</span>
+            <span className="text-base font-black font-mono text-[#38BDF8]">{cumulative} mm</span>
+          </div>
+        </div>
 
-              return (
-                <button
-                  key={item.dayName}
-                  type="button"
-                  onClick={() => setActiveRainDayIndex(idx)}
-                  className={`relative rounded-xl p-3 flex flex-col items-center justify-between transition-all text-center group cursor-pointer focus:outline-none ${
-                    isSelected
-                      ? 'bg-[#182736] border-2 border-[#38BDF8] shadow-lg scale-[1.02]'
-                      : 'bg-[#121B26] border border-[#1E2E40] hover:border-[#38BDF8]/40 hover:bg-[#15212E]'
-                  }`}
-                >
-                  <span className="text-[11px] font-bold text-[#F4F7FA] block truncate w-full">
-                    {item.dayName}
+        {/* Vertical Rainfall Distribution Columns */}
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 my-5">
+          {rainList.map((item, idx) => {
+            const isSelected = activeRainDayIndex === idx;
+            const barHeightPct = Math.max(15, (item.amountMm / maxDailyRain) * 100);
+
+            return (
+              <button
+                key={item.dayName}
+                type="button"
+                onClick={() => setActiveRainDayIndex(idx)}
+                className={`rounded-2xl p-4 flex flex-col items-center justify-between transition-all text-center cursor-pointer focus:outline-none ${
+                  isSelected
+                    ? 'bg-[#152332] border-2 border-[#38BDF8] shadow-xl scale-[1.02]'
+                    : 'bg-[#0E1620] border border-[#1E2E40] hover:border-[#38BDF8]/40 hover:bg-[#121C28]'
+                }`}
+              >
+                <div>
+                  <span className="text-xs font-bold text-white block">
+                    {idx === 0 ? 'TODAY' : idx === 1 ? 'TOMORROW' : item.dayName.toUpperCase()}
                   </span>
                   <span className="text-[10px] text-[#64748B] font-mono block mb-3">
                     {item.dateStr}
                   </span>
+                </div>
 
-                  {/* Vertical Rain Column Gauge */}
-                  <div className="w-full flex items-end justify-center h-24 bg-[#0A1017] rounded-lg p-1 mb-3 relative overflow-hidden">
-                    {/* Background gridlines */}
-                    <div className="absolute inset-x-0 top-1/2 border-b border-dashed border-[#1E2E40]/50" />
-                    
-                    <div
-                      className={`w-full max-w-[28px] rounded-md transition-all duration-500 flex items-center justify-center ${
-                        item.amountMm > 15
-                          ? 'bg-gradient-to-t from-[#2563EB] to-[#38BDF8]'
-                          : item.amountMm > 0
-                          ? 'bg-gradient-to-t from-[#0284C7] to-[#38BDF8]'
-                          : 'bg-[#1E293B]'
-                      }`}
-                      style={{ height: `${barHeightPct}%` }}
-                    >
-                      {item.amountMm > 0 && (
-                        <span className="text-[9px] font-mono font-bold text-white -rotate-90 sm:rotate-0">
-                          {item.amountMm}
-                        </span>
-                      )}
-                    </div>
+                {/* Vertical Rain Column Gauge */}
+                <div className="w-full flex items-end justify-center h-28 bg-[#070D14] rounded-xl p-1.5 mb-3 relative overflow-hidden">
+                  <div className="absolute inset-x-0 top-1/2 border-b border-dashed border-[#1E2E40]/50 pointer-events-none" />
+                  
+                  <div
+                    className={`w-full max-w-[32px] rounded-lg transition-all duration-500 flex items-center justify-center ${
+                      item.amountMm > 15
+                        ? 'bg-gradient-to-t from-[#1D4ED8] to-[#38BDF8]'
+                        : item.amountMm > 0
+                        ? 'bg-gradient-to-t from-[#0284C7] to-[#38BDF8]'
+                        : 'bg-[#1E293B]'
+                    }`}
+                    style={{ height: `${barHeightPct}%` }}
+                  >
+                    {item.amountMm > 0 && (
+                      <span className="text-[10px] font-mono font-black text-white">
+                        {item.amountMm}
+                      </span>
+                    )}
                   </div>
+                </div>
 
-                  {/* Rain Amount / Nil Badge */}
-                  <span className={`text-xs font-black font-mono ${item.amountMm > 0 ? 'text-[#38BDF8]' : 'text-[#64748B]'}`}>
+                {/* Quantitative Labels */}
+                <div>
+                  <span className={`text-sm font-black font-mono block ${item.amountMm > 0 ? 'text-[#38BDF8]' : 'text-[#64748B]'}`}>
                     {item.amountMm > 0 ? `${item.amountMm} mm` : '0 mm'}
                   </span>
-
-                  <span className="text-[10px] text-[#93A4B8] font-mono mt-0.5">
-                    {item.probPercent}% Prob
+                  <span className="text-[10px] text-[#94A3B8] font-mono mt-0.5 block">
+                    {item.probPercent}% prob
                   </span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Selected Day Expanded Diagnostic */}
-          {rainList[activeRainDayIndex] && (
-            <div className="p-3.5 rounded-xl bg-[#131E2A] border border-[#1E2E40] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-              <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-[#182635] text-[#38BDF8]">
-                  <CloudRain className="w-5 h-5" />
                 </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 2. Dual Panels: Soil Intelligence (Vertical Profile) & Irrigation Decision Tool */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        {/* LEFT (6 Cols): SOIL INTELLIGENCE (Vertical Soil Profile) */}
+        <div className="lg:col-span-6 rounded-3xl bg-[#0F1722] border border-[#1E2E40] p-6 sm:p-8 shadow-xl flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between pb-4 mb-5 border-b border-[#1E2E40]">
+              <div className="flex items-center gap-2">
+                <Layers className="w-5 h-5 text-[#2ECC71]" />
+                <h3 className="text-lg font-black text-white uppercase tracking-tight">
+                  Soil Intelligence
+                </h3>
+              </div>
+              <span className="text-[10px] text-[#64748B] font-mono">
+                Estimated from rainfall/weather model
+              </span>
+            </div>
+
+            {/* Vertical Stratified Soil Profile */}
+            <div className="space-y-3 mb-6">
+              {/* Layer 1: Topsoil (0-15cm) */}
+              <div className="p-4 rounded-2xl bg-gradient-to-r from-[#172E21] to-[#12221A] border border-[#2ECC71]/40 flex items-center justify-between">
                 <div>
                   <div className="flex items-center gap-2">
-                    <strong className="text-white font-bold text-sm">
-                      {rainList[activeRainDayIndex].dayName} ({rainList[activeRainDayIndex].dateStr})
-                    </strong>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
-                      rainList[activeRainDayIndex].amountMm > 10
-                        ? 'bg-[#38BDF8]/20 text-[#38BDF8]'
-                        : rainList[activeRainDayIndex].amountMm > 0
-                        ? 'bg-[#2ECC71]/20 text-[#2ECC71]'
-                        : 'bg-[#64748B]/20 text-[#93A4B8]'
-                    }`}>
-                      {rainList[activeRainDayIndex].condition}
+                    <span className="text-xs font-bold text-[#2ECC71] uppercase tracking-wider font-mono">
+                      TOPSOIL (0–15 cm)
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-[#2ECC71]/20 text-[#2ECC71] font-mono font-bold">
+                      {soil.status}
                     </span>
                   </div>
-                  <p className="text-[#93A4B8] text-[11px] mt-0.5">
-                    {rainList[activeRainDayIndex].amountMm > 10
-                      ? 'Precipitation surplus: Irrigation withholding mandated. Clear field furrows.'
-                      : rainList[activeRainDayIndex].amountMm > 0
-                      ? 'Light moisture contribution: Surface wetting sufficient for shallow root activity.'
-                      : 'Clear atmospheric spell: Favorable for foliar feeding and mechanical hoeing.'}
+                  <p className="text-xs text-[#CBD5E1] mt-1">
+                    Moisture available for shallow germination and surface root intake.
                   </p>
                 </div>
+                <div className="text-right pl-3 shrink-0">
+                  <span className="text-2xl font-black font-mono text-white">{soil.overallPct}%</span>
+                  <span className="text-[10px] text-[#2ECC71] block font-mono">Moisture</span>
+                </div>
               </div>
 
-              <div className="text-right shrink-0">
-                <span className="text-[10px] text-[#64748B] block uppercase font-mono">Precipitation Status</span>
-                <span className="font-bold text-[#F4F7FA] font-mono">
-                  {rainList[activeRainDayIndex].isWet ? 'Wet Farm Conditions' : 'Workable Dry Day'}
-                </span>
+              {/* Layer 2: Root Zone (15-45cm) */}
+              <div className="p-4 rounded-2xl bg-[#121E2C] border border-[#1E2E40] flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-[#38BDF8] uppercase tracking-wider font-mono">
+                      ROOT ZONE (15–45 cm)
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-[#38BDF8]/20 text-[#38BDF8] font-mono font-bold">
+                      Adequate
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#CBD5E1] mt-1">
+                    Effective moisture sustaining active vegetative tillering.
+                  </p>
+                </div>
+                <div className="text-right pl-3 shrink-0">
+                  <span className="text-2xl font-black font-mono text-white">{soil.rootZonePct}%</span>
+                  <span className="text-[10px] text-[#38BDF8] block font-mono">Water Capacity</span>
+                </div>
+              </div>
+
+              {/* Layer 3: Subsoil (45-100cm) */}
+              <div className="p-3.5 rounded-2xl bg-[#0D1520] border border-[#1E2E40]/60 flex items-center justify-between">
+                <div>
+                  <span className="text-xs font-bold text-[#94A3B8] uppercase tracking-wider font-mono">
+                    SUBSOIL (45–100 cm)
+                  </span>
+                  <span className="text-xs text-[#64748B] block mt-0.5">
+                    Deep profile storage maintaining buffer capacity.
+                  </span>
+                </div>
+                <div className="text-right pl-3 shrink-0">
+                  <span className="text-xl font-bold font-mono text-[#94A3B8]">72%</span>
+                  <span className="text-[10px] text-[#64748B] block font-mono">Saturation</span>
+                </div>
               </div>
             </div>
-          )}
-        </div>
-      </div>
-
-      {/* RIGHT (5 Cols): Soil Moisture Profile & Irrigation Planner */}
-      <div className="lg:col-span-5 rounded-2xl bg-[#0F1622] border border-[#1E2E40] p-6 shadow-xl flex flex-col justify-between">
-        <div>
-          {/* Header */}
-          <div className="flex items-center justify-between pb-3 mb-4 border-b border-[#1E2E40]">
-            <div className="flex items-center gap-2">
-              <Sprout className="w-4 h-4 text-[#2ECC71]" />
-              <h3 className="text-base font-bold text-white uppercase tracking-tight">
-                Soil Moisture Profile
-              </h3>
-            </div>
-
-            <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#182635] text-[#2ECC71] border border-[#2ECC71]/30 font-medium">
-              Model-Derived
-            </span>
           </div>
 
-          {/* Current Overall Soil Metric */}
-          <div className="flex items-center justify-between bg-[#131D28] p-3.5 rounded-xl border border-[#1E2E40] mb-4">
+          {/* Micro Soil Trend Bar */}
+          <div className="pt-4 border-t border-[#1E2E40] grid grid-cols-3 gap-3 text-xs">
             <div>
-              <span className="text-[10px] text-[#64748B] uppercase font-bold tracking-wider block">
-                Total Root-Zone Water
-              </span>
-              <div className="flex items-baseline gap-2 mt-0.5">
-                <span className="text-3xl font-black font-mono text-white">{soil.overallPct}%</span>
-                <span className="text-xs font-semibold text-[#2ECC71] px-2 py-0.5 rounded bg-[#2ECC71]/15">
-                  {soil.status}
-                </span>
-              </div>
+              <span className="text-[10px] text-[#64748B] font-mono uppercase block">SOIL MOISTURE</span>
+              <span className="text-sm font-bold text-white font-mono">{soil.overallPct}%</span>
             </div>
-
-            <div className="text-right text-xs">
-              <span className="text-[#64748B] block text-[10px]">Field Capacity: {soil.fieldCapacityPct}%</span>
-              <span className="text-[#38BDF8] font-mono font-semibold">
-                {soil.trend === 'increasing' ? '↑ Rising after rain' : '→ Stable buffer'}
+            <div>
+              <span className="text-[10px] text-[#64748B] font-mono uppercase block">TREND</span>
+              <span className="text-sm font-bold text-[#2ECC71] font-mono flex items-center gap-1">
+                <TrendingUp className="w-3.5 h-3.5" />
+                Increasing
               </span>
             </div>
-          </div>
-
-          {/* Vertical 3-Layer Soil Profile Graphic */}
-          <div className="space-y-2 mb-4">
-            {/* Layer 1: Topsoil (0 - 15 cm) */}
-            <div className="p-2.5 rounded-lg bg-[#111A24] border border-[#1E2E40] flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-[#38BDF8]" />
-                <div>
-                  <span className="font-bold text-white block text-[11px]">Topsoil (0 – 15 cm)</span>
-                  <span className="text-[10px] text-[#64748B]">Seed germination &amp; shallow roots</span>
-                </div>
-              </div>
-              <div className="text-right">
-                <span className="font-mono font-bold text-[#38BDF8]">{soil.topsoilPct}%</span>
-                <span className="text-[9px] text-[#64748B] block">Moisture</span>
-              </div>
-            </div>
-
-            {/* Layer 2: Root Zone (15 - 45 cm) */}
-            <div className="p-2.5 rounded-lg bg-[#111A24] border border-[#1E2E40] flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-[#2ECC71]" />
-                <div>
-                  <span className="font-bold text-white block text-[11px]">Active Root Zone (15 – 45 cm)</span>
-                  <span className="text-[10px] text-[#64748B]">Transpiration &amp; nutrient uptake</span>
-                </div>
-              </div>
-              <div className="text-right">
-                <span className="font-mono font-bold text-[#2ECC71]">{soil.rootZonePct}%</span>
-                <span className="text-[9px] text-[#64748B] block">Optimal</span>
-              </div>
-            </div>
-
-            {/* Layer 3: Subsoil (45 - 100 cm) */}
-            <div className="p-2.5 rounded-lg bg-[#111A24] border border-[#1E2E40] flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-[#D97706]" />
-                <div>
-                  <span className="font-bold text-white block text-[11px]">Deep Subsoil (45 – 100 cm)</span>
-                  <span className="text-[10px] text-[#64748B]">Groundwater buffer zone</span>
-                </div>
-              </div>
-              <div className="text-right">
-                <span className="font-mono font-bold text-[#D97706]">{soil.subsoilPct}%</span>
-                <span className="text-[9px] text-[#64748B] block">Recharged</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Irrigation Window Planner Banner */}
-          <div className="p-3.5 rounded-xl bg-gradient-to-r from-[#142333] to-[#0F1E2E] border border-[#38BDF8]/30">
-            <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[11px] font-bold text-[#38BDF8] uppercase tracking-wider flex items-center gap-1.5">
-                <Droplets className="w-3.5 h-3.5" />
-                Irrigation Decision Window
-              </span>
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#38BDF8] text-[#0A1017] uppercase">
-                STATUS: WAIT
-              </span>
-            </div>
-
-            <p className="text-xs text-[#CBD5E1] leading-relaxed mb-2">
-              Natural rainfall ({cumulative} mm expected) meets crop water demand. Next irrigation review: <strong className="text-white">Tomorrow 08:00 AM</strong>.
-            </p>
-
-            {/* Micro Irrigation Flow Step */}
-            <div className="grid grid-cols-4 gap-1 text-[10px] text-center font-mono">
-              <div className="p-1 rounded bg-[#182635] text-[#38BDF8] border border-[#2A3E54]">1. NOW: WAIT</div>
-              <div className="p-1 rounded bg-[#182635] text-[#38BDF8] border border-[#2A3E54]">2. RAIN SPELL</div>
-              <div className="p-1 rounded bg-[#182635] text-[#93A4B8]">3. REASSESS</div>
-              <div className="p-1 rounded bg-[#182635] text-[#64748B]">4. RESUME</div>
+            <div>
+              <span className="text-[10px] text-[#64748B] font-mono uppercase block">IRRIGATION NEED</span>
+              <span className="text-sm font-bold text-[#38BDF8] font-mono">Low Requirement</span>
             </div>
           </div>
         </div>
+
+        {/* RIGHT (6 Cols): IRRIGATION DECISION PANEL */}
+        <div className="lg:col-span-6 rounded-3xl bg-gradient-to-br from-[#122030] to-[#0D1724] border-2 border-[#38BDF8]/40 p-6 sm:p-8 shadow-xl flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between pb-4 mb-5 border-b border-[#1E2E40]">
+              <div className="flex items-center gap-2">
+                <Droplets className="w-5 h-5 text-[#38BDF8]" />
+                <h3 className="text-lg font-black text-white uppercase tracking-tight">
+                  Irrigation Decision Tool
+                </h3>
+              </div>
+              <span className="px-3 py-1 rounded-full bg-[#38BDF8]/20 text-[#38BDF8] border border-[#38BDF8]/40 text-xs font-mono font-black">
+                Active Directive
+              </span>
+            </div>
+
+            {/* Large Status Callout */}
+            <div className="p-5 rounded-2xl bg-[#09111A] border border-[#23384E] mb-5 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] text-[#64748B] font-mono uppercase font-bold block mb-1">
+                  CURRENT DIRECTIVE
+                </span>
+                <span className="text-3xl sm:text-4xl font-black font-mono text-[#38BDF8] tracking-tight">
+                  WAIT
+                </span>
+                <p className="text-xs text-[#CBD5E1] mt-1">
+                  Hold water applications. Convective showers provide natural topsoil replenishment.
+                </p>
+              </div>
+              <div className="text-right shrink-0 pl-4 border-l border-[#1E2E40]">
+                <span className="text-[10px] text-[#64748B] font-mono uppercase block">Rain Influx</span>
+                <span className="text-xl font-bold font-mono text-white">10–15 mm</span>
+                <span className="text-[10px] text-[#2ECC71] block font-mono mt-1">Next 24 Hours</span>
+              </div>
+            </div>
+
+            {/* Decision Progression Timeline */}
+            <div className="mb-4">
+              <span className="text-xs font-bold text-[#94A3B8] font-mono uppercase tracking-wider block mb-2">
+                Decision Action Sequence
+              </span>
+              <div className="grid grid-cols-5 gap-1 text-center font-mono">
+                <div className="p-2 rounded-lg bg-[#182635] border border-[#2A3E54] text-[10px] text-white font-bold">
+                  NOW
+                </div>
+                <div className="p-2 rounded-lg bg-[#38BDF8]/20 border border-[#38BDF8] text-[10px] text-[#38BDF8] font-bold">
+                  WAIT
+                </div>
+                <div className="p-2 rounded-lg bg-[#182635] border border-[#2A3E54] text-[10px] text-white font-bold">
+                  RAIN
+                </div>
+                <div className="p-2 rounded-lg bg-[#182635] border border-[#2A3E54] text-[10px] text-white font-bold">
+                  REASSESS
+                </div>
+                <div className="p-2 rounded-lg bg-[#182635] border border-[#2A3E54] text-[10px] text-white font-bold">
+                  IRRIGATE
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-4 border-t border-[#1E2E40] flex items-center justify-between text-xs text-[#94A3B8]">
+            <span className="flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-[#38BDF8]" />
+              Next Scheduled Review:
+            </span>
+            <span className="text-white font-mono font-bold">Tomorrow Morning 08:30 IST</span>
+          </div>
+        </div>
       </div>
-    </div>
+    </section>
   );
 };

@@ -1,7 +1,17 @@
 import React from 'react';
 import { ExtendedAgrometBulletin, INDIAN_STATES_AND_DISTRICTS } from '../../services/agrometService';
-import { Sprout, MapPin, Calendar, FileText, CheckCircle2, ChevronDown, Sparkles } from 'lucide-react';
-import { AgrometTooltip } from './AgrometTooltip';
+import {
+  Sprout,
+  MapPin,
+  Calendar,
+  FileText,
+  Clock,
+  Sparkles,
+  ChevronDown,
+  Activity,
+  Layers,
+  Radio,
+} from 'lucide-react';
 
 interface AgrometHeroProps {
   bulletin: ExtendedAgrometBulletin;
@@ -24,186 +34,192 @@ export const AgrometHero: React.FC<AgrometHeroProps> = ({
   const districts = INDIAN_STATES_AND_DISTRICTS[selectedState] || [selectedDistrict];
 
   return (
-    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#131E2A] via-[#101822] to-[#0A1017] border border-[#1E2E40] shadow-2xl p-6 sm:p-8">
-      {/* Background Subtle Horizon & Agricultural Atmospheric Motif */}
-      <div className="absolute inset-0 pointer-events-none opacity-25">
+    <header className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#0E1724] via-[#0B121C] to-[#070D14] border border-[#1E2E40]/90 shadow-2xl p-6 sm:p-8 lg:p-10">
+      {/* Subtle Atmospheric & Crop Horizon Silhouette Graphic */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden opacity-30 select-none">
         <svg
           className="w-full h-full object-cover"
-          viewBox="0 0 1200 400"
+          viewBox="0 0 1440 450"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
         >
           <defs>
-            <linearGradient id="cropGrad" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="#2ECC71" stopOpacity="0.4" />
-              <stop offset="100%" stopColor="#2ECC71" stopOpacity="0.0" />
+            <linearGradient id="skyAtmosphere" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#38BDF8" stopOpacity="0.25" />
+              <stop offset="45%" stopColor="#2ECC71" stopOpacity="0.15" />
+              <stop offset="100%" stopColor="#0B121C" stopOpacity="0.0" />
             </linearGradient>
-            <linearGradient id="skyGlow" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stopColor="#38BDF8" stopOpacity="0.15" />
-              <stop offset="50%" stopColor="#2ECC71" stopOpacity="0.1" />
-              <stop offset="100%" stopColor="#38BDF8" stopOpacity="0.05" />
+            <linearGradient id="fieldRidge1" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#1E3A2B" stopOpacity="0.7" />
+              <stop offset="100%" stopColor="#0E1724" stopOpacity="0.9" />
+            </linearGradient>
+            <linearGradient id="fieldRidge2" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#2ECC71" stopOpacity="0.2" />
+              <stop offset="100%" stopColor="#070D14" stopOpacity="0.8" />
             </linearGradient>
           </defs>
-          <rect width="1200" height="400" fill="url(#skyGlow)" />
-          {/* Subtle wavy field contours */}
+
+          {/* Atmospheric Glow */}
+          <rect width="1440" height="450" fill="url(#skyAtmosphere)" />
+
+          {/* Gentle contour waves */}
           <path
-            d="M0 320 Q 300 280 600 310 T 1200 290 L 1200 400 L 0 400 Z"
-            fill="url(#cropGrad)"
+            d="M0 320 Q 360 260 720 300 T 1440 270 L 1440 450 L 0 450 Z"
+            fill="url(#fieldRidge1)"
           />
           <path
-            d="M0 350 Q 400 310 800 340 T 1200 330 L 1200 400 L 0 400 Z"
-            fill="#172836"
-            opacity="0.6"
+            d="M0 360 Q 420 310 860 345 T 1440 330 L 1440 450 L 0 450 Z"
+            fill="url(#fieldRidge2)"
           />
-          {/* Stylized crop stalk silhouettes on the right */}
-          <g transform="translate(880, 240) scale(0.7)" stroke="#2ECC71" strokeWidth="2" strokeLinecap="round" opacity="0.35">
-            <path d="M 50 150 Q 45 80 50 20" />
-            <path d="M 50 80 Q 20 60 10 45" />
-            <path d="M 50 60 Q 80 40 95 25" />
-            <path d="M 50 100 Q 15 90 5 70" />
-            <path d="M 50 35 Q 35 15 25 0" />
-            <circle cx="50" cy="18" r="4" fill="#2ECC71" />
+
+          {/* Minimalist crop stalks silhouettes */}
+          <g transform="translate(1020, 220) scale(0.9)" stroke="#2ECC71" strokeWidth="2.5" strokeLinecap="round" opacity="0.4">
+            <path d="M 60 200 Q 55 100 60 20" />
+            <path d="M 60 110 Q 20 80 5 60" />
+            <path d="M 60 80 Q 100 50 115 30" />
+            <path d="M 60 140 Q 15 125 0 95" />
+            <path d="M 60 45 Q 40 20 25 0" />
+            <circle cx="60" cy="18" r="5" fill="#2ECC71" />
           </g>
-          <g transform="translate(980, 220) scale(0.85)" stroke="#38BDF8" strokeWidth="2" strokeLinecap="round" opacity="0.3">
-            <path d="M 50 150 Q 55 70 50 10" />
-            <path d="M 50 70 Q 85 50 100 30" />
-            <path d="M 50 50 Q 15 30 5 15" />
-            <path d="M 50 90 Q 90 75 105 55" />
-            <circle cx="50" cy="8" r="4" fill="#38BDF8" />
+          <g transform="translate(1160, 200) scale(1.1)" stroke="#38BDF8" strokeWidth="2" strokeLinecap="round" opacity="0.35">
+            <path d="M 50 200 Q 60 95 50 10" />
+            <path d="M 50 95 Q 95 65 115 40" />
+            <path d="M 50 65 Q 10 40 0 18" />
+            <path d="M 50 120 Q 100 100 120 75" />
+            <circle cx="50" cy="8" r="4.5" fill="#38BDF8" />
           </g>
-          <g transform="translate(1080, 250) scale(0.65)" stroke="#2ECC71" strokeWidth="2" strokeLinecap="round" opacity="0.35">
-            <path d="M 50 150 Q 48 80 50 20" />
-            <path d="M 50 75 Q 25 55 12 40" />
-            <path d="M 50 55 Q 75 35 88 20" />
+          <g transform="translate(1290, 240) scale(0.8)" stroke="#2ECC71" strokeWidth="2.5" strokeLinecap="round" opacity="0.4">
+            <path d="M 50 200 Q 45 100 50 20" />
+            <path d="M 50 100 Q 20 75 5 55" />
+            <path d="M 50 70 Q 85 45 100 25" />
             <circle cx="50" cy="18" r="4" fill="#2ECC71" />
           </g>
         </svg>
       </div>
 
-      <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-        {/* Left: Brand, Heading, Value Proposition & Metadata */}
-        <div className="flex-1 max-w-2xl">
-          <div className="flex items-center gap-2.5 mb-2">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#2ECC71]/15 border border-[#2ECC71]/30 text-[#2ECC71] text-xs font-semibold uppercase tracking-wider">
-              <Sprout className="w-3.5 h-3.5" />
-              <span>Gramin Krishi Mausam Sewa (GKMS)</span>
+      <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+        {/* Left: Command Header & Title */}
+        <div className="flex-1 max-w-3xl space-y-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#2ECC71]/15 border border-[#2ECC71]/35 text-[#2ECC71] text-xs font-bold uppercase tracking-wider shadow-sm">
+              <Sprout className="w-4 h-4" />
+              <span>National Agromet Service • GKMS</span>
             </div>
-            <div className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#38BDF8]/10 border border-[#38BDF8]/20 text-[#38BDF8] text-xs font-medium">
-              <Sparkles className="w-3 h-3 text-[#38BDF8]" />
-              <span>AMFU Node</span>
+
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#182736] border border-[#2A3E54] text-xs text-[#CBD5E1] font-mono">
+              <span className="w-2 h-2 rounded-full bg-[#2ECC71] animate-pulse" />
+              <span className="text-[#38BDF8] font-bold">LIVE AGRICULTURAL DATA</span>
+              <span className="text-[#64748B]">• Updated 2 min ago</span>
             </div>
           </div>
 
-          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight text-white flex items-center gap-3">
-            AGROMET
-            <span className="text-sm font-normal px-2.5 py-0.5 rounded bg-[#1E293B] text-[#93A4B8] border border-[#334155]">
-              v4.2 Command Center
-            </span>
-          </h1>
+          <div>
+            <div className="flex items-baseline gap-3.5 flex-wrap">
+              <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight text-white flex items-center gap-3">
+                AGROMET
+              </h1>
+              <span className="text-xs sm:text-sm font-semibold px-3 py-1 rounded-lg bg-[#182635] text-[#38BDF8] border border-[#2A3E54] tracking-wide">
+                Agricultural Weather Command Center
+              </span>
+            </div>
+            <p className="text-base sm:text-lg text-[#94A3B8] font-normal mt-2 leading-relaxed max-w-2xl">
+              Weather intelligence for smarter farm decisions — translating high-resolution synoptic forecasts into decisive irrigation, nutrient, disease surveillance, and harvesting actions.
+            </p>
+          </div>
 
-          <p className="text-sm sm:text-base text-[#93A4B8] mt-1.5 leading-relaxed font-normal">
-            Weather intelligence for better farm decisions — translating atmospheric forecasts into crop-specific irrigation, nutrient, pest, and harvesting actions.
-          </p>
-
-          {/* Quick Bulletin Context Badges */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4 pt-4 border-t border-[#1E2E40]/80">
-            <div className="flex items-center gap-2 text-xs">
+          {/* Current Active Location Badge & Bulletin Metadata */}
+          <div className="flex flex-wrap items-center gap-3 pt-2">
+            <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#131E2A] border border-[#22354A] text-xs sm:text-sm text-white">
               <MapPin className="w-4 h-4 text-[#2ECC71] shrink-0" />
-              <div>
-                <span className="text-[10px] text-[#64748B] block uppercase font-medium">Agro District</span>
-                <span className="font-semibold text-white truncate block">{selectedDistrict}, {selectedState}</span>
-              </div>
+              <span>
+                Location: <strong className="text-[#38BDF8] font-bold font-mono">{selectedDistrict}, {selectedState}</strong>
+              </span>
             </div>
 
-            <div className="flex items-center gap-2 text-xs">
-              <FileText className="w-4 h-4 text-[#38BDF8] shrink-0" />
-              <div>
-                <span className="text-[10px] text-[#64748B] block uppercase font-medium">Bulletin Reference</span>
-                <span className="font-semibold text-white font-mono text-[11px] truncate block">{bulletin.bulletinNo}</span>
-              </div>
+            <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#131E2A] border border-[#22354A] text-xs text-[#94A3B8]">
+              <FileText className="w-3.5 h-3.5 text-[#F59E0B] shrink-0" />
+              <span>Bulletin: <strong className="text-white font-mono">{bulletin.bulletinNo}</strong></span>
             </div>
 
-            <div className="flex items-center gap-2 text-xs">
-              <Calendar className="w-4 h-4 text-[#F59E0B] shrink-0" />
-              <div>
-                <span className="text-[10px] text-[#64748B] block uppercase font-medium">Validity Period</span>
-                <span className="font-semibold text-[#F4F7FA] text-[11px] block">{bulletin.validPeriod}</span>
-              </div>
+            <div className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-[#131E2A] border border-[#22354A] text-xs text-[#94A3B8]">
+              <Calendar className="w-3.5 h-3.5 text-[#38BDF8] shrink-0" />
+              <span>Validity: <strong className="text-white font-mono">{bulletin.validPeriod}</strong></span>
             </div>
           </div>
         </div>
 
-        {/* Right: Interactive Primary Location Selector */}
-        <div className="lg:w-80 shrink-0 bg-[#0F1622]/90 backdrop-blur-md rounded-xl p-4 border border-[#1E2E40] shadow-xl">
-          <div className="flex items-center justify-between pb-2 mb-3 border-b border-[#1E2E40]">
-            <span className="text-xs font-semibold text-white uppercase tracking-wider flex items-center gap-1.5">
-              <MapPin className="w-3.5 h-3.5 text-[#2ECC71]" />
-              Target Location
+        {/* Right: Prominent Dual Location Selectors */}
+        <div className="w-full lg:w-80 shrink-0 bg-[#0F1722]/90 backdrop-blur-md border border-[#1E2E40] p-5 rounded-2xl shadow-xl flex flex-col gap-4">
+          <div className="flex items-center justify-between pb-2 border-b border-[#1E2E40]">
+            <span className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+              <Layers className="w-3.5 h-3.5 text-[#38BDF8]" />
+              Select Agricultural Zone
             </span>
             {isLoading ? (
-              <span className="text-[10px] text-[#38BDF8] animate-pulse font-mono">Syncing...</span>
+              <span className="text-[10px] text-[#F59E0B] font-mono animate-pulse font-semibold">
+                Syncing...
+              </span>
             ) : (
-              <span className="text-[10px] text-[#2ECC71] flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3" /> Live Bulletin
+              <span className="text-[10px] text-[#2ECC71] font-mono font-semibold">
+                IMD Verified
               </span>
             )}
           </div>
 
-          <div className="space-y-3">
-            {/* 1. State Selector */}
-            <div>
-              <label htmlFor="agromet-state-select" className="text-[11px] font-medium text-[#93A4B8] mb-1 flex items-center justify-between">
-                <span>Select State / UT</span>
-                <span className="text-[10px] text-[#64748B]">28 States</span>
-              </label>
-              <div className="relative">
-                <select
-                  id="agromet-state-select"
-                  value={selectedState}
-                  onChange={(e) => onStateChange(e.target.value)}
-                  className="w-full appearance-none bg-[#162232] border border-[#2A3E54] rounded-lg px-3 py-2 text-xs font-medium text-white focus:outline-none focus:border-[#2ECC71] focus:ring-1 focus:ring-[#2ECC71] transition-all cursor-pointer"
-                >
-                  {states.map((st) => (
-                    <option key={st} value={st}>
-                      {st}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="w-4 h-4 text-[#93A4B8] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              </div>
+          {/* State Dropdown */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider flex items-center justify-between">
+              <span>State / Union Territory</span>
+              <span className="text-[10px] font-mono text-[#64748B]">{states.length} States</span>
+            </label>
+            <div className="relative">
+              <select
+                value={selectedState}
+                onChange={(e) => onStateChange(e.target.value)}
+                disabled={isLoading}
+                className="w-full appearance-none px-3.5 py-2.5 rounded-xl bg-[#152230] border border-[#2A3E54] text-sm text-white font-semibold focus:outline-none focus:border-[#2ECC71] focus:ring-2 focus:ring-[#2ECC71]/20 transition-all cursor-pointer disabled:opacity-50"
+              >
+                {states.map((state) => (
+                  <option key={state} value={state} className="bg-[#0F1722] text-white">
+                    {state}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="w-4 h-4 text-[#94A3B8] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
+          </div>
 
-            {/* 2. District Selector */}
-            <div>
-              <label htmlFor="agromet-district-select" className="text-[11px] font-medium text-[#93A4B8] mb-1 flex items-center justify-between">
-                <span>Select District</span>
-                <span className="text-[10px] text-[#64748B]">{districts.length} Agro-Zones</span>
-              </label>
-              <div className="relative">
-                <select
-                  id="agromet-district-select"
-                  value={selectedDistrict}
-                  onChange={(e) => onDistrictChange(e.target.value)}
-                  className="w-full appearance-none bg-[#162232] border border-[#2A3E54] rounded-lg px-3 py-2 text-xs font-medium text-white focus:outline-none focus:border-[#2ECC71] focus:ring-1 focus:ring-[#2ECC71] transition-all cursor-pointer"
-                >
-                  {districts.map((dst) => (
-                    <option key={dst} value={dst}>
-                      {dst}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="w-4 h-4 text-[#93A4B8] absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-              </div>
+          {/* District Dropdown */}
+          <div className="space-y-1.5">
+            <label className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-wider flex items-center justify-between">
+              <span>Agro-Meteorological District</span>
+              <span className="text-[10px] font-mono text-[#64748B]">{districts.length} Districts</span>
+            </label>
+            <div className="relative">
+              <select
+                value={selectedDistrict}
+                onChange={(e) => onDistrictChange(e.target.value)}
+                disabled={isLoading}
+                className="w-full appearance-none px-3.5 py-2.5 rounded-xl bg-[#152230] border border-[#2A3E54] text-sm text-white font-semibold focus:outline-none focus:border-[#38BDF8] focus:ring-2 focus:ring-[#38BDF8]/20 transition-all cursor-pointer disabled:opacity-50"
+              >
+                {districts.map((district) => (
+                  <option key={district} value={district} className="bg-[#0F1722] text-white">
+                    {district}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="w-4 h-4 text-[#94A3B8] absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
             </div>
+          </div>
 
-            {/* AMFU Affiliation Node */}
-            <div className="pt-2 text-[10px] text-[#64748B] leading-tight flex items-start gap-1">
-              <span className="text-[#2ECC71] font-bold">Node:</span>
-              <span className="truncate">{bulletin.amfuUnit}</span>
-            </div>
+          <div className="pt-2 border-t border-[#1E2E40] flex items-center justify-between text-[11px] text-[#64748B]">
+            <span>AMFU Issuing Node</span>
+            <span className="text-[#38BDF8] font-semibold truncate max-w-[170px]" title={bulletin.amfuUnit}>
+              {bulletin.amfuUnit.split('•')[0] || 'State Univ Node'}
+            </span>
           </div>
         </div>
       </div>
-    </div>
+    </header>
   );
 };
