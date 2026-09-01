@@ -82,6 +82,97 @@ body {
   max-width: 100%;
 }
 
+/* =========================================
+   MAUSAM OFFICIAL BRAND & IMD LOGO
+========================================= */
+
+.mausam-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+  text-decoration: none;
+}
+
+.imd-logo-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: transparent !important;
+}
+
+.imd-logo {
+  height: 76px;
+  max-height: 84px;
+  width: auto;
+  max-width: 90px;
+  background: transparent !important;
+  object-fit: contain;
+  display: block;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45));
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mausam-brand:hover .imd-logo {
+  transform: scale(1.04);
+}
+
+@media (max-width: 1024px) {
+  .imd-logo {
+    height: 64px;
+    max-height: 72px;
+    max-width: 75px;
+  }
+}
+
+@media (max-width: 640px) {
+  .imd-logo {
+    height: 52px;
+    max-height: 58px;
+    max-width: 60px;
+  }
+}
+
+.brand-copy {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.brand-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #F4F7FA;
+  font-weight: 800;
+  font-size: 1.25rem;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.india-badge {
+  background: rgba(20, 153, 232, 0.15);
+  color: #43C7F4;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  border: 1px solid rgba(20, 153, 232, 0.3);
+  letter-spacing: 0.05em;
+}
+
+.brand-subtitle {
+  color: #93A4B8;
+  font-size: 11px;
+  font-weight: 400;
+  line-height: 1.3;
+  margin-top: 2px;
+}
+
 @media (max-width: 1023px) {
   .mausam-container {
     width: calc(100% - 32px);

@@ -8,6 +8,7 @@ import { MobileNavDrawer } from './MobileNavDrawer';
 import { MainNavTab } from './MainNavigation';
 import { FooterView } from './FooterNavigation';
 import { UseMyLocationButton } from '../location/UseMyLocationButton';
+import { BrandLogo } from './BrandLogo';
 
 interface GovernmentHeaderProps {
   selectedLocation: LocationRecord;
@@ -89,32 +90,9 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
         <div className="h-[2px] w-full bg-gradient-to-r from-[#1499E8] via-[#43C7F4] to-[#22C7A0]" />
 
         <div className="max-w-[1440px] mx-auto px-3 sm:px-4 lg:px-6">
-          <div className="h-16 flex items-center justify-between gap-3">
+          <div className="min-h-[72px] sm:min-h-[80px] md:min-h-[88px] py-1.5 flex items-center justify-between gap-3">
             {/* Left: MAUSAM Brand Identity */}
-            <div
-              className="flex items-center gap-3 cursor-pointer group"
-              onClick={() => onNavigateTab && onNavigateTab('home')}
-            >
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1499E8] to-[#0C78BA] flex items-center justify-center text-white shadow-sm shadow-[#1499E8]/20 transition-transform group-hover:scale-105">
-                <span className="material-symbols-outlined text-[22px]">
-                  water_drop
-                </span>
-              </div>
-
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-[#F4F7FA] font-bold text-lg tracking-tight">
-                    MAUSAM
-                  </span>
-                  <span className="bg-[#1499E8]/15 text-[#43C7F4] text-[10px] font-semibold px-2 py-0.5 rounded-full border border-[#1499E8]/30">
-                    INDIA
-                  </span>
-                </div>
-                <p className="text-[#93A4B8] text-[11px] font-normal leading-none mt-0.5 hidden sm:block">
-                  Atmospheric Intelligence Platform
-                </p>
-              </div>
-            </div>
+            <BrandLogo onClick={() => onNavigateTab && onNavigateTab('home')} />
 
             {/* Center: Search / Observatory Station Finder (Desktop/Tablet) */}
             <div className="relative hidden md:flex items-center gap-2 flex-1 max-w-md lg:max-w-2xl">

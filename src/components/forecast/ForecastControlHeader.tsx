@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NWPModelType, NWP_MODELS } from '../../services/nwpModelService';
+import { NWPModelType, NWP_MODELS, StructuredModelForecast } from '../../services/nwpModelService';
 import { LocationRecord } from '../../types';
 import {
   Cpu,
@@ -12,6 +12,12 @@ import {
   Download,
   Calendar,
   Activity,
+  Database,
+  CloudRain,
+  Thermometer,
+  Wind,
+  ShieldCheck,
+  Server,
 } from 'lucide-react';
 
 interface ForecastControlHeaderProps {
@@ -21,6 +27,8 @@ interface ForecastControlHeaderProps {
   lastUpdated: string;
   isLive?: boolean;
   onExportCSV: () => void;
+  structuredForecast?: StructuredModelForecast | null;
+  isLoadingModel?: boolean;
 }
 
 export const ForecastControlHeader: React.FC<ForecastControlHeaderProps> = ({
@@ -30,6 +38,8 @@ export const ForecastControlHeader: React.FC<ForecastControlHeaderProps> = ({
   lastUpdated,
   isLive = true,
   onExportCSV,
+  structuredForecast,
+  isLoadingModel = false,
 }) => {
   const [showModelSpecs, setShowModelSpecs] = useState(false);
   const activeModelMeta = NWP_MODELS[modelType];
@@ -37,45 +47,55 @@ export const ForecastControlHeader: React.FC<ForecastControlHeaderProps> = ({
   const lat = typeof selectedLocation.lat === 'number' ? selectedLocation.lat : 20.2961;
   const lng = typeof selectedLocation.lng === 'number' ? selectedLocation.lng : 85.8245;
 
+  const totalQpf = structuredForecast?.metadata?.totalQpf24h !== undefined
+    ? `${structuredForecast.metadata.totalQpf24h} mm`
+    : 'N/A';
+  const maxTemp = structuredForecast?.metadata?.maxTemp24h !== undefined
+    ? `${structuredForecast.metadata.maxTemp24h}°C`
+    : 'N/A';
+  const maxGust = structuredForecast?.metadata?.maxWindGust24h !== undefined
+    ? `${structuredForecast.metadata.maxWindGust24h} km/h`
+    : 'N/A';
+
   return (
     <div
       id="forecast-command-header"
-      className="bg-[#151D26] border border-[#314255] rounded-lg p-4 sm:p-5 shadow-md flex flex-col gap-4 relative overflow-hidden"
+      className="bg-[#0B141E] border border-[#162331] rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col gap-5 relative overflow-hidden"
     >
       {/* Top Section: Title & Controls */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-3.5 border-b border-[#314255]/80">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-[#162331]">
         {/* Left: Meteorological NWP Title & Location Metadata */}
-        <div className="flex flex-col gap-1">
+        <div className="flex flex-col gap-1.5">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="bg-[#0B72B9]/20 text-[#4FA8E0] border border-[#0B72B9]/40 text-[10px] uppercase font-bold px-2 py-0.5 rounded tracking-wider flex items-center gap-1">
-              <Cpu className="w-3 h-3" />
+            <span className="bg-[#1499E8]/15 text-[#43C7F4] border border-[#1499E8]/30 text-[10px] uppercase font-bold px-2.5 py-1 rounded-full tracking-wider flex items-center gap-1.5 shadow-sm">
+              <Cpu className="w-3.5 h-3.5" />
               Numerical Weather Prediction (NWP)
             </span>
-            <span className="text-[11px] text-[#2ECC71] bg-[#2ECC71]/10 px-2 py-0.5 rounded border border-[#2ECC71]/30 font-mono font-medium flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#2ECC71] animate-pulse"></span>
-              {isLive ? 'OPERATIONAL RUN' : 'CACHED RUN'}
+            <span className="text-[11px] text-[#22C7A0] bg-[#22C7A0]/10 px-2.5 py-0.5 rounded-full border border-[#22C7A0]/30 font-mono font-medium flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#22C7A0] animate-pulse"></span>
+              {isLoadingModel ? 'INITIALIZING NWP RUN...' : isLive ? 'OPERATIONAL GRID RUN' : 'CACHED MODEL RUN'}
             </span>
           </div>
 
-          <h1 className="text-white font-black text-xl sm:text-2xl tracking-tight mt-0.5">
+          <h1 className="text-[#F4F7FA] font-black text-xl sm:text-2xl tracking-tight mt-0.5">
             Atmospheric Model Forecast — {selectedLocation.city}, {selectedLocation.state}
           </h1>
 
-          <div className="flex items-center gap-2 text-xs text-[#8A94A6] flex-wrap">
-            <span>High-resolution numerical weather guidance</span>
+          <div className="flex items-center gap-2 text-xs text-[#93A4B8] flex-wrap">
+            <span>High-resolution grid simulation</span>
             <span>•</span>
-            <span className="text-[#D7DEE8] font-mono">
-              {lat.toFixed(2)}°N, {lng.toFixed(2)}°E
+            <span className="text-[#D1DCE8] font-mono">
+              {lat.toFixed(4)}°N, {lng.toFixed(4)}°E
             </span>
             <span>•</span>
-            <span>Station ID: <strong className="text-[#4FA8E0] font-mono">{selectedLocation.id}</strong></span>
+            <span>Station ID: <strong className="text-[#43C7F4] font-mono">{selectedLocation.id}</strong></span>
           </div>
         </div>
 
         {/* Right: Model Selector & Actions */}
         <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap shrink-0">
-          <div className="flex items-center gap-1 bg-[#1E2733] p-1 rounded-lg border border-[#314255] shadow-inner">
-            <span className="text-[10px] text-[#8A94A6] px-2 font-bold uppercase tracking-wider hidden sm:inline">
+          <div className="flex items-center gap-1 bg-[#071018] p-1.5 rounded-xl border border-[#162331] shadow-inner">
+            <span className="text-[10px] text-[#93A4B8] px-2 font-bold uppercase tracking-wider hidden sm:inline">
               MODEL:
             </span>
             {(['WRF', 'GEFS', 'ECMWF'] as const).map((m) => {
@@ -85,14 +105,14 @@ export const ForecastControlHeader: React.FC<ForecastControlHeaderProps> = ({
                   key={m}
                   type="button"
                   onClick={() => onSelectModel(m)}
-                  className={`px-3 py-1.5 text-xs font-bold rounded-md transition-all flex items-center gap-1.5 cursor-pointer ${
+                  className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 cursor-pointer ${
                     isSelected
                       ? m === 'WRF'
-                        ? 'bg-[#0B72B9] text-white shadow-md shadow-[#0B72B9]/30 ring-1 ring-white/20'
+                        ? 'bg-[#1499E8] text-white shadow-lg shadow-[#1499E8]/30 ring-1 ring-white/20'
                         : m === 'GEFS'
-                        ? 'bg-[#2ECC71] text-black shadow-md shadow-[#2ECC71]/30 ring-1 ring-white/20'
-                        : 'bg-[#E67E22] text-white shadow-md shadow-[#E67E22]/30 ring-1 ring-white/20'
-                      : 'text-[#8A94A6] hover:text-white hover:bg-[#151D26]'
+                        ? 'bg-[#22C7A0] text-black shadow-lg shadow-[#22C7A0]/30 ring-1 ring-black/20'
+                        : 'bg-[#FF9F43] text-white shadow-lg shadow-[#FF9F43]/30 ring-1 ring-white/20'
+                      : 'text-[#93A4B8] hover:text-[#F4F7FA] hover:bg-[#111F30]'
                   }`}
                   aria-pressed={isSelected}
                   title={`Switch to ${NWP_MODELS[m].fullName}`}
@@ -107,18 +127,18 @@ export const ForecastControlHeader: React.FC<ForecastControlHeaderProps> = ({
           <button
             type="button"
             onClick={() => setShowModelSpecs(!showModelSpecs)}
-            className="p-2 bg-[#1E2733] hover:bg-[#314255] text-[#8A94A6] hover:text-white rounded-lg border border-[#314255] transition-colors flex items-center gap-1 text-xs"
+            className="p-2.5 bg-[#071018] hover:bg-[#111F30] text-[#93A4B8] hover:text-[#F4F7FA] rounded-xl border border-[#162331] transition-colors flex items-center gap-1.5 text-xs cursor-pointer"
             title="Toggle Model Physics Specifications"
           >
-            <Info className="w-4 h-4 text-[#4FA8E0]" />
+            <Info className="w-4 h-4 text-[#43C7F4]" />
             <span className="hidden sm:inline font-semibold">Specs</span>
-            {showModelSpecs ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            {showModelSpecs ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           </button>
 
           <button
             type="button"
             onClick={onExportCSV}
-            className="p-2 bg-[#1E2733] hover:bg-[#314255] text-[#4FA8E0] hover:text-white rounded-lg border border-[#314255] transition-colors flex items-center gap-1 text-xs font-semibold"
+            className="p-2.5 bg-[#071018] hover:bg-[#111F30] text-[#43C7F4] hover:text-[#F4F7FA] rounded-xl border border-[#162331] transition-colors flex items-center gap-1.5 text-xs font-semibold cursor-pointer"
             title="Export full forecast timeseries to CSV"
           >
             <Download className="w-4 h-4" />
@@ -129,76 +149,106 @@ export const ForecastControlHeader: React.FC<ForecastControlHeaderProps> = ({
 
       {/* Model Diagnostic Overview Strip */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-xs">
-        <div className="bg-[#1E2733] p-3 rounded-lg border border-[#314255] flex flex-col justify-between">
-          <span className="text-[10px] text-[#8A94A6] uppercase font-bold">Active Model</span>
+        <div className="bg-[#071018] p-3.5 rounded-xl border border-[#162331] flex flex-col justify-between">
+          <span className="text-[10px] text-[#93A4B8] uppercase font-bold">Active Model &amp; Grid</span>
           <div className="flex items-center gap-2 mt-1">
             <div
               className="w-2.5 h-2.5 rounded-full shrink-0"
               style={{ backgroundColor: activeModelMeta.badgeColor }}
             />
-            <span className="text-sm font-bold text-white font-mono">{activeModelMeta.shortName}</span>
+            <span className="text-sm font-bold text-[#F4F7FA] font-mono">{activeModelMeta.shortName}</span>
           </div>
-          <span className="text-[11px] text-[#8A94A6] mt-1">{activeModelMeta.gridResolution}</span>
+          <span className="text-[11px] text-[#93A4B8] mt-1">{activeModelMeta.gridResolution}</span>
         </div>
 
-        <div className="bg-[#1E2733] p-3 rounded-lg border border-[#314255] flex flex-col justify-between">
-          <span className="text-[10px] text-[#8A94A6] uppercase font-bold">Cycle &amp; Horizon</span>
+        <div className="bg-[#071018] p-3.5 rounded-xl border border-[#162331] flex flex-col justify-between">
+          <span className="text-[10px] text-[#93A4B8] uppercase font-bold">Cycle &amp; Horizon</span>
           <div className="flex items-center gap-2 mt-1">
-            <Calendar className="w-3.5 h-3.5 text-[#4FA8E0]" />
-            <span className="text-sm font-bold text-white font-mono">{activeModelMeta.updateCycle.split(' ')[0]}</span>
+            <Calendar className="w-3.5 h-3.5 text-[#43C7F4]" />
+            <span className="text-sm font-bold text-[#F4F7FA] font-mono">{activeModelMeta.updateCycle.split(' ')[0]} Run</span>
           </div>
-          <span className="text-[11px] text-[#8A94A6] mt-1">Horizon: 24h Nowcast to 7-Day Synoptic</span>
+          <span className="text-[11px] text-[#93A4B8] mt-1">Horizon: 24h Nowcast to 7-Day Synoptic</span>
         </div>
 
-        <div className="bg-[#1E2733] p-3 rounded-lg border border-[#314255] flex flex-col justify-between">
-          <span className="text-[10px] text-[#8A94A6] uppercase font-bold">Data Freshness / Updated</span>
+        <div className="bg-[#071018] p-3.5 rounded-xl border border-[#162331] flex flex-col justify-between">
+          <span className="text-[10px] text-[#93A4B8] uppercase font-bold">Data Freshness / Updated</span>
           <div className="flex items-center gap-2 mt-1">
-            <Activity className="w-3.5 h-3.5 text-[#2ECC71]" />
-            <span className="text-xs font-mono font-bold text-[#D7DEE8]">{lastUpdated}</span>
+            <Activity className="w-3.5 h-3.5 text-[#22C7A0]" />
+            <span className="text-xs font-mono font-bold text-[#D1DCE8]">{lastUpdated}</span>
           </div>
-          <span className="text-[11px] text-[#2ECC71] font-semibold">Latency: &lt; 5 min (Synchronized)</span>
+          <span className="text-[11px] text-[#22C7A0] font-semibold">Latency: &lt; 5 min (Synchronized)</span>
         </div>
 
-        <div className="bg-[#1E2733] p-3 rounded-lg border border-[#314255] flex flex-col justify-between">
-          <span className="text-[10px] text-[#8A94A6] uppercase font-bold">Application Certainty</span>
-          <div className="flex items-center gap-2 mt-1">
-            <CheckCircle className="w-3.5 h-3.5 text-[#2ECC71]" />
-            <span className="text-sm font-bold font-mono text-[#2ECC71]">
-              {activeModelMeta.confidenceScore}% High Certainty
+        <div className="bg-[#071018] p-3.5 rounded-xl border border-[#162331] flex flex-col justify-between">
+          <span className="text-[10px] text-[#93A4B8] uppercase font-bold">Model 24h Summary</span>
+          <div className="flex items-center justify-between mt-1 font-mono">
+            <span className="text-xs text-[#43C7F4] flex items-center gap-1">
+              <CloudRain className="w-3 h-3" /> {totalQpf}
+            </span>
+            <span className="text-xs text-[#FFC857] flex items-center gap-1">
+              <Thermometer className="w-3 h-3" /> {maxTemp}
+            </span>
+            <span className="text-xs text-[#22C7A0] flex items-center gap-1">
+              <Wind className="w-3 h-3" /> {maxGust}
             </span>
           </div>
-          <span className="text-[10px] text-[#8A94A6]">Application-derived calibration</span>
+          <span className="text-[10px] text-[#93A4B8] truncate mt-1">
+            {structuredForecast?.metadata?.convectiveRisk || `${activeModelMeta.confidenceScore}% Confidence`}
+          </span>
         </div>
       </div>
 
       {/* Expandable Model Physics & Mathematical Details */}
       {showModelSpecs && (
-        <div className="bg-[#1E2733] p-4 rounded-lg border border-[#314255] text-xs flex flex-col gap-3 transition-all">
-          <div className="flex items-center justify-between border-b border-[#314255] pb-2">
-            <h4 className="font-bold text-white uppercase text-[11px] tracking-wider text-[#4FA8E0] flex items-center gap-1.5">
-              <Layers className="w-3.5 h-3.5" />
-              {activeModelMeta.id} Dynamical Core &amp; Microphysics Schemes
+        <div className="bg-[#071018] p-4 sm:p-5 rounded-xl border border-[#162331] text-xs flex flex-col gap-3.5 transition-all animate-fade-in">
+          <div className="flex items-center justify-between border-b border-[#162331] pb-2.5">
+            <h4 className="font-bold text-[#F4F7FA] uppercase text-xs tracking-wider flex items-center gap-2">
+              <Layers className="w-4 h-4 text-[#43C7F4]" />
+              {activeModelMeta.id} Dynamical Formulation &amp; Physical Schemes
             </h4>
-            <span className="text-[#8A94A6] text-[10px]">
-              Operational Numerical Model Architecture
+            <span className="text-[#93A4B8] text-[10px] font-mono">
+              Vertical Levels: {activeModelMeta.verticalLevels}
             </span>
           </div>
-          <p className="text-[#D7DEE8] leading-relaxed">
+          
+          <p className="text-[#D1DCE8] leading-relaxed">
             {activeModelMeta.description}
           </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 text-[11px]">
-            <div className="bg-[#151D26] p-2.5 rounded border border-[#314255]">
-              <strong className="text-white block mb-0.5">Core Formulation:</strong>
-              <span className="text-[#8A94A6]">{activeModelMeta.coreType}</span>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+            <div className="bg-[#0B141E] p-3 rounded-lg border border-[#162331]">
+              <strong className="text-[#F4F7FA] block mb-1 flex items-center gap-1.5">
+                <Cpu className="w-3.5 h-3.5 text-[#1499E8]" /> Core Formulation:
+              </strong>
+              <span className="text-[#93A4B8]">{activeModelMeta.coreType}</span>
             </div>
-            <div className="bg-[#151D26] p-2.5 rounded border border-[#314255]">
-              <strong className="text-white block mb-0.5">Physics Parameterizations:</strong>
-              <span className="text-[#8A94A6]">{activeModelMeta.physicsSchemes}</span>
+            <div className="bg-[#0B141E] p-3 rounded-lg border border-[#162331]">
+              <strong className="text-[#F4F7FA] block mb-1 flex items-center gap-1.5">
+                <Database className="w-3.5 h-3.5 text-[#22C7A0]" /> Physics Parameterizations:
+              </strong>
+              <span className="text-[#93A4B8]">{activeModelMeta.physicsSchemes}</span>
             </div>
           </div>
-          <div className="text-[11px] text-[#8A94A6]">
-            <strong className="text-white">Primary Synoptic Application: </strong>
-            {activeModelMeta.primaryApplication}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+            <div className="bg-[#0B141E] p-3 rounded-lg border border-[#162331]">
+              <strong className="text-[#F4F7FA] block mb-1 flex items-center gap-1.5">
+                <Server className="w-3.5 h-3.5 text-[#FF9F43]" /> Source Grid Provider:
+              </strong>
+              <span className="text-[#93A4B8] font-mono text-[11px]">{activeModelMeta.sourceProvider}</span>
+            </div>
+            <div className="bg-[#0B141E] p-3 rounded-lg border border-[#162331]">
+              <strong className="text-[#F4F7FA] block mb-1 flex items-center gap-1.5">
+                <ShieldCheck className="w-3.5 h-3.5 text-[#22C7A0]" /> Output Variables Streamed:
+              </strong>
+              <div className="flex flex-wrap gap-1 mt-1">
+                {activeModelMeta.rawVariablesAvailable.map((v, i) => (
+                  <span key={i} className="text-[10px] px-1.5 py-0.5 rounded bg-[#162331] text-[#D1DCE8]">
+                    {v}
+                  </span>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       )}

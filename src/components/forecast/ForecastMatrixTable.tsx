@@ -11,6 +11,9 @@ import {
   Cloud,
   ChevronDown,
   ChevronUp,
+  Cpu,
+  Layers,
+  Thermometer,
 } from 'lucide-react';
 
 interface ForecastMatrixTableProps {
@@ -19,6 +22,8 @@ interface ForecastMatrixTableProps {
   modelName: string;
   cityName: string;
   onExportCSV: () => void;
+  validFrom?: string;
+  validUntil?: string;
 }
 
 export const ForecastMatrixTable: React.FC<ForecastMatrixTableProps> = ({
@@ -27,6 +32,8 @@ export const ForecastMatrixTable: React.FC<ForecastMatrixTableProps> = ({
   modelName,
   cityName,
   onExportCSV,
+  validFrom,
+  validUntil,
 }) => {
   const [expandedRowIdx, setExpandedRowIdx] = useState<number | null>(null);
   const normalizedItems = useMemo(() => normalizeHourlyForecast(hourly), [hourly]);
@@ -34,20 +41,25 @@ export const ForecastMatrixTable: React.FC<ForecastMatrixTableProps> = ({
   return (
     <div
       id="forecast-synoptic-matrix-card"
-      className="bg-[#1E2733] border border-[#314255] rounded-lg p-4 sm:p-5 shadow-md flex flex-col gap-4"
+      className="bg-[#0B141E] border border-[#162331] rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col gap-4"
     >
       {/* Header & Export Action */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#314255]">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded bg-[#4FA8E0]/20 border border-[#4FA8E0]/40 flex items-center justify-center text-[#4FA8E0]">
-            <TableIcon className="w-4 h-4" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#162331]">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#1499E8]/15 border border-[#1499E8]/30 flex items-center justify-center text-[#43C7F4]">
+            <TableIcon className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-sm sm:text-base font-bold text-white uppercase tracking-tight">
-              24-Hour Synoptic Time-Series Matrix ({modelType})
-            </h2>
-            <p className="text-xs text-[#8A94A6]">
-              Point-wise meteorological parameter projections simulated via <strong className="text-[#D7DEE8]">{modelName}</strong>
+            <div className="flex items-center gap-2 flex-wrap">
+              <h2 className="text-base sm:text-lg font-bold text-[#F4F7FA] tracking-tight">
+                24-Hour Synoptic Point Matrix ({modelType})
+              </h2>
+              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#1499E8]/15 text-[#43C7F4] border border-[#1499E8]/30">
+                Hourly Grid Series
+              </span>
+            </div>
+            <p className="text-xs text-[#93A4B8] mt-0.5">
+              Point-wise meteorological parameter projections simulated directly via <strong className="text-[#F4F7FA]">{modelName}</strong>
             </p>
           </div>
         </div>
@@ -55,74 +67,78 @@ export const ForecastMatrixTable: React.FC<ForecastMatrixTableProps> = ({
         <button
           type="button"
           onClick={onExportCSV}
-          className="px-3 py-1.5 bg-[#151D26] hover:bg-[#314255] text-[#4FA8E0] hover:text-white rounded-md border border-[#314255] text-xs font-semibold flex items-center gap-1.5 transition-colors self-start sm:self-auto cursor-pointer"
+          className="px-3.5 py-1.5 bg-[#071018] hover:bg-[#111F30] text-[#43C7F4] hover:text-[#F4F7FA] rounded-xl border border-[#162331] text-xs font-semibold flex items-center gap-2 transition-colors self-start sm:self-auto cursor-pointer"
           title="Export displayed dataset to CSV"
         >
-          <Download className="w-3.5 h-3.5" />
+          <Download className="w-4 h-4" />
           <span>Export Matrix (CSV)</span>
         </button>
       </div>
 
       {/* Desktop View: Full Table with Sticky Header */}
-      <div className="hidden md:block overflow-x-auto max-h-[460px] scrollbar-thin">
-        <table className="w-full text-xs text-left border-collapse min-w-[720px]">
-          <thead className="sticky top-0 z-10 bg-[#151D26] border-b border-[#314255] text-[#8A94A6] shadow-sm">
+      <div className="hidden md:block overflow-x-auto max-h-[460px] scrollbar-thin scrollbar-thumb-[#162331] scrollbar-track-transparent">
+        <table className="w-full text-xs text-left border-collapse min-w-[760px]">
+          <thead className="sticky top-0 z-10 bg-[#071018] border-b border-[#162331] text-[#93A4B8] shadow-sm">
             <tr>
               <th className="p-3 font-bold">Time (IST)</th>
-              <th className="p-3 font-bold text-[#FF8C42]">Temp (°C)</th>
-              <th className="p-3 font-bold">Weather Condition</th>
-              <th className="p-3 font-bold text-[#4FA8E0]">Precip Prob</th>
-              <th className="p-3 font-bold">QPF (mm)</th>
-              <th className="p-3 font-bold text-[#2ECC71]">Wind Speed &amp; Dir</th>
-              <th className="p-3 font-bold text-[#1ABC9C]">Humidity</th>
-              <th className="p-3 font-bold">Cloud Cover</th>
-              <th className="p-3 font-bold">Visibility</th>
+              <th className="p-3 font-bold text-[#FF9F43]">Temp (°C)</th>
+              <th className="p-3 font-bold text-[#93A4B8]">Feels Like</th>
+              <th className="p-3 font-bold">Condition &amp; Hydrometeor</th>
+              <th className="p-3 font-bold text-[#43C7F4]">Precip Prob</th>
+              <th className="p-3 font-bold text-[#43C7F4]">QPF (mm)</th>
+              <th className="p-3 font-bold text-[#22C7A0]">Wind Speed &amp; Dir</th>
+              <th className="p-3 font-bold text-[#2ECC71]">Humidity</th>
+              <th className="p-3 font-bold text-[#93A4B8]">Cloud Cover</th>
+              <th className="p-3 font-bold text-[#93A4B8]">Dew Point</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#314255]/50">
+          <tbody className="divide-y divide-[#162331]">
             {normalizedItems.map((item, idx) => (
               <tr
                 key={idx}
-                className={`hover:bg-[#151D26] transition-colors ${
-                  item.isNow ? 'bg-[#0B72B9]/10 font-medium' : ''
+                className={`hover:bg-[#071018] transition-colors ${
+                  item.isNow ? 'bg-[#1499E8]/10 font-medium' : ''
                 }`}
               >
-                <td className="p-3 font-mono font-bold text-white whitespace-nowrap">
+                <td className="p-3 font-mono font-bold text-[#F4F7FA] whitespace-nowrap">
                   <div className="flex items-center gap-1.5">
                     <span>{item.time}</span>
                     {item.isNow && (
-                      <span className="text-[9px] bg-[#0B72B9]/30 text-[#4FA8E0] px-1 rounded font-bold">
+                      <span className="text-[9px] bg-[#1499E8]/30 text-[#43C7F4] px-1.5 py-0.2 rounded font-bold">
                         NOW
                       </span>
                     )}
                   </div>
                 </td>
-                <td className="p-3 font-mono font-bold text-white">
-                  {item.validTemp}°C
+                <td className="p-3 font-mono font-bold text-[#F4F7FA]">
+                  {item.validTemp !== undefined ? `${item.validTemp}°C` : 'N/A'}
                 </td>
-                <td className="p-3 text-[#D7DEE8]">
+                <td className="p-3 font-mono text-[#93A4B8]">
+                  {item.feelsLike !== undefined ? `${item.feelsLike}°C` : 'N/A'}
+                </td>
+                <td className="p-3 text-[#D1DCE8]">
                   <div className="flex items-center gap-2">
                     <WeatherConditionIcon condition={item.condition} className="w-4 h-4 shrink-0" />
-                    <span className="line-clamp-1">{item.condition}</span>
+                    <span className="line-clamp-1">{item.condition || 'N/A'}</span>
                   </div>
                 </td>
-                <td className="p-3 font-mono font-bold text-[#4FA8E0]">
-                  {item.validRainProb}%
+                <td className="p-3 font-mono font-bold text-[#43C7F4]">
+                  {item.validRainProb !== undefined ? `${item.validRainProb}%` : 'N/A'}
                 </td>
-                <td className="p-3 font-mono text-[#D7DEE8]">
-                  {item.validPrecipMm} mm
+                <td className="p-3 font-mono text-[#D1DCE8]">
+                  {item.validPrecipMm !== undefined ? `${item.validPrecipMm} mm` : '0 mm'}
                 </td>
-                <td className="p-3 font-mono text-[#D7DEE8]">
-                  {item.validWindSpeed} km/h {item.validWindDirection}
+                <td className="p-3 font-mono text-[#D1DCE8]">
+                  {item.validWindSpeed !== undefined ? `${item.validWindSpeed} km/h ${item.validWindDirection}` : 'N/A'}
                 </td>
-                <td className="p-3 font-mono text-[#1ABC9C]">
-                  {item.validHumidity}% RH
+                <td className="p-3 font-mono text-[#2ECC71]">
+                  {item.validHumidity !== undefined ? `${item.validHumidity}% RH` : 'N/A'}
                 </td>
-                <td className="p-3 font-mono text-[#8A94A6]">
-                  {item.validCloudCover}%
+                <td className="p-3 font-mono text-[#93A4B8]">
+                  {item.validCloudCover !== undefined ? `${item.validCloudCover}%` : 'N/A'}
                 </td>
-                <td className="p-3 font-mono text-[#8A94A6]">
-                  {item.visibilityKm} km
+                <td className="p-3 font-mono text-[#93A4B8]">
+                  {item.dewPoint !== undefined ? `${item.dewPoint}°C` : 'N/A'}
                 </td>
               </tr>
             ))}
@@ -137,10 +153,10 @@ export const ForecastMatrixTable: React.FC<ForecastMatrixTableProps> = ({
           return (
             <div
               key={idx}
-              className={`p-3 rounded-lg border flex flex-col gap-2 transition-all ${
+              className={`p-3.5 rounded-xl border flex flex-col gap-2 transition-all ${
                 item.isNow
-                  ? 'bg-[#151D26] border-[#4FA8E0]'
-                  : 'bg-[#151D26] border-[#314255]'
+                  ? 'bg-[#071018] border-[#1499E8]'
+                  : 'bg-[#071018] border-[#162331]'
               }`}
             >
               <div
@@ -148,46 +164,48 @@ export const ForecastMatrixTable: React.FC<ForecastMatrixTableProps> = ({
                 onClick={() => setExpandedRowIdx(isExpanded ? null : idx)}
               >
                 <div className="flex items-center gap-2.5">
-                  <span className="text-xs font-bold font-mono text-white">
+                  <span className="text-xs font-bold font-mono text-[#F4F7FA]">
                     {item.time} IST
                   </span>
                   <WeatherConditionIcon condition={item.condition} className="w-4 h-4" />
-                  <span className="text-xs text-[#D7DEE8] line-clamp-1">
+                  <span className="text-xs text-[#D1DCE8] line-clamp-1">
                     {item.condition}
                   </span>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-bold font-mono text-white">
+                  <span className="text-xs font-bold font-mono text-[#F4F7FA]">
                     {item.validTemp}°C
                   </span>
-                  {isExpanded ? (
-                    <ChevronUp className="w-3.5 h-3.5 text-[#8A94A6]" />
-                  ) : (
-                    <ChevronDown className="w-3.5 h-3.5 text-[#8A94A6]" />
-                  )}
+                  {isExpanded ? <ChevronUp className="w-4 h-4 text-[#93A4B8]" /> : <ChevronDown className="w-4 h-4 text-[#93A4B8]" />}
                 </div>
               </div>
 
               {isExpanded && (
-                <div className="pt-2 border-t border-[#314255] grid grid-cols-2 gap-2 text-[11px] text-[#8A94A6] animate-fade-in">
-                  <div>
-                    <span>Rain Prob:</span> <strong className="text-[#4FA8E0] font-mono">{item.validRainProb}%</strong>
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#162331] text-[11px] font-mono animate-fade-in">
+                  <div className="flex justify-between text-[#93A4B8]">
+                    <span>Precip Prob:</span>
+                    <strong className="text-[#43C7F4]">{item.validRainProb}%</strong>
                   </div>
-                  <div>
-                    <span>Precip QPF:</span> <strong className="text-white font-mono">{item.validPrecipMm} mm</strong>
+                  <div className="flex justify-between text-[#93A4B8]">
+                    <span>QPF Rain:</span>
+                    <strong className="text-[#D1DCE8]">{item.validPrecipMm} mm</strong>
                   </div>
-                  <div>
-                    <span>Wind:</span> <strong className="text-[#2ECC71] font-mono">{item.validWindSpeed}k {item.validWindDirection}</strong>
+                  <div className="flex justify-between text-[#93A4B8]">
+                    <span>Wind:</span>
+                    <strong className="text-[#22C7A0]">{item.validWindSpeed} km/h {item.validWindDirection}</strong>
                   </div>
-                  <div>
-                    <span>Humidity:</span> <strong className="text-[#1ABC9C] font-mono">{item.validHumidity}% RH</strong>
+                  <div className="flex justify-between text-[#93A4B8]">
+                    <span>Relative Humidity:</span>
+                    <strong className="text-[#2ECC71]">{item.validHumidity}%</strong>
                   </div>
-                  <div>
-                    <span>Cloud Cover:</span> <strong className="text-white font-mono">{item.validCloudCover}%</strong>
+                  <div className="flex justify-between text-[#93A4B8]">
+                    <span>Dew Point:</span>
+                    <strong className="text-[#D1DCE8]">{item.dewPoint}°C</strong>
                   </div>
-                  <div>
-                    <span>Visibility:</span> <strong className="text-white font-mono">{item.visibilityKm} km</strong>
+                  <div className="flex justify-between text-[#93A4B8]">
+                    <span>Cloud Cover:</span>
+                    <strong className="text-[#D1DCE8]">{item.validCloudCover}%</strong>
                   </div>
                 </div>
               )}

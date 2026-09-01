@@ -112,11 +112,19 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({
         <div>
           <div className="p-4 border-b border-[#334155] flex items-center justify-between bg-[#17212B]">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded bg-[#0B72B9] flex items-center justify-center text-white font-bold shrink-0">
-                <span className="material-symbols-outlined text-[20px]">cloud</span>
+              <div className="w-10 h-10 flex items-center justify-center shrink-0">
+                <img
+                  src="/assets/imd-logo.svg"
+                  alt="IMD Logo"
+                  className="max-h-9 max-w-9 object-contain drop-shadow"
+                  loading="eager"
+                />
               </div>
               <div>
-                <div className="text-white font-bold text-sm leading-none">MAUSAM</div>
+                <div className="text-white font-bold text-sm leading-none flex items-center gap-1.5">
+                  <span>MAUSAM</span>
+                  <span className="bg-[#1499E8]/20 text-[#43C7F4] text-[9px] font-semibold px-1.5 py-0.2 rounded-full border border-[#1499E8]/30">INDIA</span>
+                </div>
                 <div className="text-[#8A94A6] text-[10px] mt-0.5">Atmospheric Intelligence</div>
               </div>
             </div>

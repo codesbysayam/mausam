@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { WeatherDataBundle } from '../services/weatherService';
 import { LocationRecord } from '../types';
 import { LocatingPhase } from '../services/geolocationService';
@@ -6,6 +6,8 @@ import { CurrentLocationBanner } from '../components/location/CurrentLocationBan
 import {
   NWPModelType,
   NWP_MODELS,
+  StructuredModelForecast,
+  fetchStructuredModelForecast,
   getModelHourlyForecast,
   getModelDailyForecast,
   calculateModelComparison,
@@ -28,7 +30,7 @@ import { WindIntelligenceCard } from '../components/forecast/WindIntelligenceCar
 import { SolarCycleCard } from '../components/weather/SolarCycleCard';
 import { ModelConsensusCard } from '../components/forecast/ModelConsensusCard';
 import { ForecastMatrixTable } from '../components/forecast/ForecastMatrixTable';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, RefreshCw } from 'lucide-react';
 import { INITIAL_WEATHER } from '../data/weatherData';
 
 interface ForecastPageProps {
@@ -60,11 +62,46 @@ export const ForecastPage: React.FC<ForecastPageProps> = ({
 }) => {
   const [modelType, setModelType] = useState<NWPModelType>('WRF');
   const [exportNotification, setExportNotification] = useState<string | null>(null);
+  const [structuredForecast, setStructuredForecast] = useState<StructuredModelForecast | null>(null);
+  const [isLoadingModel, setIsLoadingModel] = useState<boolean>(false);
 
   const rawHourly = weatherBundle?.hourly || [];
   const rawDaily = weatherBundle?.daily || [];
   const currentWeather = weatherBundle?.current || INITIAL_WEATHER;
   const activeAlerts = weatherBundle?.alerts || [];
+
+  const lat = typeof selectedLocation.lat === 'number' ? selectedLocation.lat : 20.2961;
+  const lon = typeof selectedLocation.lng === 'number' ? selectedLocation.lng : 85.8245;
+
+  // Fetch real model-specific stream whenever location or model selection changes
+  useEffect(() => {
+    let isCancelled = false;
+    async function loadModelRun() {
+      setIsLoadingModel(true);
+      try {
+        const forecast = await fetchStructuredModelForecast(
+          modelType,
+          { lat, lon, city: selectedLocation.city, state: selectedLocation.state },
+          rawHourly,
+          rawDaily
+        );
+        if (!isCancelled) {
+          setStructuredForecast(forecast);
+        }
+      } catch (e) {
+        console.error('[ForecastPage] Failed to fetch structured NWP model:', e);
+      } finally {
+        if (!isCancelled) {
+          setIsLoadingModel(false);
+        }
+      }
+    }
+
+    loadModelRun();
+    return () => {
+      isCancelled = true;
+    };
+  }, [modelType, lat, lon, selectedLocation.city, selectedLocation.state, rawHourly, rawDaily]);
 
   // Format last updated timestamp in standard IST
   const lastUpdatedStr = useMemo(() => {
@@ -82,14 +119,20 @@ export const ForecastPage: React.FC<ForecastPageProps> = ({
     );
   }, [weatherBundle?.lastFetchedAt]);
 
-  // Compute model-specific dynamically transformed hourly & daily trajectories
+  // Use structured model hourly & daily if loaded, else fallback to mathematically transformed forecast
   const modelHourly = useMemo(() => {
+    if (structuredForecast && structuredForecast.model === modelType && structuredForecast.hourly.length > 0) {
+      return structuredForecast.hourly;
+    }
     return getModelHourlyForecast(rawHourly, modelType);
-  }, [rawHourly, modelType]);
+  }, [structuredForecast, rawHourly, modelType]);
 
   const modelDaily = useMemo(() => {
+    if (structuredForecast && structuredForecast.model === modelType && structuredForecast.daily.length > 0) {
+      return structuredForecast.daily;
+    }
     return getModelDailyForecast(rawDaily, modelType);
-  }, [rawDaily, modelType]);
+  }, [structuredForecast, rawDaily, modelType]);
 
   // Compute multi-model comparative consensus metrics
   const comparison = useMemo(() => {
@@ -106,13 +149,16 @@ export const ForecastPage: React.FC<ForecastPageProps> = ({
 
     let csv = `IMD MAUSAM NUMERICAL WEATHER PREDICTION EXPORT\n`;
     csv += `Station: "${selectedLocation.city}, ${selectedLocation.state}"\n`;
-    csv += `Coordinates: "${selectedLocation.lat?.toFixed(2)}N, ${selectedLocation.lng?.toFixed(2)}E"\n`;
+    csv += `Coordinates: "${lat.toFixed(4)}N, ${lon.toFixed(4)}E"\n`;
     csv += `Model: "${activeModelMeta.fullName}"\n`;
+    csv += `Core: "${activeModelMeta.coreType}"\n`;
+    csv += `Grid Resolution: "${activeModelMeta.gridResolution}"\n`;
+    csv += `Provider: "${activeModelMeta.sourceProvider}"\n`;
     csv += `Export Timestamp: "${lastUpdatedStr}"\n\n`;
-    csv += `Time (IST),Temperature (C),Feels Like (C),Weather Condition,Rain Prob (%),Precip QPF (mm),Wind Speed (km/h),Wind Dir,Wind Degree,Relative Humidity (%),Cloud Cover (%),Visibility (km),Solar UV Index\n`;
+    csv += `Time (IST),Temperature (C),Feels Like (C),Weather Condition,Rain Prob (%),Precip QPF (mm),Wind Speed (km/h),Wind Dir,Wind Degree,Relative Humidity (%),Cloud Cover (%),Visibility (km),Solar UV Index,Dew Point (C)\n`;
 
     normalized.forEach((h) => {
-      csv += `"${h.time}","${h.validTemp}","${h.feelsLike}","${h.condition}","${h.validRainProb}","${h.validPrecipMm}","${h.validWindSpeed}","${h.validWindDirection}","${h.windDegree}","${h.validHumidity}","${h.validCloudCover}","${h.visibilityKm}","${h.uvIndex}"\n`;
+      csv += `"${h.time}","${h.validTemp !== undefined ? h.validTemp : 'N/A'}","${h.feelsLike !== undefined ? h.feelsLike : 'N/A'}","${h.condition}","${h.validRainProb !== undefined ? h.validRainProb : 'N/A'}","${h.validPrecipMm !== undefined ? h.validPrecipMm : '0'}","${h.validWindSpeed !== undefined ? h.validWindSpeed : 'N/A'}","${h.validWindDirection}","${h.windDegree}","${h.validHumidity !== undefined ? h.validHumidity : 'N/A'}","${h.validCloudCover !== undefined ? h.validCloudCover : 'N/A'}","${h.visibilityKm !== undefined ? h.visibilityKm : 'N/A'}","${h.uvIndex !== undefined ? h.uvIndex : 'N/A'}","${h.dewPoint !== undefined ? h.dewPoint : 'N/A'}"\n`;
     });
 
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
@@ -125,9 +171,9 @@ export const ForecastPage: React.FC<ForecastPageProps> = ({
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
 
-    setExportNotification(`Exported ${activeModelMeta.shortName} Forecast Dataset (CSV)`);
+    setExportNotification(`Exported ${activeModelMeta.shortName} Structured Forecast Dataset (CSV)`);
     setTimeout(() => setExportNotification(null), 3500);
-  }, [modelHourly, selectedLocation, activeModelMeta, lastUpdatedStr, modelType]);
+  }, [modelHourly, selectedLocation, activeModelMeta, lastUpdatedStr, modelType, lat, lon]);
 
   const handleRefresh = useCallback(() => {
     if (onRefresh) {
@@ -160,6 +206,8 @@ export const ForecastPage: React.FC<ForecastPageProps> = ({
         lastUpdated={lastUpdatedStr}
         isLive={weatherBundle?.isLive}
         onExportCSV={handleExportCSV}
+        structuredForecast={structuredForecast}
+        isLoadingModel={isLoadingModel}
       />
 
       {/* CSV Export Success Notification */}
@@ -271,6 +319,8 @@ export const ForecastPage: React.FC<ForecastPageProps> = ({
         modelName={activeModelMeta.shortName}
         cityName={selectedLocation.city}
         onExportCSV={handleExportCSV}
+        validFrom={structuredForecast?.validFrom}
+        validUntil={structuredForecast?.validUntil}
       />
 
       {/* 15. SUBTLE DATA PROVENANCE & ARCHITECTURE FOOTER */}
