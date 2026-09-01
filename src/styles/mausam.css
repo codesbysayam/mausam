@@ -83,6 +83,71 @@ body {
 }
 
 /* =========================================
+   FLUID TYPOGRAPHY & RESPONSIVE SCALING
+========================================= */
+
+h1, .h1 {
+  font-size: clamp(1.4rem, 3.5vw + 0.5rem, 2.5rem);
+  line-height: 1.2;
+}
+
+h2, .h2 {
+  font-size: clamp(1.15rem, 2.5vw + 0.3rem, 1.85rem);
+  line-height: 1.25;
+}
+
+h3, .h3 {
+  font-size: clamp(1rem, 1.8vw + 0.2rem, 1.4rem);
+  line-height: 1.3;
+}
+
+.text-fluid-display {
+  font-size: clamp(2rem, 5.5vw + 0.5rem, 4.5rem);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+.text-fluid-hero-temp {
+  font-size: clamp(2.75rem, 7vw + 0.5rem, 5.5rem);
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+/* Ensure all flex/grid children wrap safely and do not blow out containers */
+.mausam-grid-auto {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: clamp(12px, 2vw, 24px);
+}
+
+.mausam-grid-dense {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr));
+  gap: clamp(8px, 1.5vw, 16px);
+}
+
+/* Responsive horizontal swipe strips */
+.mausam-scroll-strip {
+  display: flex;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: thin;
+}
+
+.mausam-scroll-strip > * {
+  scroll-snap-align: start;
+  flex-shrink: 0;
+}
+
+/* Prevent image and canvas overflow across all viewports */
+img, svg, canvas, video {
+  max-width: 100%;
+  height: auto;
+}
+
+/* =========================================
    MAUSAM OFFICIAL BRAND & IMD LOGO
 ========================================= */
 
@@ -481,6 +546,65 @@ body {
 
   .safe-area-bottom {
     padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px);
+  }
+}
+
+/* Extra small devices (320px - 380px) */
+@media (max-width: 380px) {
+  .mausam-container {
+    width: calc(100% - 16px);
+  }
+  
+  .mausam-panel {
+    padding: 10px;
+  }
+
+  .mausam-btn,
+  .mausam-button {
+    padding: 0 10px;
+    font-size: 12px;
+  }
+}
+
+/* Tablet & Landscape Mobile (480px - 1024px) */
+@media (min-width: 481px) and (max-width: 1024px) {
+  .mausam-panel {
+    padding: 16px;
+  }
+}
+
+/* Ultrawide Displays (2560px+) */
+@media (min-width: 2560px) {
+  .mausam-container {
+    width: min(2200px, calc(100% - 96px));
+  }
+  
+  body {
+    font-size: 16.5px;
+  }
+}
+
+/* High-DPI screen adjustments */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .imd-logo {
+    image-rendering: auto;
+  }
+}
+
+/* Touch device interactions */
+@media (hover: none) and (pointer: coarse) {
+  button, 
+  a, 
+  input[type="button"], 
+  input[type="submit"],
+  [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  .mausam-table td, 
+  .mausam-table th {
+    padding: 14px 12px;
   }
 }
 

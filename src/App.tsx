@@ -27,6 +27,8 @@ import { useLanguage } from './i18n/LanguageContext';
 import { useUserLocation } from './hooks/useUserLocation';
 import { LocationCenterModal } from './components/location/LocationCenterModal';
 import { LocationPrivacyModal } from './components/location/LocationPrivacyModal';
+import { NetworkStatusBanner } from './components/common/NetworkStatusBanner';
+import { useNetworkStatus } from './hooks/useNetworkStatus';
 import './styles/mausam.css';
 
 export type AppView = MainNavTab | FooterView;
@@ -115,6 +117,9 @@ export default function App() {
   const [isAskMausamOpen, setIsAskMausamOpen] = useState(false);
   const [selectedFooterPublication, setSelectedFooterPublication] = useState<MeteorologicalPublication | null>(null);
 
+  // Real-time network and API status listener
+  const { isOnline, isApiReachable, retryConnection } = useNetworkStatus();
+
   const handleOpenFooterArticle = useCallback((pubId: string) => {
     const pub = OFFICIAL_PUBLICATIONS.find(p => p.id === pubId);
     if (pub) {
@@ -192,6 +197,17 @@ export default function App() {
 
   return (
     <div className="mausam-app min-h-screen bg-[#0F141A] text-[#D7DEE8] flex flex-col font-sans w-full overflow-x-hidden">
+      {/* Network Connectivity Status Listener Banner */}
+      <NetworkStatusBanner
+        isOnline={isOnline}
+        isApiReachable={isApiReachable}
+        lastSyncedAt={weatherBundle.lastFetchedAt}
+        onRetry={async () => {
+          await retryConnection();
+          await loadWeatherData(selectedLocation, true);
+        }}
+      />
+
       {/* 1. Official Government Header with Searchable Language Selector & Mobile Drawer */}
       <GovernmentHeader
         selectedLocation={selectedLocation}
