@@ -1,12 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import { WeatherDataBundle } from '../services/weatherService';
 import { LocationRecord } from '../types';
+import { LocatingPhase } from '../services/geolocationService';
 import { locationService } from '../services/locationService';
 import { StateWeatherData, IndiaWeatherMap } from '../components/map/IndiaWeatherMap';
 import { WeatherMapMetric } from '../components/map/MapLayerControl';
 import { INDIA_WEATHER_DATA } from '../data/indiaWeatherData';
 import { useLanguage } from '../i18n/LanguageContext';
 import { MainNavTab } from '../components/layout/MainNavigation';
+import { CurrentLocationBanner } from '../components/location/CurrentLocationBanner';
 
 // Modular Homepage Sections
 import { HomeAtmosphericHero } from '../components/home/HomeAtmosphericHero';
@@ -19,6 +21,7 @@ import { HomePersonalizedHub } from '../components/home/HomePersonalizedHub';
 import { HomeSolarCycle } from '../components/home/HomeSolarCycle';
 import { HomeAirEnvironment } from '../components/home/HomeAirEnvironment';
 import { HomeRadarPreview } from '../components/home/HomeRadarPreview';
+import { WeatherSnapshot } from '../components/weather/WeatherSnapshot';
 
 import {
   Table,
@@ -45,6 +48,11 @@ interface HomePageProps {
   onNavigateToTab: (tab: MainNavTab) => void;
   onSelectLocation: (loc: LocationRecord) => void;
   onStateSelect: (state: StateWeatherData) => void;
+  onDetectLocation?: (forceRefresh?: boolean) => Promise<any>;
+  isLocating?: boolean;
+  locatePhase?: LocatingPhase;
+  locationSource?: 'DEVICE_GPS' | 'MANUAL_SEARCH';
+  onOpenLocationCenter?: () => void;
 }
 
 export const HomePage: React.FC<HomePageProps> = ({
@@ -53,6 +61,11 @@ export const HomePage: React.FC<HomePageProps> = ({
   onNavigateToTab,
   onSelectLocation,
   onStateSelect,
+  onDetectLocation,
+  isLocating = false,
+  locatePhase = 'idle',
+  locationSource = 'MANUAL_SEARCH',
+  onOpenLocationCenter,
 }) => {
   const { t, tCondition } = useLanguage();
   const { current, hourly = [], daily = [], alerts = [], lastFetchedAt } = weatherBundle;
@@ -125,6 +138,15 @@ export const HomePage: React.FC<HomePageProps> = ({
 
   return (
     <div id="mausam-home-view" className="flex flex-col gap-6 w-full pb-14">
+      {/* Real Geolocation & Active Station Banner */}
+      <CurrentLocationBanner
+        location={selectedLocation}
+        source={locationSource}
+        isLocating={isLocating}
+        onDetectLocation={onDetectLocation ? () => onDetectLocation(true) : undefined}
+        onChangeLocationClick={onOpenLocationCenter}
+      />
+
       {/* 1. DISTINCTIVE ATMOSPHERIC HERO */}
       <HomeAtmosphericHero
         weather={current}
@@ -137,6 +159,17 @@ export const HomePage: React.FC<HomePageProps> = ({
       <HomeSevereAlertBanner
         alerts={alerts}
         onNavigateToWarnings={() => onNavigateToTab('warnings')}
+      />
+
+      {/* 2.5 ACTIVE OBSERVATORY TELEMETRY SNAPSHOT & GPS CONTROLLER */}
+      <WeatherSnapshot
+        weatherBundle={weatherBundle}
+        location={selectedLocation}
+        locationSource={locationSource}
+        isLocating={isLocating}
+        locatePhase={locatePhase}
+        onDetectLocation={onDetectLocation}
+        onOpenLocationCenter={onOpenLocationCenter}
       />
 
       {/* 3. TODAY AT A GLANCE (RICH MULTI-VARIABLE INTERACTION) */}
@@ -177,8 +210,10 @@ export const HomePage: React.FC<HomePageProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         <div className="lg:col-span-5">
           <HomeSolarCycle
-            sunrise="05:42 AM"
-            sunset="06:24 PM"
+            location={selectedLocation}
+            weather={current}
+            sunrise={current.sunrise}
+            sunset={current.sunset}
           />
         </div>
         <div className="lg:col-span-7">

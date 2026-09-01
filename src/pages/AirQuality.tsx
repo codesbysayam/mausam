@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { WeatherDataBundle } from '../services/weatherService';
 import { LocationRecord } from '../types';
+import { LocatingPhase } from '../services/geolocationService';
+import { CurrentLocationBanner } from '../components/location/CurrentLocationBanner';
 import { AQISection } from '../components/environment/AQISection';
 import { PollenSection } from '../components/environment/PollenSection';
 import { IndiaWeatherMap, StateWeatherData } from '../components/map/IndiaWeatherMap';
@@ -39,6 +41,11 @@ interface AirQualityPageProps {
   selectedLocation: LocationRecord;
   onStateSelect?: (state: StateWeatherData) => void;
   onSelectLocation?: (loc: LocationRecord) => void;
+  onDetectLocation?: (forceRefresh?: boolean) => Promise<any>;
+  isLocating?: boolean;
+  locatePhase?: LocatingPhase;
+  locationSource?: 'DEVICE_GPS' | 'MANUAL_SEARCH';
+  onOpenLocationCenter?: () => void;
 }
 
 // Custom Rich Interactive Tooltip Component
@@ -137,6 +144,11 @@ export const AirQualityPage: React.FC<AirQualityPageProps> = ({
   selectedLocation,
   onStateSelect,
   onSelectLocation,
+  onDetectLocation,
+  isLocating = false,
+  locatePhase = 'idle',
+  locationSource = 'MANUAL_SEARCH',
+  onOpenLocationCenter,
 }) => {
   const { current } = weatherBundle;
 
@@ -314,6 +326,15 @@ export const AirQualityPage: React.FC<AirQualityPageProps> = ({
 
   return (
     <div className="flex flex-col gap-5">
+      {/* Real Geolocation & Active Station Banner */}
+      <CurrentLocationBanner
+        location={selectedLocation}
+        source={locationSource}
+        isLocating={isLocating}
+        onDetectLocation={onDetectLocation ? () => onDetectLocation(true) : undefined}
+        onChangeLocationClick={onOpenLocationCenter}
+      />
+
       {/* Primary AQI Section */}
       <AQISection weather={current} />
 

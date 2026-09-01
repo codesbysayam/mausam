@@ -1,14 +1,20 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Sun, Moon, Sunrise, Sunset, Clock } from 'lucide-react';
+import { Sun, Sunrise, Sunset, Clock, Sparkles, Compass } from 'lucide-react';
+import { calculateSolarEphemeris, SolarEphemeris } from '../../utils/solarCalculator';
+import { LocationRecord, CurrentWeather } from '../../types';
 
 interface HomeSolarCycleProps {
+  location?: LocationRecord;
+  weather?: CurrentWeather;
   sunrise?: string;
   sunset?: string;
 }
 
 export const HomeSolarCycle: React.FC<HomeSolarCycleProps> = ({
-  sunrise = '05:42 AM',
-  sunset = '06:24 PM',
+  location,
+  weather,
+  sunrise,
+  sunset,
 }) => {
   const [now, setNow] = useState<Date>(new Date());
 
@@ -17,61 +23,18 @@ export const HomeSolarCycle: React.FC<HomeSolarCycleProps> = ({
     return () => clearInterval(timer);
   }, []);
 
-  // Parse sunrise & sunset to minutes from midnight
-  const { sunriseMins, sunsetMins, currentMins, progressPercent, isDay, timeUntilNext } = useMemo(() => {
-    // Current IST minutes
-    const istTimeStr = new Intl.DateTimeFormat('en-IN', {
-      timeZone: 'Asia/Kolkata',
-      hour: 'numeric',
-      minute: 'numeric',
-      second: 'numeric',
-      hour12: false,
-    }).format(now);
+  const lat = typeof location?.lat === 'number' ? location.lat : 20.2961;
+  const lng = typeof location?.lng === 'number' ? location.lng : 85.8245;
 
-    const [hrs, mins] = istTimeStr.split(':').map(Number);
-    const curr = hrs * 60 + mins;
+  const solarData: SolarEphemeris = useMemo(() => {
+    return calculateSolarEphemeris(lat, lng, now);
+  }, [lat, lng, now]);
 
-    // Approximate sunrise (5:42 -> 342) and sunset (18:24 -> 1104)
-    const sr = 5 * 60 + 42;
-    const ss = 18 * 60 + 24;
-
-    const day = curr >= sr && curr <= ss;
-
-    let prog = 0;
-    if (day) {
-      prog = Math.min(100, Math.max(0, ((curr - sr) / (ss - sr)) * 100));
-    } else if (curr > ss) {
-      prog = 100;
-    } else {
-      prog = 0;
-    }
-
-    // Calculate time until next event
-    let diffMins = 0;
-    let nextEvent = '';
-    if (curr < sr) {
-      diffMins = sr - curr;
-      nextEvent = 'Sunrise';
-    } else if (curr <= ss) {
-      diffMins = ss - curr;
-      nextEvent = 'Sunset';
-    } else {
-      diffMins = 24 * 60 - curr + sr;
-      nextEvent = 'Sunrise';
-    }
-
-    const hRemain = Math.floor(diffMins / 60);
-    const mRemain = diffMins % 60;
-
-    return {
-      sunriseMins: sr,
-      sunsetMins: ss,
-      currentMins: curr,
-      progressPercent: prog,
-      isDay: day,
-      timeUntilNext: `${hRemain}h ${mRemain}m until ${nextEvent}`,
-    };
-  }, [now]);
+  const displaySunrise = sunrise || weather?.sunrise || solarData.sunriseStr;
+  const displaySunset = sunset || weather?.sunset || solarData.sunsetStr;
+  const dayLengthStr = weather?.dayLength || solarData.dayLengthStr;
+  const isDay = solarData.isDaytime;
+  const progressPercent = solarData.progressPercent;
 
   // Position on semi-circle SVG arc (width=300, height=120)
   // Arc goes from (20, 110) through (150, 20) to (280, 110)
@@ -84,7 +47,7 @@ export const HomeSolarCycle: React.FC<HomeSolarCycleProps> = ({
   const sunY = cy - ry * Math.sin(angleRad);
 
   return (
-    <section id="homepage-solar-cycle" className="rounded-2xl bg-[#0B141E] border border-[#162331] p-5 flex flex-col gap-4">
+    <section id="homepage-solar-cycle" className="rounded-2xl bg-[#0B141E] border border-[#162331] p-5 flex flex-col justify-between gap-4 h-full">
       {/* Header */}
       <div className="flex items-center justify-between pb-3 border-b border-[#162331]">
         <div className="flex items-center gap-2">
@@ -96,13 +59,13 @@ export const HomeSolarCycle: React.FC<HomeSolarCycleProps> = ({
               Solar Trajectory &amp; Day Length
             </h2>
             <p className="text-xs text-[#93A4B8]">
-              Astronomical solar position and daylight ephemeris
+              {location?.city ? `${location.city} (${lat.toFixed(2)}°N, ${lng.toFixed(2)}°E)` : 'Astronomical Solar Position & Ephemeris'}
             </p>
           </div>
         </div>
         <span className="text-[10px] font-mono text-[#FFC857] bg-[#FFC857]/10 px-2.5 py-0.5 rounded-full border border-[#FFC857]/30 flex items-center gap-1">
           <Clock className="w-3 h-3" />
-          {timeUntilNext}
+          {solarData.countdownFormatted} to {solarData.nextEventName}
         </span>
       </div>
 
@@ -152,28 +115,40 @@ export const HomeSolarCycle: React.FC<HomeSolarCycleProps> = ({
           </defs>
         </svg>
 
-        {/* Sunrise and Sunset Labels */}
+        {/* Sunrise, Solar Noon, and Sunset Labels */}
         <div className="w-full max-w-sm flex items-center justify-between text-xs px-2 mt-1">
           <div className="flex items-center gap-1.5">
             <Sunrise className="w-4 h-4 text-[#43C7F4]" />
             <div>
               <span className="text-[10px] text-[#93A4B8] block">Sunrise</span>
-              <strong className="text-[#F4F7FA] font-mono">{sunrise}</strong>
+              <strong className="text-[#F4F7FA] font-mono">{displaySunrise}</strong>
             </div>
           </div>
 
           <div className="text-center">
             <span className="text-[10px] text-[#93A4B8] block">Total Daylight</span>
-            <strong className="text-[#FFC857] font-mono text-xs">12h 42m</strong>
+            <strong className="text-[#FFC857] font-mono text-xs">{dayLengthStr}</strong>
           </div>
 
           <div className="flex items-center gap-1.5 text-right">
             <div>
               <span className="text-[10px] text-[#93A4B8] block">Sunset</span>
-              <strong className="text-[#F4F7FA] font-mono">{sunset}</strong>
+              <strong className="text-[#F4F7FA] font-mono">{displaySunset}</strong>
             </div>
             <Sunset className="w-4 h-4 text-[#FF9F43]" />
           </div>
+        </div>
+      </div>
+
+      {/* Real-time Solar Angle & Azimuth Metadata */}
+      <div className="flex items-center justify-between text-[11px] pt-2 border-t border-[#162331] text-[#93A4B8]">
+        <div className="flex items-center gap-1">
+          <Compass className="w-3.5 h-3.5 text-[#43C7F4]" />
+          <span>Azimuth: <strong className="text-[#F4F7FA] font-mono">{solarData.solarAzimuthDeg}°</strong></span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Sparkles className="w-3.5 h-3.5 text-[#FFC857]" />
+          <span>Elevation: <strong className="text-[#FFC857] font-mono">{solarData.solarElevationDeg > 0 ? `+${solarData.solarElevationDeg}°` : `${solarData.solarElevationDeg}°`}</strong></span>
         </div>
       </div>
     </section>

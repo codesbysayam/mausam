@@ -24,6 +24,9 @@ import { AskMausamDrawer } from './components/AskMausamDrawer';
 import { ReportDetailModal } from './components/ReportDetailModal';
 import { OFFICIAL_PUBLICATIONS, MeteorologicalPublication } from './data/reportsAndArticles';
 import { useLanguage } from './i18n/LanguageContext';
+import { useUserLocation } from './hooks/useUserLocation';
+import { LocationCenterModal } from './components/location/LocationCenterModal';
+import { LocationPrivacyModal } from './components/location/LocationPrivacyModal';
 import './styles/mausam.css';
 
 export type AppView = MainNavTab | FooterView;
@@ -80,9 +83,23 @@ export default function App() {
     getTabFromPathname(window.location.pathname)
   );
 
-  const [selectedLocation, setSelectedLocation] = useState<LocationRecord>(() =>
-    locationService.getSelectedLocation()
-  );
+  // Hook-driven real geolocation and location switching state
+  const {
+    selectedLocation,
+    locationSource,
+    isLocating,
+    locatePhase,
+    locateError,
+    accuracyMeters,
+    lastDetectedAt,
+    nearestStationInfo,
+    detectLocation,
+    selectLocation: handleSelectLocation,
+    clearSavedLocation,
+  } = useUserLocation();
+
+  const [isLocationCenterOpen, setIsLocationCenterOpen] = useState(false);
+  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
 
   const [weatherBundle, setWeatherBundle] = useState<WeatherDataBundle>({
     current: INITIAL_WEATHER,
@@ -144,12 +161,6 @@ export default function App() {
     loadWeatherData(selectedLocation);
   }, [selectedLocation, loadWeatherData]);
 
-  // Handle location change via header or search
-  const handleSelectLocation = (loc: LocationRecord) => {
-    locationService.setSelectedLocation(loc);
-    setSelectedLocation(loc);
-  };
-
   // Handle state click from India Map or State Table
   const handleStateSelect = (state: StateWeatherData) => {
     const matched =
@@ -189,6 +200,12 @@ export default function App() {
         activeTab={activeTab}
         onNavigateTab={(tab) => navigateToTab(tab as AppView)}
         activeAlertCount={weatherBundle.alerts?.length || 0}
+        onDetectLocation={detectLocation}
+        isLocating={isLocating}
+        locatePhase={locatePhase}
+        locationSource={locationSource}
+        onOpenLocationCenter={() => setIsLocationCenterOpen(true)}
+        onOpenPrivacyModal={() => setIsPrivacyModalOpen(true)}
       />
 
       {/* 2. Primary Navigation Bar (Desktop/Tablet) */}
@@ -222,6 +239,11 @@ export default function App() {
               onNavigateToTab={(tab) => navigateToTab(tab as AppView)}
               onSelectLocation={handleSelectLocation}
               onStateSelect={handleStateSelect}
+              onDetectLocation={detectLocation}
+              isLocating={isLocating}
+              locatePhase={locatePhase}
+              locationSource={locationSource}
+              onOpenLocationCenter={() => setIsLocationCenterOpen(true)}
             />
           )}
 
@@ -232,16 +254,17 @@ export default function App() {
               selectedLocation={selectedLocation}
               onRefresh={() => loadWeatherData(selectedLocation, true)}
               onSelectLocation={handleSelectLocation}
-              onChangeLocationClick={() => {
-                const desktopInput = document.getElementById('station-search-input-desktop');
-                const mobileInput = document.getElementById('station-search-input-mobile');
-                if (mobileInput && window.innerWidth < 768) {
-                  mobileInput.focus();
-                } else if (desktopInput) {
-                  desktopInput.focus();
-                }
-              }}
+              onChangeLocationClick={() => setIsLocationCenterOpen(true)}
               onNavigateToTab={(tab) => navigateToTab(tab as AppView)}
+              onDetectLocation={detectLocation}
+              isLocating={isLocating}
+              locatePhase={locatePhase}
+              locateError={locateError}
+              locationSource={locationSource}
+              accuracyMeters={accuracyMeters}
+              nearestStationInfo={nearestStationInfo}
+              onOpenLocationCenter={() => setIsLocationCenterOpen(true)}
+              onOpenPrivacyModal={() => setIsPrivacyModalOpen(true)}
             />
           )}
 
@@ -254,6 +277,11 @@ export default function App() {
               onSelectLocation={handleSelectLocation}
               onNavigateToTab={(tab) => navigateToTab(tab as AppView)}
               isLoadingWeather={isLoadingWeather}
+              onDetectLocation={detectLocation}
+              isLocating={isLocating}
+              locatePhase={locatePhase}
+              locationSource={locationSource}
+              onOpenLocationCenter={() => setIsLocationCenterOpen(true)}
             />
           )}
 
@@ -266,13 +294,29 @@ export default function App() {
           )}
 
           {/* RADAR & MAPS: Doppler Weather Radar & Satellite Imagery */}
-          {activeTab === 'radar' && <RadarPage />}
+          {activeTab === 'radar' && (
+            <RadarPage
+              selectedLocation={selectedLocation}
+              onDetectLocation={detectLocation}
+              isLocating={isLocating}
+              locatePhase={locatePhase}
+              locationSource={locationSource}
+              onOpenLocationCenter={() => setIsLocationCenterOpen(true)}
+            />
+          )}
 
           {/* AQI & AIR: National Air Quality Index & Aero-Allergen Pollen */}
           {activeTab === 'aqi' && (
             <AirQualityPage
               weatherBundle={weatherBundle}
               selectedLocation={selectedLocation}
+              onSelectLocation={handleSelectLocation}
+              onStateSelect={handleStateSelect}
+              onDetectLocation={detectLocation}
+              isLocating={isLocating}
+              locatePhase={locatePhase}
+              locationSource={locationSource}
+              onOpenLocationCenter={() => setIsLocationCenterOpen(true)}
             />
           )}
 
@@ -282,6 +326,11 @@ export default function App() {
               weatherBundle={weatherBundle}
               selectedLocation={selectedLocation}
               onNavigateToTab={(tab) => navigateToTab(tab as AppView)}
+              onDetectLocation={detectLocation}
+              isLocating={isLocating}
+              locatePhase={locatePhase}
+              locationSource={locationSource}
+              onOpenLocationCenter={() => setIsLocationCenterOpen(true)}
             />
           )}
 
@@ -463,6 +512,34 @@ export default function App() {
         publication={selectedFooterPublication}
         isOpen={Boolean(selectedFooterPublication)}
         onClose={() => setSelectedFooterPublication(null)}
+      />
+
+      {/* Centralized Location Switching & Geolocation Modal */}
+      <LocationCenterModal
+        isOpen={isLocationCenterOpen}
+        onClose={() => setIsLocationCenterOpen(false)}
+        selectedLocation={selectedLocation}
+        onSelectLocation={handleSelectLocation}
+        onDetectLocation={detectLocation}
+        isLocating={isLocating}
+        locatePhase={locatePhase}
+        locateError={locateError}
+        locationSource={locationSource}
+        accuracyMeters={accuracyMeters}
+        lastDetectedAt={lastDetectedAt}
+        nearestStationInfo={nearestStationInfo}
+        onOpenPrivacyModal={() => {
+          setIsLocationCenterOpen(false);
+          setIsPrivacyModalOpen(true);
+        }}
+        onClearSavedLocation={clearSavedLocation}
+      />
+
+      {/* Privacy Policy & Geolocation Transparency Modal */}
+      <LocationPrivacyModal
+        isOpen={isPrivacyModalOpen}
+        onClose={() => setIsPrivacyModalOpen(false)}
+        onClearSavedLocation={clearSavedLocation}
       />
 
       {/* Floating Ask MAUSAM AI Quick Trigger */}

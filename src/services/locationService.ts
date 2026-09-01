@@ -5,9 +5,25 @@ import { PRIMARY_ODISHA_LOCATION } from '../data/odishaLocations';
 class LocationService {
   private locations: LocationRecord[] = ALL_INDIA_LOCATIONS;
   private selectedLocationId: string = PRIMARY_ODISHA_LOCATION.id;
+  private dynamicLocations: Map<string, LocationRecord> = new Map();
+
+  constructor() {
+    // Check if there was a previously saved detected location
+    try {
+      const saved = localStorage.getItem('mausam_detected_location');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed?.record?.id) {
+          this.dynamicLocations.set(parsed.record.id, parsed.record);
+        }
+      }
+    } catch {
+      // Ignore
+    }
+  }
 
   getAllLocations(): LocationRecord[] {
-    return this.locations;
+    return [...Array.from(this.dynamicLocations.values()), ...this.locations];
   }
 
   getOdishaLocations(): LocationRecord[] {
@@ -22,9 +38,23 @@ class LocationService {
     return PRIMARY_ODISHA_LOCATION;
   }
 
+  registerDynamicLocation(loc: LocationRecord): void {
+    if (loc && loc.id) {
+      this.dynamicLocations.set(loc.id, loc);
+    }
+  }
+
   findLocationById(id: string): LocationRecord | undefined {
     if (!id) return undefined;
     const cleanId = id.toLowerCase().trim();
+
+    // 0. Check dynamic locations (GPS detected)
+    if (this.dynamicLocations.has(cleanId)) {
+      return this.dynamicLocations.get(cleanId);
+    }
+    for (const [k, v] of this.dynamicLocations.entries()) {
+      if (k.toLowerCase() === cleanId) return v;
+    }
 
     // 1. Direct ID match
     const direct = this.locations.find((l) => l.id.toLowerCase() === cleanId);
@@ -145,15 +175,38 @@ class LocationService {
     return this.getLocationById(this.selectedLocationId);
   }
 
-  setSelectedLocation(target: string | LocationRecord): LocationRecord {
+  getLocationSource(): 'DEVICE_GPS' | 'MANUAL_SEARCH' {
+    try {
+      const source = localStorage.getItem('mausam_location_source');
+      if (source === 'DEVICE_GPS') return 'DEVICE_GPS';
+    } catch {
+      // Ignore
+    }
+    return 'MANUAL_SEARCH';
+  }
+
+  setSelectedLocation(target: string | LocationRecord, source: 'DEVICE_GPS' | 'MANUAL_SEARCH' = 'MANUAL_SEARCH'): LocationRecord {
     const loc = typeof target === 'string' ? this.getLocationById(target) : target;
+    this.registerDynamicLocation(loc);
     this.selectedLocationId = loc.id;
     try {
       localStorage.setItem('mausam_selected_location_id', loc.id);
+      localStorage.setItem('mausam_location_source', source);
     } catch {
       // Ignore in restricted iframe
     }
     return loc;
+  }
+
+  clearSavedLocation(): void {
+    this.selectedLocationId = PRIMARY_ODISHA_LOCATION.id;
+    try {
+      localStorage.removeItem('mausam_selected_location_id');
+      localStorage.removeItem('mausam_location_source');
+      localStorage.removeItem('mausam_detected_location');
+    } catch {
+      // Ignore
+    }
   }
 
   /**

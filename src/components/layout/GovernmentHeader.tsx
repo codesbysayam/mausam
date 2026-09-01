@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { LocationRecord } from '../../types';
 import { locationService } from '../../services/locationService';
+import { LocatingPhase } from '../../services/geolocationService';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { LanguageSelector } from './LanguageSelector';
 import { MobileNavDrawer } from './MobileNavDrawer';
 import { MainNavTab } from './MainNavigation';
 import { FooterView } from './FooterNavigation';
+import { UseMyLocationButton } from '../location/UseMyLocationButton';
 
 interface GovernmentHeaderProps {
   selectedLocation: LocationRecord;
@@ -14,6 +16,12 @@ interface GovernmentHeaderProps {
   activeTab?: string;
   onNavigateTab?: (tab: MainNavTab | FooterView) => void;
   activeAlertCount?: number;
+  onDetectLocation?: (forceRefresh?: boolean) => Promise<any>;
+  isLocating?: boolean;
+  locatePhase?: LocatingPhase;
+  locationSource?: 'DEVICE_GPS' | 'MANUAL_SEARCH';
+  onOpenLocationCenter?: () => void;
+  onOpenPrivacyModal?: () => void;
 }
 
 export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
@@ -23,6 +31,12 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
   activeTab = 'home',
   onNavigateTab,
   activeAlertCount = 0,
+  onDetectLocation,
+  isLocating = false,
+  locatePhase = 'idle',
+  locationSource = 'MANUAL_SEARCH',
+  onOpenLocationCenter,
+  onOpenPrivacyModal,
 }) => {
   const { t, formatDate } = useLanguage();
   const [now, setNow] = useState<Date>(new Date());
@@ -61,6 +75,13 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
     document.documentElement.style.fontSize = '16px';
   };
 
+  const handleMyLocationClick = async () => {
+    if (onDetectLocation) {
+      await onDetectLocation(true);
+      setIsSearchOpen(false);
+    }
+  };
+
   return (
     <>
       <header className="w-full bg-[#071018] border-b border-[#162331] sticky top-0 z-40 select-none">
@@ -96,8 +117,8 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
             </div>
 
             {/* Center: Search / Observatory Station Finder (Desktop/Tablet) */}
-            <div className="relative hidden md:block flex-1 max-w-sm lg:max-w-md">
-              <div className="relative">
+            <div className="relative hidden md:flex items-center gap-2 flex-1 max-w-md lg:max-w-2xl">
+              <div className="relative flex-1">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#93A4B8] text-[18px]">
                   search
                 </span>
@@ -123,6 +144,41 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
                 )}
               </div>
 
+              {/* Prominent 📍 Use My Location Button (Desktop) */}
+              {onDetectLocation && (
+                <UseMyLocationButton
+                  onDetect={handleMyLocationClick}
+                  isLocating={isLocating}
+                  phase={locatePhase}
+                  locationSource={locationSource}
+                  variant="primary"
+                  className="h-10 shrink-0 font-semibold px-3 shadow-md"
+                />
+              )}
+
+              {/* Quick Location Badge & Switcher Button */}
+              {onOpenLocationCenter && (
+                <button
+                  type="button"
+                  id="header-location-center-btn"
+                  onClick={onOpenLocationCenter}
+                  className="hidden lg:flex items-center gap-1.5 h-10 px-3 bg-[#111C27] hover:bg-[#162331] border border-[#162331] hover:border-[#43C7F4]/50 rounded-xl text-xs text-[#D1DCE8] transition-colors shrink-0 group cursor-pointer"
+                  title="Manage and switch station locations"
+                >
+                  <span className="material-symbols-outlined text-[16px] text-[#43C7F4]">
+                    location_on
+                  </span>
+                  <span className="font-semibold text-white truncate max-w-[110px]">
+                    {selectedLocation.city}
+                  </span>
+                  {locationSource === 'DEVICE_GPS' && (
+                    <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-[#22C7A0]/20 text-[#22C7A0] border border-[#22C7A0]/40">
+                      GPS
+                    </span>
+                  )}
+                </button>
+              )}
+
               {/* Desktop Search Dropdown */}
               {isSearchOpen && (
                 <>
@@ -130,7 +186,20 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
                     className="fixed inset-0 z-40"
                     onClick={() => setIsSearchOpen(false)}
                   />
-                  <div className="absolute top-12 left-0 w-full bg-[#111C27] border border-[#162331] rounded-xl shadow-2xl z-50 max-h-80 overflow-y-auto scrollbar-thin">
+                  <div className="absolute top-12 left-0 right-0 bg-[#111C27] border border-[#162331] rounded-xl shadow-2xl z-50 max-h-80 overflow-y-auto scrollbar-thin">
+                    {/* GPS Quick Action at top of search dropdown */}
+                    {onDetectLocation && (
+                      <div className="p-2 border-b border-[#162331] bg-[#0A1118]">
+                        <UseMyLocationButton
+                          onDetect={handleMyLocationClick}
+                          isLocating={isLocating}
+                          phase={locatePhase}
+                          variant="compact"
+                          className="w-full justify-center"
+                        />
+                      </div>
+                    )}
+
                     <div className="p-2.5 border-b border-[#162331] text-[11px] text-[#93A4B8] font-semibold flex justify-between">
                       <span>{t('selectStation', 'SELECT LOCATION')}</span>
                       <span className="text-[#43C7F4] truncate max-w-[150px]">{selectedLocation.city}, {selectedLocation.state}</span>
@@ -281,31 +350,46 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
             </div>
           </div>
 
-          {/* Mobile Second Row Search */}
+          {/* Mobile Second Row Search & Location Trigger */}
           <div className="md:hidden pb-3 pt-1 relative">
-            <div className="relative w-full">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#93A4B8] text-[18px]">
-                search
-              </span>
-              <input
-                type="text"
-                id="station-search-input-mobile"
-                placeholder={t('searchPlaceholder', 'Search city, state or station...')}
-                value={searchQuery}
-                onFocus={() => setIsSearchOpen(true)}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full h-10 bg-[#111C27] border border-[#162331] rounded-xl text-[#F4F7FA] text-xs pl-9 pr-8 focus:outline-none focus:border-[#1499E8]"
-                aria-label={t('searchPlaceholder', 'Search city, state or station...')}
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-[#93A4B8] hover:text-white"
-                  aria-label="Clear search"
-                >
-                  <span className="material-symbols-outlined text-[16px]">close</span>
-                </button>
+            <div className="flex items-center gap-2 w-full">
+              <div className="relative flex-1">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#93A4B8] text-[18px]">
+                  search
+                </span>
+                <input
+                  type="text"
+                  id="station-search-input-mobile"
+                  placeholder={t('searchPlaceholder', 'Search city, state or station...')}
+                  value={searchQuery}
+                  onFocus={() => setIsSearchOpen(true)}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full h-10 bg-[#111C27] border border-[#162331] rounded-xl text-[#F4F7FA] text-xs pl-9 pr-8 focus:outline-none focus:border-[#1499E8]"
+                  aria-label={t('searchPlaceholder', 'Search city, state or station...')}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#93A4B8] hover:text-white"
+                    aria-label="Clear search"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">close</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Mobile Quick Use My Location Button */}
+              {onDetectLocation && (
+                <UseMyLocationButton
+                  onDetect={handleMyLocationClick}
+                  isLocating={isLocating}
+                  phase={locatePhase}
+                  locationSource={locationSource}
+                  compact
+                  variant="primary"
+                  className="h-10 shrink-0 px-2.5 shadow-sm"
+                />
               )}
             </div>
 
@@ -317,6 +401,19 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
                   onClick={() => setIsSearchOpen(false)}
                 />
                 <div className="absolute top-12 left-0 right-0 bg-[#111C27] border border-[#162331] rounded-xl shadow-2xl z-50 max-h-[60vh] overflow-y-auto">
+                  {/* GPS Quick Action in mobile search dropdown */}
+                  {onDetectLocation && (
+                    <div className="p-2 border-b border-[#162331] bg-[#0A1118]">
+                      <UseMyLocationButton
+                        onDetect={handleMyLocationClick}
+                        isLocating={isLocating}
+                        phase={locatePhase}
+                        variant="compact"
+                        className="w-full justify-center"
+                      />
+                    </div>
+                  )}
+
                   <div className="p-2.5 border-b border-[#162331] text-[11px] text-[#93A4B8] font-semibold flex justify-between bg-[#0A1118]">
                     <span>{t('selectStation', 'SELECT LOCATION')}</span>
                     <span className="text-[#43C7F4] truncate max-w-[140px]">{selectedLocation.city}</span>
@@ -397,6 +494,11 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
         fontSizeMultiplier={fontSizeMultiplier}
         onAdjustFontSize={handleAdjustFontSize}
         onResetFontSize={handleResetFontSize}
+        onDetectLocation={onDetectLocation}
+        isLocating={isLocating}
+        locatePhase={locatePhase}
+        locationSource={locationSource}
+        onOpenLocationCenter={onOpenLocationCenter}
       />
     </>
   );

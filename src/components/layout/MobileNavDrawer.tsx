@@ -3,7 +3,9 @@ import { useLanguage } from '../../i18n/LanguageContext';
 import { MainNavTab } from './MainNavigation';
 import { FooterView } from './FooterNavigation';
 import { LocationRecord } from '../../types';
+import { LocatingPhase } from '../../services/geolocationService';
 import { LanguageSelector } from './LanguageSelector';
+import { UseMyLocationButton } from '../location/UseMyLocationButton';
 
 interface MobileNavDrawerProps {
   isOpen: boolean;
@@ -16,6 +18,11 @@ interface MobileNavDrawerProps {
   fontSizeMultiplier: number;
   onAdjustFontSize: (delta: number) => void;
   onResetFontSize: () => void;
+  onDetectLocation?: (forceRefresh?: boolean) => Promise<any>;
+  isLocating?: boolean;
+  locatePhase?: LocatingPhase;
+  locationSource?: 'DEVICE_GPS' | 'MANUAL_SEARCH';
+  onOpenLocationCenter?: () => void;
 }
 
 interface MobileNavItem {
@@ -48,6 +55,11 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({
   fontSizeMultiplier,
   onAdjustFontSize,
   onResetFontSize,
+  onDetectLocation,
+  isLocating = false,
+  locatePhase = 'idle',
+  locationSource = 'MANUAL_SEARCH',
+  onOpenLocationCenter,
 }) => {
   const { t } = useLanguage();
   const drawerRef = useRef<HTMLDivElement>(null);
@@ -70,6 +82,12 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
+
+  const handleDetect = async () => {
+    if (onDetectLocation) {
+      await onDetectLocation(true);
+    }
+  };
 
   return (
     <div
@@ -120,25 +138,58 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({
                 location_on
               </span>
               <div className="truncate">
-                <span className="font-semibold text-white block truncate">
-                  {selectedLocation.city}, {selectedLocation.state}
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-semibold text-white truncate">
+                    {selectedLocation.city}, {selectedLocation.state}
+                  </span>
+                  {locationSource === 'DEVICE_GPS' && (
+                    <span className="text-[8px] font-mono font-bold px-1 py-0.2 rounded bg-[#22C7A0]/20 text-[#22C7A0] border border-[#22C7A0]/40">
+                      GPS
+                    </span>
+                  )}
+                </div>
                 <span className="text-[10px] text-[#8A94A6] block truncate">
                   {selectedLocation.imdStation || 'AWS Observatory'}
                 </span>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                onNavigateTab('weather');
-                onClose();
-              }}
-              className="text-[11px] text-[#4FA8E0] font-semibold hover:underline shrink-0 pl-2"
-            >
-              Change
-            </button>
+            {onOpenLocationCenter ? (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenLocationCenter();
+                }}
+                className="text-[11px] text-[#4FA8E0] font-semibold hover:underline shrink-0 pl-2 cursor-pointer"
+              >
+                Manage
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => {
+                  onNavigateTab('weather');
+                  onClose();
+                }}
+                className="text-[11px] text-[#4FA8E0] font-semibold hover:underline shrink-0 pl-2"
+              >
+                Change
+              </button>
+            )}
           </div>
+
+          {/* GPS Use My Location Quick Trigger */}
+          {onDetectLocation && (
+            <div className="p-3 border-b border-[#334155]/60 bg-[#0D1520]">
+              <UseMyLocationButton
+                onDetect={handleDetect}
+                isLocating={isLocating}
+                phase={locatePhase}
+                variant="compact"
+                className="w-full justify-center"
+              />
+            </div>
+          )}
 
           {/* Ask MAUSAM Quick Action Banner */}
           {onOpenAskMausam && (

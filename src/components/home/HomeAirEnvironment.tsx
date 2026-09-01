@@ -12,13 +12,32 @@ export const HomeAirEnvironment: React.FC<HomeAirEnvironmentProps> = ({
   weather,
   onNavigateToAqi,
 }) => {
-  const aqiVal = weather.aqi || 82;
-  const aqiInfo = getAqiMeaning(aqiVal);
-  const pm25 = weather.aqiPm25 || 38;
-  const pm10 = weather.aqiPm10 || 74;
-  const no2 = weather.no2 || 22;
-  const o3 = weather.o3 || 45;
-  const uv = weather.uvIndex || 5.4;
+  const safeAqi =
+    typeof weather.aqi === 'number' && !Number.isNaN(weather.aqi) && weather.aqi > 0
+      ? weather.aqi
+      : typeof weather.aqiIndex === 'number' && !Number.isNaN(weather.aqiIndex) && weather.aqiIndex > 0
+      ? weather.aqiIndex
+      : 82;
+
+  const aqiInfo = getAqiMeaning(safeAqi);
+  const pm25 =
+    typeof weather.aqiPm25 === 'number' && !Number.isNaN(weather.aqiPm25) && weather.aqiPm25 > 0
+      ? Math.round(weather.aqiPm25 * 10) / 10
+      : Math.round(safeAqi * 0.45 * 10) / 10;
+
+  const pm10 =
+    typeof weather.aqiPm10 === 'number' && !Number.isNaN(weather.aqiPm10) && weather.aqiPm10 > 0
+      ? Math.round(weather.aqiPm10 * 10) / 10
+      : Math.round(pm25 * 1.8 * 10) / 10;
+
+  const no2 = typeof weather.no2 === 'number' ? weather.no2 : 22.4;
+  const o3 = typeof weather.o3 === 'number' ? weather.o3 : 38.0;
+  const uv = typeof weather.uvIndex === 'number' ? weather.uvIndex : 5.4;
+  const pollenCount = weather.pollenCount ?? 2;
+  const pollenGrains = pollenCount * 12 + 6;
+
+  const uvRisk = uv >= 11 ? 'Extreme' : uv >= 8 ? 'Very High' : uv >= 6 ? 'High' : uv >= 3 ? 'Moderate' : 'Low';
+  const pollenRisk = pollenCount > 3 ? 'High' : pollenCount > 1 ? 'Moderate' : 'Low';
 
   return (
     <section id="homepage-air-environment" className="rounded-2xl bg-[#0B141E] border border-[#162331] p-5 flex flex-col gap-4">
@@ -72,7 +91,7 @@ export const HomeAirEnvironment: React.FC<HomeAirEnvironmentProps> = ({
 
           <div className="flex items-baseline gap-3 my-2">
             <span className="text-5xl font-light tracking-tight" style={{ color: aqiInfo.severityColor }}>
-              {aqiVal}
+              {safeAqi}
             </span>
             <div>
               <span className="text-sm font-bold text-[#F4F7FA] block">
@@ -158,14 +177,14 @@ export const HomeAirEnvironment: React.FC<HomeAirEnvironmentProps> = ({
             <div className="flex justify-between items-center text-[10px] font-bold text-[#93A4B8] uppercase">
               <span className="flex items-center gap-1">
                 <Flower2 className="w-3 h-3 text-[#22C7A0]" />
-                Pollen
+                Bio-Pollen
               </span>
-              <span className="text-[#22C7A0]">Low</span>
+              <span className={pollenRisk === 'High' ? 'text-[#EF5350]' : pollenRisk === 'Moderate' ? 'text-[#FFC857]' : 'text-[#22C7A0]'}>{pollenRisk}</span>
             </div>
             <div className="text-xl font-bold text-[#22C7A0] my-1">
-              18 <span className="text-[10px] font-normal text-[#93A4B8]">gr/m³</span>
+              {pollenGrains} <span className="text-[10px] font-normal text-[#93A4B8]">gr/m³</span>
             </div>
-            <span className="text-[10px] text-[#93A4B8] truncate">Grass &amp; Tree count</span>
+            <span className="text-[10px] text-[#93A4B8] truncate">Level {pollenCount}/5 • Poaceae</span>
           </div>
 
           {/* UV Radiation Index */}
@@ -178,9 +197,9 @@ export const HomeAirEnvironment: React.FC<HomeAirEnvironmentProps> = ({
               <span className="text-[#FFC857]">Index {uv}</span>
             </div>
             <div className="text-xl font-bold text-[#FFC857] my-1">
-              {uv >= 8 ? 'Very High' : uv >= 6 ? 'High' : 'Moderate'}
+              {uvRisk}
             </div>
-            <span className="text-[10px] text-[#93A4B8] truncate">SPF 30+ recommended</span>
+            <span className="text-[10px] text-[#93A4B8] truncate">{uv >= 6 ? 'SPF 30+ recommended' : 'Low skin hazard'}</span>
           </div>
         </div>
       </div>

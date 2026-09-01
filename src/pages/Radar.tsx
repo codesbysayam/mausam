@@ -1,9 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SectionHeader } from '../components/common/SectionHeader';
 import { StatusBadge } from '../components/common/StatusBadge';
 import { IndiaWeatherMap, StateWeatherData } from '../components/map/IndiaWeatherMap';
 import { WeatherMapMetric, MapLayerControl } from '../components/map/MapLayerControl';
 import { INDIA_WEATHER_DATA } from '../data/indiaWeatherData';
+import { LocationRecord } from '../types';
+import { LocatingPhase } from '../services/geolocationService';
+import { CurrentLocationBanner } from '../components/location/CurrentLocationBanner';
 import {
   DopplerRadarViewer,
   RADAR_STATIONS_DATA,
@@ -11,7 +14,23 @@ import {
   RadarStationInfo,
 } from '../components/radar/DopplerRadarViewer';
 
-export const RadarPage: React.FC = () => {
+export interface RadarPageProps {
+  selectedLocation?: LocationRecord;
+  onDetectLocation?: (forceRefresh?: boolean) => Promise<any>;
+  isLocating?: boolean;
+  locatePhase?: LocatingPhase;
+  locationSource?: 'DEVICE_GPS' | 'MANUAL_SEARCH';
+  onOpenLocationCenter?: () => void;
+}
+
+export const RadarPage: React.FC<RadarPageProps> = ({
+  selectedLocation,
+  onDetectLocation,
+  isLocating = false,
+  locatePhase = 'idle',
+  locationSource = 'MANUAL_SEARCH',
+  onOpenLocationCenter,
+}) => {
   const [selectedStation, setSelectedStation] = useState<RadarStationInfo>(
     RADAR_STATIONS_DATA.find((s) => s.code === 'DWR-MUM') || RADAR_STATIONS_DATA[0]
   );
@@ -21,6 +40,30 @@ export const RadarPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'synoptic-map' | 'station-scope'>('synoptic-map');
   const [stationFilter, setStationFilter] = useState<'all' | 'coastal' | 'inland'>('all');
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Sync radar station if selectedLocation changes
+  useEffect(() => {
+    if (!selectedLocation) return;
+    setSelectedState(selectedLocation.state);
+
+    // Try finding exact city or matching state station
+    const exactCity = RADAR_STATIONS_DATA.find(
+      (st) =>
+        st.name.toLowerCase().includes(selectedLocation.city.toLowerCase()) ||
+        st.surroundingPlaces?.some((p) => p.name.toLowerCase().includes(selectedLocation.city.toLowerCase()))
+    );
+    if (exactCity) {
+      setSelectedStation(exactCity);
+      return;
+    }
+
+    const stateMatch = RADAR_STATIONS_DATA.find(
+      (st) => st.state.toLowerCase() === selectedLocation.state.toLowerCase()
+    );
+    if (stateMatch) {
+      setSelectedStation(stateMatch);
+    }
+  }, [selectedLocation]);
 
   const filteredStations = RADAR_STATIONS_DATA.filter((s) => {
     const matchesSearch =
@@ -47,6 +90,17 @@ export const RadarPage: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-5 max-w-[1440px] mx-auto w-full">
+      {/* Real Geolocation & Active Radar Station Banner */}
+      {selectedLocation && (
+        <CurrentLocationBanner
+          location={selectedLocation}
+          source={locationSource}
+          isLocating={isLocating}
+          onDetectLocation={onDetectLocation ? () => onDetectLocation(true) : undefined}
+          onChangeLocationClick={onOpenLocationCenter}
+        />
+      )}
+
       {/* 1. Header & Primary Radar Controller */}
       <div className="mausam-card flex flex-col lg:flex-row lg:items-center justify-between gap-4">
         <div>

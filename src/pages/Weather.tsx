@@ -12,6 +12,8 @@ import { SevenDaySynopticForecast } from '../components/weather/SevenDaySynoptic
 import { SolarCycleCard } from '../components/weather/SolarCycleCard';
 import { PersonaWeatherHub } from '../components/weather/personas/PersonaWeatherHub';
 import { buildHumanWeatherStory } from '../services/humanWeatherEngine';
+import { LocatingPhase, GeolocationServiceError, NearestStationResult } from '../services/geolocationService';
+import { CurrentLocationBanner } from '../components/location/CurrentLocationBanner';
 import {
   Activity,
   Radio,
@@ -26,6 +28,15 @@ interface WeatherPageProps {
   onChangeLocationClick?: () => void;
   onNavigateToTab?: (tab: string) => void;
   onSelectLocation?: (location: LocationRecord) => void;
+  onDetectLocation?: (forceRefresh?: boolean) => Promise<any>;
+  isLocating?: boolean;
+  locatePhase?: LocatingPhase;
+  locateError?: GeolocationServiceError | null;
+  locationSource?: 'DEVICE_GPS' | 'MANUAL_SEARCH';
+  accuracyMeters?: number | null;
+  nearestStationInfo?: NearestStationResult | null;
+  onOpenLocationCenter?: () => void;
+  onOpenPrivacyModal?: () => void;
 }
 
 export const WeatherPage: React.FC<WeatherPageProps> = ({
@@ -35,6 +46,15 @@ export const WeatherPage: React.FC<WeatherPageProps> = ({
   onChangeLocationClick,
   onNavigateToTab,
   onSelectLocation,
+  onDetectLocation,
+  isLocating = false,
+  locatePhase = 'idle',
+  locateError = null,
+  locationSource = 'MANUAL_SEARCH',
+  accuracyMeters = null,
+  nearestStationInfo = null,
+  onOpenLocationCenter,
+  onOpenPrivacyModal,
 }) => {
   const { t } = useLanguage();
   const { current, hourly = [], daily = [], alerts = [], lastFetchedAt, isLive = true } = weatherBundle;
@@ -89,6 +109,16 @@ export const WeatherPage: React.FC<WeatherPageProps> = ({
 
   return (
     <div id="weather-comprehensive-view-container" className="flex flex-col gap-6 w-full pb-12">
+      {/* Real Geolocation & Active Station Banner */}
+      <CurrentLocationBanner
+        location={selectedLocation}
+        source={locationSource}
+        isLocating={isLocating}
+        onDetectLocation={onDetectLocation ? () => onDetectLocation(true) : undefined}
+        onChangeLocationClick={onOpenLocationCenter || onChangeLocationClick}
+        onOpenPrivacyModal={onOpenPrivacyModal}
+      />
+
       {/* =========================================================================
           1. DYNAMIC OBSERVATION HEADER
       ========================================================================= */}

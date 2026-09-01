@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { WeatherDataBundle } from '../services/weatherService';
 import { LocationRecord } from '../types';
+import { LocatingPhase } from '../services/geolocationService';
+import { CurrentLocationBanner } from '../components/location/CurrentLocationBanner';
 import {
   NWPModelType,
   NWP_MODELS,
@@ -36,6 +38,11 @@ interface ForecastPageProps {
   onSelectLocation?: (loc: LocationRecord) => void;
   onNavigateToTab?: (tab: string) => void;
   isLoadingWeather?: boolean;
+  onDetectLocation?: (forceRefresh?: boolean) => Promise<any>;
+  isLocating?: boolean;
+  locatePhase?: LocatingPhase;
+  locationSource?: 'DEVICE_GPS' | 'MANUAL_SEARCH';
+  onOpenLocationCenter?: () => void;
 }
 
 export const ForecastPage: React.FC<ForecastPageProps> = ({
@@ -45,6 +52,11 @@ export const ForecastPage: React.FC<ForecastPageProps> = ({
   onSelectLocation,
   onNavigateToTab,
   isLoadingWeather = false,
+  onDetectLocation,
+  isLocating = false,
+  locatePhase = 'idle',
+  locationSource = 'MANUAL_SEARCH',
+  onOpenLocationCenter,
 }) => {
   const [modelType, setModelType] = useState<NWPModelType>('WRF');
   const [exportNotification, setExportNotification] = useState<string | null>(null);
@@ -131,6 +143,15 @@ export const ForecastPage: React.FC<ForecastPageProps> = ({
 
   return (
     <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto pb-12">
+      {/* Real Geolocation & Active Station Banner */}
+      <CurrentLocationBanner
+        location={selectedLocation}
+        source={locationSource}
+        isLocating={isLocating}
+        onDetectLocation={onDetectLocation ? () => onDetectLocation(true) : undefined}
+        onChangeLocationClick={onOpenLocationCenter}
+      />
+
       {/* 1. MODEL SELECTION & EXPORT TOOLBAR */}
       <ForecastControlHeader
         selectedLocation={selectedLocation}

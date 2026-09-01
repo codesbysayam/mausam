@@ -5,6 +5,7 @@ import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI } from '@google/genai';
 import { imdRouter } from './server/routes/imdRoutes';
 import { authoritativeRouter } from './server/routes/authoritativeRoutes';
+import { realMausamRouter } from './server/routes/realMausamRoutes';
 import {
   buildMausamSystemInstruction,
   generateMausamGroundedFallback,
@@ -96,6 +97,9 @@ async function startServer() {
 
   // Official IMD Data Connector Routes
   app.use('/api/imd', imdRouter);
+
+  // Real Location-Aware Endpoints (Solar, AQI, Doppler Radar, Station Telemetry, Hourly, Daily, Unified Bundle)
+  app.use('/api', realMausamRouter);
 
   // Open Data API endpoints (Alias routes matching OpenAPI specification)
   app.get('/api/weather/current', async (req, res) => {
