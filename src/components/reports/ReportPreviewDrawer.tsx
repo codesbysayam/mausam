@@ -170,8 +170,8 @@ export const ReportPreviewDrawer: React.FC<ReportPreviewDrawerProps> = ({
               <tr>
                 <td class="label">Category:</td>
                 <td>${publication.category}</td>
-                <td class="label">Archive Size:</td>
-                <td>${publication.size}</td>
+                <td class="label">Status:</td>
+                <td>Verified Institutional Monograph</td>
               </tr>
             </table>
 
@@ -213,7 +213,7 @@ export const ReportPreviewDrawer: React.FC<ReportPreviewDrawerProps> = ({
 
             <div class="signature-block">
               <div>
-                <div class="official-stamp">MAUSAM OFFICIAL ARCHIVE VERIFIED</div>
+                <div class="official-stamp">MAUSAM OFFICIAL PUBLICATION VERIFIED</div>
                 <div style="margin-top: 4px; color: #555;">Document Digitally Signed &amp; Authenticated</div>
               </div>
               <div style="text-align: right;">
@@ -444,12 +444,12 @@ export const ReportPreviewDrawer: React.FC<ReportPreviewDrawerProps> = ({
               </div>
             </div>
 
-            <div className="flex sm:flex-col sm:items-end gap-3 text-xs">
+            <div className="flex sm:flex-col sm:items-end gap-1.5 text-xs">
               <span className="text-[#94A3B8]">
                 Date: <strong className="text-white">{publication.date}</strong>
               </span>
-              <span className="text-[#94A3B8]">
-                Archive Size: <strong className="text-[#38BDF8]">{publication.size}</strong>
+              <span className="text-[#38BDF8] font-mono text-[11px]">
+                {publication.documentNumber}
               </span>
             </div>
           </div>

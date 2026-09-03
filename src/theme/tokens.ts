@@ -13,74 +13,77 @@ export const MAUSAM_BRAND = {
 export const tokens = {
   colors: {
     // 1. Core Brand Colors
-    primary: '#1499E8', // MAUSAM Blue
-    primaryDark: '#0C78BA',
-    primaryLight: '#43C7F4', // Cyan
-    teal: '#22C7A0', // Teal
+    primary: '#0B3D91', // Deep Government Blue
+    primaryDark: '#062A63',
+    primaryLight: '#E3F2FD', // Ice/Sky Blue
+    secondary: '#1565C0', // Royal Blue
 
-    // 2. Warm Highlights & Signals
-    warm: '#FFC857',
-    warning: '#FF9F43',
-    severe: '#EF5350',
+    // 2. Weather Severity Colors
+    severity: {
+      normal: '#008000', // Green - Normal / No Warning
+      watch: '#FFFF00',  // Yellow - Watch
+      alert: '#FFA500',  // Orange - Alert
+      warning: '#FF0000',// Red - Warning
+    },
 
     // 3. Atmospheric States
     weather: {
-      clear: '#FFC857',
-      sunny: '#FFC857',
-      cloudy: '#93A4B8',
-      rain: '#1499E8',
-      rainy: '#1499E8',
-      storm: '#43C7F4',
-      snow: '#DCEEFB',
-      fog: '#93A4B8',
-      mist: '#93A4B8',
-      heat: '#EF5350',
-      cold: '#43C7F4',
-      duststorm: '#FF9F43',
-      unknown: '#93A4B8',
+      clear: '#FFA500',
+      sunny: '#FFA500',
+      cloudy: '#607D8B',
+      rain: '#1565C0',
+      rainy: '#1565C0',
+      storm: '#0B3D91',
+      snow: '#E3F2FD',
+      fog: '#607D8B',
+      mist: '#607D8B',
+      heat: '#FF0000',
+      cold: '#1565C0',
+      duststorm: '#FFA500',
+      unknown: '#607D8B',
     },
 
     // 4. Semantic Status System
     status: {
-      good: '#22C7A0',     // Normal / Good AQI / Routine (Green)
-      warning: '#FFC857',  // Watch / Moderate / Yellow
-      prepare: '#FF9F43',  // Alert / Poor AQI / Orange
-      danger: '#EF5350',   // Severe / Red Alert / Action Required
-      info: '#1499E8',     // Advisory / Blue
+      good: '#008000',     // Normal / Good AQI / Routine (Green)
+      warning: '#FFFF00',  // Watch / Moderate / Yellow
+      prepare: '#FFA500',  // Alert / Poor AQI / Orange
+      danger: '#FF0000',   // Warning / Red Alert / Action Required
+      info: '#1565C0',     // Advisory / Royal Blue
     },
 
-    // 5. Sophisticated Surfaces
+    // 5. Sophisticated Government Dark Surfaces
     dark: {
-      background: '#071018',
-      backgroundAlt: '#0A1118',
-      surface: '#111C27',
-      surfaceSecondary: '#162331',
-      surfaceHover: '#1C2C3E',
-      textPrimary: '#F4F7FA',
-      textSecondary: '#93A4B8',
-      textMuted: '#62758D',
-      border: 'rgba(147, 164, 184, 0.12)',
-      borderSubtle: 'rgba(147, 164, 184, 0.08)',
-      borderHover: 'rgba(20, 153, 232, 0.4)',
+      background: '#071A2D',
+      backgroundAlt: '#0B2239',
+      surface: '#0B2239',
+      surfaceSecondary: '#102D47',
+      surfaceHover: '#153658',
+      textPrimary: '#FFFFFF',
+      textSecondary: '#D7DEE8',
+      textMuted: '#B8C7D9',
+      border: '#1D4E73',
+      borderSubtle: 'rgba(29, 78, 115, 0.4)',
+      borderHover: '#1565C0',
     },
 
-    // 6. Light Surfaces (if toggled)
+    // 6. Light Surfaces (Government Palette)
     light: {
-      background: '#F4F7FA',
+      background: '#F5F9FC',
       surface: '#FFFFFF',
-      surfaceRaised: '#E8EEF5',
-      textPrimary: '#071018',
-      textSecondary: '#4A5D78',
-      textMuted: '#8092A8',
-      border: '#DDE4ED',
+      surfaceRaised: '#EEF4F9',
+      textPrimary: '#172B4D',
+      textSecondary: '#607D8B',
+      textMuted: '#8A94A6',
+      border: '#D9E2EC',
     },
 
     // 7. Atmospheric Gradients
     gradients: {
-      daySky: 'linear-gradient(135deg, rgba(20, 153, 232, 0.15) 0%, rgba(67, 199, 244, 0.05) 100%)',
-      sunset: 'linear-gradient(135deg, rgba(255, 159, 67, 0.18) 0%, rgba(255, 200, 87, 0.06) 100%)',
-      night: 'linear-gradient(135deg, #111C27 0%, #071018 100%)',
-      storm: 'linear-gradient(135deg, rgba(239, 83, 80, 0.15) 0%, #111C27 100%)',
+      daySky: 'linear-gradient(135deg, rgba(21, 101, 192, 0.15) 0%, rgba(227, 242, 253, 0.05) 100%)',
+      sunset: 'linear-gradient(135deg, rgba(255, 165, 0, 0.18) 0%, rgba(255, 255, 0, 0.06) 100%)',
+      night: 'linear-gradient(135deg, #0B2239 0%, #071A2D 100%)',
+      storm: 'linear-gradient(135deg, rgba(255, 0, 0, 0.15) 0%, #0B2239 100%)',
     },
   },
 

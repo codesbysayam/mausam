@@ -38,8 +38,8 @@ export const HazardCategoryButtons: React.FC<HazardCategoryButtonsProps> = ({
         onClick={() => onSelectHazard('all')}
         className={`px-3 py-1.5 rounded-full text-xs font-semibold shrink-0 flex items-center gap-1.5 transition-all cursor-pointer border ${
           selectedHazard === 'all'
-            ? 'bg-[#0B72B9] text-white border-[#4FA8E0] shadow-sm'
-            : 'bg-[#1E2733] text-[#DCE3EB] hover:bg-[#2A3749] border-[#314255]'
+            ? 'bg-[#1565C0] text-white border-[#E3F2FD] shadow-sm'
+            : 'bg-[#0B2239] text-[#D7DEE8] hover:bg-[#102D47] border-[#1D4E73]'
         }`}
       >
         <span className="material-symbols-outlined text-[15px]">apps</span>
@@ -48,7 +48,7 @@ export const HazardCategoryButtons: React.FC<HazardCategoryButtonsProps> = ({
           className={`px-1.5 py-0.2 rounded-full text-[10px] font-mono ${
             selectedHazard === 'all'
               ? 'bg-white/20 text-white'
-              : 'bg-[#151D26] text-[#8A94A6]'
+              : 'bg-[#071A2D] text-[#B8C7D9]'
           }`}
         >
           {warnings.length}
@@ -70,8 +70,8 @@ export const HazardCategoryButtons: React.FC<HazardCategoryButtonsProps> = ({
             onClick={() => onSelectHazard(isActive ? 'all' : hazard.id)}
             className={`px-3 py-1.5 rounded-full text-xs font-semibold shrink-0 flex items-center gap-1.5 transition-all cursor-pointer border ${
               isActive
-                ? 'bg-[#0B72B9] text-white border-[#4FA8E0] shadow-sm'
-                : 'bg-[#1E2733] text-[#DCE3EB] hover:bg-[#2A3749] border-[#314255]'
+                ? 'bg-[#1565C0] text-white border-[#E3F2FD] shadow-sm'
+                : 'bg-[#0B2239] text-[#D7DEE8] hover:bg-[#102D47] border-[#1D4E73]'
             }`}
           >
             <span className="material-symbols-outlined text-[15px]">
@@ -84,8 +84,8 @@ export const HazardCategoryButtons: React.FC<HazardCategoryButtonsProps> = ({
                   isActive
                     ? 'bg-white/20 text-white'
                     : count >= 2
-                    ? 'bg-[#E74C3C]/30 text-[#FF7675] border border-[#E74C3C]/40'
-                    : 'bg-[#151D26] text-[#8A94A6]'
+                    ? 'bg-[#FF0000]/30 text-[#FF4D4D] border border-[#FF0000]/40'
+                    : 'bg-[#071A2D] text-[#B8C7D9]'
                 }`}
               >
                 {count}

@@ -90,7 +90,7 @@ export const ReportsHero: React.FC<ReportsHeroProps> = ({ publications }) => {
             </span>
             <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-mono text-[#94A3B8]">
               <span className="w-1.5 h-1.5 rounded-full bg-[#2ECC71]" />
-              Open Data Archive
+              Open Data Repository
             </span>
           </div>
 
@@ -126,7 +126,7 @@ export const ReportsHero: React.FC<ReportsHeroProps> = ({ publications }) => {
               Publication Intelligence
             </span>
             <span className="text-[10px] font-mono text-[#2ECC71] bg-[#2ECC71]/10 px-2 py-0.5 rounded border border-[#2ECC71]/30 font-bold">
-              LIVE ARCHIVE
+              OFFICIAL REGISTRY
             </span>
           </div>
 

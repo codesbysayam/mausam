@@ -98,11 +98,6 @@ export const FeaturedReportCard: React.FC<FeaturedReportCardProps> = ({
             </div>
 
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#091119] border border-[#1E2E40]">
-              <Layers className="w-3.5 h-3.5 text-[#2ECC71]" />
-              <span>{publication.size}</span>
-            </div>
-
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#091119] border border-[#1E2E40]">
               <BarChart2 className="w-3.5 h-3.5 text-[#818CF8]" />
               <span>{publication.category}</span>
             </div>

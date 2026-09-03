@@ -6,6 +6,7 @@ import { LocationRecord } from '../../types';
 import { LocatingPhase } from '../../services/geolocationService';
 import { LanguageSelector } from './LanguageSelector';
 import { UseMyLocationButton } from '../location/UseMyLocationButton';
+import { triggerHaptic } from '../../utils/haptics';
 
 interface MobileNavDrawerProps {
   isOpen: boolean;
@@ -233,6 +234,7 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({
                   key={item.id}
                   type="button"
                   onClick={() => {
+                    triggerHaptic('light');
                     onNavigateTab(item.id);
                     onClose();
                   }}

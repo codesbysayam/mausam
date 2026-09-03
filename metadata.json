@@ -1,6 +1,6 @@
 {
-  "name": "Mausam Atmospheric Intelligence",
-  "description": "Simplified weather intelligence console with dynamic movable India radar map, IMD Mausam crowdsource citizen reporting, Meghdoot Agromet agricultural advisories, and forecasting tools.",
+  "name": "MAUSAM — Atmospheric Intelligence",
+  "description": "National meteorological observation, radar nowcasting, and environmental intelligence platform.",
   "requestFramePermissions": ["geolocation"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

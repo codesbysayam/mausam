@@ -11,8 +11,10 @@ import {
   DopplerRadarViewer,
   RADAR_STATIONS_DATA,
   RadarProduct,
+  RadarProductType,
   RadarStationInfo,
 } from '../components/radar/DopplerRadarViewer';
+import { RadarProductAlert, RadarProductAlertInfo } from '../components/radar/RadarProductAlert';
 
 export interface RadarPageProps {
   selectedLocation?: LocationRecord;
@@ -36,10 +38,29 @@ export const RadarPage: React.FC<RadarPageProps> = ({
   );
   const [selectedState, setSelectedState] = useState<string>('Odisha');
   const [activeMetric, setActiveMetric] = useState<WeatherMapMetric>('rainfall');
-  const [productType, setProductType] = useState<RadarProduct>('MAXZ');
-  const [viewMode, setViewMode] = useState<'synoptic-map' | 'station-scope'>('synoptic-map');
+  const [productType, setProductType] = useState<RadarProductType>('MAXZ');
+  const [viewMode, setViewMode] = useState<'synoptic-map' | 'station-scope'>('station-scope');
   const [stationFilter, setStationFilter] = useState<'all' | 'coastal' | 'inland'>('all');
   const [searchTerm, setSearchTerm] = useState('');
+
+  // Radar product error & fallback alert notification state (non-blocking)
+  const [radarAlert, setRadarAlert] = useState<RadarProductAlertInfo | null>(null);
+  const [refreshCounter, setRefreshCounter] = useState<number>(0);
+  const [isRetryingProduct, setIsRetryingProduct] = useState<boolean>(false);
+
+  const handleRetryProduct = () => {
+    setIsRetryingProduct(true);
+    setRefreshCounter((c) => c + 1);
+    setTimeout(() => setIsRetryingProduct(false), 900);
+  };
+
+  const handleDismissAlert = () => {
+    setRadarAlert(null);
+  };
+
+  const handleSwitchProduct = (newProduct: RadarProductType) => {
+    setProductType(newProduct);
+  };
 
   // Sync radar station if selectedLocation changes
   useEffect(() => {
@@ -106,14 +127,14 @@ export const RadarPage: React.FC<RadarPageProps> = ({
         <div>
           <div className="flex items-center gap-2 mb-1">
             <h2 className="text-white font-bold text-lg">
-              National Doppler Weather Radar (DWR) Imagery &amp; Synoptic Maps
+              National Weather Radar Imagery &amp; IMD Station Grid
             </h2>
             <span className="bg-[#0B72B9]/20 text-[#4FA8E0] text-[10px] font-bold px-2 py-0.5 rounded border border-[#0B72B9]/40">
-              IMD RADAR NETWORK
+              WEATHER RADAR &amp; IMD DIRECTORY
             </span>
           </div>
           <p className="text-xs text-[#8A94A6]">
-            Continuous dual-polarization atmospheric reflectivity (dBZ), radial hydrometeor velocity (m/s), and precipitation estimation (SRI).
+            Open composite Doppler reflectivity overlay (via RainViewer) mapped across India Meteorological Department (IMD) Doppler Weather Radar coordinates.
           </p>
         </div>
 
@@ -146,44 +167,26 @@ export const RadarPage: React.FC<RadarPageProps> = ({
             </button>
           </div>
 
-          {/* Product Selector for Radar */}
-          {viewMode === 'station-scope' && (
-            <div className="flex bg-[#1E2733] border border-[#334155] rounded p-1">
-              {(['MAXZ', 'PPZ', 'PPV', 'SRI'] as const).map((p) => (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => setProductType(p)}
-                  className={`px-2.5 py-1 text-xs font-bold rounded transition-all ${
-                    productType === p
-                      ? 'bg-[#0B72B9] text-white shadow'
-                      : 'text-[#8A94A6] hover:text-white'
-                  }`}
-                  title={
-                    p === 'MAXZ'
-                      ? 'MAXZ: Maximum Reflectivity (0 to 65+ dBZ)'
-                      : p === 'PPZ'
-                      ? 'PPZ: PPI Plan Position Indicator Reflectivity at 0.5° cut'
-                      : p === 'PPV'
-                      ? 'PPV: Doppler Radial Velocity (-32 to +32 m/s)'
-                      : 'SRI: Surface Rainfall Intensity (mm/hr)'
-                  }
-                >
-                  {p}
-                </button>
-              ))}
-            </div>
-          )}
-
-          <StatusBadge label="Doppler Network 100% Operational" variant="good" icon="check_circle" />
+          <StatusBadge label="Open Composite Radar Active" variant="info" icon="sensors" />
         </div>
       </div>
+
+      {/* Radar Product Fetch Failure / Offline Alert Banner (Non-blocking: map & controls remain fully functional) */}
+      {radarAlert && (
+        <RadarProductAlert
+          alert={radarAlert}
+          onDismiss={handleDismissAlert}
+          onRetry={handleRetryProduct}
+          onSwitchProduct={handleSwitchProduct}
+          isRetrying={isRetryingProduct}
+        />
+      )}
 
       {/* 2. Main Radar Imagery & Station Selector Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
         {/* Left 2 Cols: Active Synoptic Meteorological Map or Doppler Radar Scope */}
         <div className="lg:col-span-2 flex flex-col gap-4">
-          {viewMode === 'synoptic-map' ? (
+          <div className={viewMode === 'synoptic-map' ? 'block' : 'hidden'}>
             <IndiaWeatherMap
               data={INDIA_WEATHER_DATA}
               metric={activeMetric}
@@ -191,51 +194,59 @@ export const RadarPage: React.FC<RadarPageProps> = ({
               selectedState={selectedState}
               onStateSelect={handleStateSelect}
             />
-          ) : (
+          </div>
+          <div className={viewMode === 'station-scope' ? 'block' : 'hidden'}>
             <DopplerRadarViewer
               selectedStation={selectedStation}
               productType={productType}
               onProductChange={setProductType}
               onSelectStation={setSelectedStation}
+              onProductFetchStatus={setRadarAlert}
+              refreshTrigger={refreshCounter}
             />
-          )}
+          </div>
 
-          {/* Real-time Storm Cell & Severe Weather Diagnostics */}
+          {/* Genuine IMD Radar Station Technical Specifications */}
           <div className="mausam-card">
             <div className="flex justify-between items-center pb-2.5 border-b border-[#334155] mb-3">
               <h3 className="text-white font-bold text-xs uppercase tracking-wider flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[#4FA8E0] text-[16px]">thunderstorm</span>
-                Live Hydrometeor &amp; Severe Storm Cell Diagnostics ({selectedStation.code} • {selectedStation.state})
+                <span className="material-symbols-outlined text-[#4FA8E0] text-[16px]">sensors</span>
+                Station Technical Specifications &amp; Radar Parameters ({selectedStation.name} • {selectedStation.code})
               </h3>
-              <span className="text-[10px] text-[#2ECC71] font-mono bg-[#2ECC71]/15 px-2 py-0.5 rounded border border-[#2ECC71]/30">
-                SCIT Algorithmic Tracking Active
+              <span className="text-[10px] text-[#4FA8E0] font-mono bg-[#0B72B9]/15 px-2 py-0.5 rounded border border-[#0B72B9]/30">
+                {selectedStation.band} Station Hardware
               </span>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
               <div className="bg-[#1E2733] p-3 rounded-lg border border-[#334155]">
-                <span className="text-[10px] text-[#8A94A6] block mb-0.5">Peak Reflectivity</span>
-                <span className="text-[#FF8C42] font-bold text-sm font-mono">56.4 dBZ</span>
-                <span className="text-[10px] text-[#8A94A6] block mt-0.5">Severe Convective Core</span>
+                <span className="text-[10px] text-[#8A94A6] block mb-0.5">Station Coordinates</span>
+                <span className="text-white font-bold text-sm font-mono">{selectedStation.lat.toFixed(4)}°N, {selectedStation.lng.toFixed(4)}°E</span>
+                <span className="text-[10px] text-[#8A94A6] block mt-0.5">Geodesic Origin</span>
               </div>
 
               <div className="bg-[#1E2733] p-3 rounded-lg border border-[#334155]">
-                <span className="text-[10px] text-[#8A94A6] block mb-0.5">Max Radial Velocity</span>
-                <span className="text-[#4FA8E0] font-bold text-sm font-mono">±24.5 m/s</span>
-                <span className="text-[10px] text-[#8A94A6] block mt-0.5">Inbound/Outbound Dipole</span>
+                <span className="text-[10px] text-[#8A94A6] block mb-0.5">Transmitter Band</span>
+                <span className="text-[#4FA8E0] font-bold text-sm font-mono">{selectedStation.band}</span>
+                <span className="text-[10px] text-[#8A94A6] block mt-0.5">{selectedStation.frequencyGhz ? `${selectedStation.frequencyGhz} GHz Carrier` : 'Dual Polarization'}</span>
               </div>
 
               <div className="bg-[#1E2733] p-3 rounded-lg border border-[#334155]">
-                <span className="text-[10px] text-[#8A94A6] block mb-0.5">Est. Peak Rain Rate</span>
-                <span className="text-[#2ECC71] font-bold text-sm font-mono">52.0 mm/hr</span>
-                <span className="text-[10px] text-[#8A94A6] block mt-0.5">Torrential Downpour</span>
+                <span className="text-[10px] text-[#8A94A6] block mb-0.5">Antenna Elevation</span>
+                <span className="text-[#2ECC71] font-bold text-sm font-mono">{selectedStation.elevationMeters}m ASL</span>
+                <span className="text-[10px] text-[#8A94A6] block mt-0.5">Tower Platform Height</span>
               </div>
 
               <div className="bg-[#1E2733] p-3 rounded-lg border border-[#334155]">
-                <span className="text-[10px] text-[#8A94A6] block mb-0.5">Max Echo Top (ET)</span>
-                <span className="text-white font-bold text-sm font-mono">14.8 km ASL</span>
-                <span className="text-[10px] text-[#8A94A6] block mt-0.5">Tropopause Penetration</span>
+                <span className="text-[10px] text-[#8A94A6] block mb-0.5">Surveillance Radius</span>
+                <span className="text-[#FF8C42] font-bold text-sm font-mono">{selectedStation.range}</span>
+                <span className="text-[10px] text-[#8A94A6] block mt-0.5">Footprint Perimeter</span>
               </div>
+            </div>
+
+            <div className="mt-2.5 pt-2 border-t border-[#334155]/60 text-[11px] text-[#8A94A6] flex items-center justify-between">
+              <span>Radar reflectivity overlay: <strong>RainViewer open composite</strong></span>
+              <span>Station metadata: <strong>IMD Doppler Radar Network Reference</strong></span>
             </div>
           </div>
         </div>
@@ -304,6 +315,7 @@ export const RadarPage: React.FC<RadarPageProps> = ({
                     key={station.code}
                     onClick={() => {
                       setSelectedStation(station);
+                      setViewMode('station-scope');
                     }}
                     className={`p-2.5 rounded-lg border cursor-pointer transition-all ${
                       selectedStation.code === station.code

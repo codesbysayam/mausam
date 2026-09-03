@@ -12,14 +12,19 @@ interface CropStageTimelineProps {
   selectedCrop: CropType;
   selectedStage: PhenologicalStage;
   onStageSelect: (stage: PhenologicalStage) => void;
+  sowingDate?: Date;
 }
 
 export const CropStageTimeline: React.FC<CropStageTimelineProps> = ({
   selectedCrop,
   selectedStage,
   onStageSelect,
+  sowingDate,
 }) => {
   const currentIdx = CROP_STAGES.indexOf(selectedStage);
+
+  // Approximate days per stage based on standard 120-day crop cycle
+  const stageDurations = [7, 14, 21, 28, 21, 14, 10, 5]; // Cumulative days offset
 
   return (
     <section
@@ -49,6 +54,17 @@ export const CropStageTimeline: React.FC<CropStageTimelineProps> = ({
         {CROP_STAGES.map((stage, idx) => {
           const isSelected = stage === selectedStage;
           const isPassed = idx < currentIdx;
+
+          // Estimate date for stage if sowingDate is provided
+          let stageEstimatedDate = '';
+          if (sowingDate) {
+            let daysOffset = 0;
+            for (let i = 0; i < idx; i++) {
+              daysOffset += stageDurations[i] || 14;
+            }
+            const dateObj = new Date(sowingDate.getTime() + daysOffset * 24 * 60 * 60 * 1000);
+            stageEstimatedDate = dateObj.toLocaleDateString('en-IN', { day: 'numeric', month: 'short' });
+          }
 
           return (
             <button
@@ -94,7 +110,7 @@ export const CropStageTimeline: React.FC<CropStageTimelineProps> = ({
                   {stage}
                 </div>
                 <div className="text-[9px] font-mono text-[#64748B] mt-0.5">
-                  {idx === 0 ? 'Start Phase' : idx === 7 ? 'End Phase' : `Phase ${idx + 1}`}
+                  {stageEstimatedDate ? `Est: ${stageEstimatedDate}` : (idx === 0 ? 'Start Phase' : idx === 7 ? 'End Phase' : `Phase ${idx + 1}`)}
                 </div>
               </div>
             </button>

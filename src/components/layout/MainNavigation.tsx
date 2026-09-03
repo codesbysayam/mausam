@@ -1,6 +1,7 @@
 import React from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { TranslationDictionary } from '../../i18n/translations';
+import { triggerHaptic } from '../../utils/haptics';
 
 export type MainNavTab =
   | 'home'
@@ -45,7 +46,7 @@ export const MainNavigation: React.FC<MainNavigationProps> = ({
   const { t } = useLanguage();
 
   return (
-    <nav className="hidden md:block w-full bg-[#0A1118] border-b border-[#162331] select-none" aria-label="Primary Navigation">
+    <nav className="hidden md:block w-full bg-[#071A2D] border-b border-[#1D4E73] select-none" aria-label="Primary Navigation">
       <div className="max-w-[1440px] mx-auto px-4 lg:px-6">
         <div className="flex items-center space-x-1 lg:space-x-2 overflow-x-auto scrollbar-none py-1.5">
           {NAV_CONFIG.map((item) => {
@@ -58,28 +59,31 @@ export const MainNavigation: React.FC<MainNavigationProps> = ({
                 key={item.id}
                 id={`nav-tab-${item.id}`}
                 type="button"
-                onClick={() => onTabChange(item.id)}
+                onClick={() => {
+                  triggerHaptic('light');
+                  onTabChange(item.id);
+                }}
                 className={`flex items-center gap-2 h-10 px-3.5 rounded-lg text-xs font-semibold tracking-wide transition-all whitespace-nowrap cursor-pointer relative ${
                   isActive
-                    ? 'text-[#F4F7FA] bg-[#162331] shadow-xs'
-                    : 'text-[#93A4B8] hover:text-[#F4F7FA] hover:bg-[#111C27]'
+                    ? 'text-white bg-[#102D47] shadow-xs'
+                    : 'text-[#B8C7D9] hover:text-white hover:bg-[#0B2239]'
                 }`}
                 aria-current={isActive ? 'page' : undefined}
               >
-                <span className={`material-symbols-outlined text-[17px] ${isActive ? 'text-[#43C7F4]' : 'text-[#93A4B8]'}`}>
+                <span className={`material-symbols-outlined text-[17px] ${isActive ? 'text-[#E3F2FD]' : 'text-[#B8C7D9]'}`}>
                   {item.icon}
                 </span>
                 <span>{displayLabel}</span>
 
                 {badgeCount && badgeCount > 0 ? (
-                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-[#EF5350] text-white animate-pulse">
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-[#FF0000] text-white animate-pulse">
                     {badgeCount}
                   </span>
                 ) : null}
 
                 {/* Subtle active pill indicator */}
                 {isActive && (
-                  <span className="absolute bottom-0 left-3 right-3 h-[2px] bg-[#1499E8] rounded-full" />
+                  <span className="absolute bottom-0 left-3 right-3 h-[2px] bg-[#1565C0] rounded-full" />
                 )}
               </button>
             );

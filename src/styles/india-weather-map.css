@@ -5,12 +5,12 @@
   background:
     linear-gradient(
       145deg,
-      #0a0f1c 0%,
-      #0f1724 55%,
-      #111a27 100%
+      #071A2D 0%,
+      #0B2239 55%,
+      #102D47 100%
     );
 
-  border: 1px solid #1e2733;
+  border: 1px solid #1D4E73;
   border-radius: 14px;
 
   padding: 24px;
@@ -31,7 +31,7 @@
 }
 
 .india-weather-map__eyebrow {
-  color: #4fa8e0;
+  color: #E3F2FD;
 
   font-size: 12px;
   font-weight: 700;
@@ -60,7 +60,7 @@
 .india-weather-map__header p {
   margin: 7px 0 0;
 
-  color: #8a94a6;
+  color: #B8C7D9;
 
   font-family:
     "Noto Sans",
@@ -71,9 +71,9 @@
 }
 
 .india-weather-map__metric {
-  border: 1px solid #263342;
+  border: 1px solid #1D4E73;
 
-  background: #111a27;
+  background: #0B2239;
 
   border-radius: 8px;
 
@@ -87,7 +87,7 @@
 .india-weather-map__metric span {
   display: block;
 
-  color: #8a94a6;
+  color: #B8C7D9;
 
   font-size: 9px;
 
@@ -97,7 +97,7 @@
 .india-weather-map__metric strong {
   display: block;
 
-  color: #4fa8e0;
+  color: #E3F2FD;
 
   font-size: 12px;
 
@@ -117,12 +117,12 @@
   background:
     radial-gradient(
       circle at center,
-      rgba(79, 168, 224, 0.06),
+      rgba(21, 101, 192, 0.12),
       transparent 55%
     );
 
-  border-top: 1px solid #1e2733;
-  border-bottom: 1px solid #1e2733;
+  border-top: 1px solid #1D4E73;
+  border-bottom: 1px solid #1D4E73;
 }
 
 .india-map-wrapper {
@@ -143,9 +143,9 @@
 /* All India map paths */
 
 .india-map-svg path {
-  fill: #1e2733;
+  fill: #102D47;
 
-  stroke: #4a5568;
+  stroke: #1D4E73;
 
   stroke-width: 0.7;
 
@@ -158,9 +158,9 @@
 }
 
 .india-map-svg path:hover {
-  fill: #0b72b9;
+  fill: #0B3D91;
 
-  stroke: #4fa8e0;
+  stroke: #1565C0;
 
   stroke-width: 1.2;
 
@@ -170,7 +170,7 @@
 /* Selected state */
 
 .india-map-svg path.is-selected {
-  fill: #4fa8e0;
+  fill: #1565C0;
 
   stroke: #ffffff;
 
@@ -189,14 +189,14 @@
 
   padding: 14px 16px;
 
-  background: #0f141a;
+  background: #071A2D;
 
-  border: 1px solid #4fa8e0;
+  border: 1px solid #1565C0;
 
   border-radius: 8px;
 
   box-shadow:
-    0 10px 30px rgba(0, 0, 0, 0.35);
+    0 10px 30px rgba(0, 0, 0, 0.5);
 
   pointer-events: none;
 
@@ -212,7 +212,7 @@
 }
 
 .tooltip-city {
-  color: #8a94a6;
+  color: #B8C7D9;
 
   font-size: 11px;
 
@@ -220,7 +220,7 @@
 }
 
 .tooltip-value {
-  color: #4fa8e0;
+  color: #E3F2FD;
 
   font-size: 22px;
 
@@ -230,7 +230,7 @@
 }
 
 .tooltip-condition {
-  color: #c5ced9;
+  color: #D7DEE8;
 
   font-size: 12px;
 

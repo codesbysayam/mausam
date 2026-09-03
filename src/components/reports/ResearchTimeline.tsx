@@ -122,7 +122,7 @@ export const ResearchTimeline: React.FC<ResearchTimelineProps> = ({
                     {theme.label}
                   </span>
                   <span className="text-[10px] font-mono text-[#64748B]">
-                    {pub.size}
+                    {pub.date}
                   </span>
                 </div>
 

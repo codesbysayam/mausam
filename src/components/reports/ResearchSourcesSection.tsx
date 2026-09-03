@@ -73,7 +73,7 @@ export const ResearchSourcesSection: React.FC = () => {
 
         <div className="flex items-center gap-2 text-xs font-mono text-[#2ECC71] bg-[#2ECC71]/10 px-3 py-1 rounded-xl border border-[#2ECC71]/30">
           <ShieldCheck className="w-4 h-4" />
-          <span>Authenticated Open Data Archive</span>
+          <span>Authenticated National Repository</span>
         </div>
       </div>
 

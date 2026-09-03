@@ -61,6 +61,7 @@ export const ForecastPage: React.FC<ForecastPageProps> = ({
   onOpenLocationCenter,
 }) => {
   const [modelType, setModelType] = useState<NWPModelType>('WRF');
+  const [selectedForecastDate, setSelectedForecastDate] = useState<Date>(new Date());
   const [exportNotification, setExportNotification] = useState<string | null>(null);
   const [structuredForecast, setStructuredForecast] = useState<StructuredModelForecast | null>(null);
   const [isLoadingModel, setIsLoadingModel] = useState<boolean>(false);
@@ -208,6 +209,8 @@ export const ForecastPage: React.FC<ForecastPageProps> = ({
         onExportCSV={handleExportCSV}
         structuredForecast={structuredForecast}
         isLoadingModel={isLoadingModel}
+        selectedDate={selectedForecastDate}
+        onSelectDate={setSelectedForecastDate}
       />
 
       {/* CSV Export Success Notification */}

@@ -127,7 +127,7 @@ export function useUserLocation(
 
         return updated;
       } catch (err: any) {
-        console.warn('[useUserLocation] Geolocation error:', err);
+        console.debug('[useUserLocation] Geolocation info/status:', err);
         const geoError: GeolocationServiceError = err.code
           ? err
           : {

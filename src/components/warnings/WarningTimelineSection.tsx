@@ -62,11 +62,11 @@ export const WarningTimelineSection: React.FC<WarningTimelineSectionProps> = ({
     <section
       id="warning-lifecycle-timeline-section"
       aria-label="Warning Lifecycle Timeline"
-      className="bg-[#1E2733] border border-[#314255] rounded-md p-4 sm:p-6 shadow-md flex flex-col gap-4"
+      className="bg-[#0B2239] border border-[#1D4E73] rounded-md p-4 sm:p-6 shadow-md flex flex-col gap-4"
     >
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#314255] gap-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#1D4E73] gap-2">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded bg-[#151D26] border border-[#314255] flex items-center justify-center text-[#4FA8E0]">
+          <div className="w-8 h-8 rounded bg-[#071A2D] border border-[#1D4E73] flex items-center justify-center text-[#E3F2FD]">
             <span className="material-symbols-outlined text-[20px]">
               timelapse
             </span>
@@ -75,14 +75,14 @@ export const WarningTimelineSection: React.FC<WarningTimelineSectionProps> = ({
             <h3 className="text-sm sm:text-base font-bold text-white uppercase tracking-tight">
               Operational Warning Lifecycle &amp; Progression Timeline
             </h3>
-            <p className="text-[11px] text-[#8A94A6]">
+            <p className="text-[11px] text-[#B8C7D9]">
               Standard 5-stage meteorological alert progression from synoptic detection to expiration
             </p>
           </div>
         </div>
 
         {activeWarning && (
-          <span className="text-[11px] font-mono text-[#4FA8E0] bg-[#151D26] px-2.5 py-1 rounded border border-[#314255]">
+          <span className="text-[11px] font-mono text-[#E3F2FD] bg-[#071A2D] px-2.5 py-1 rounded border border-[#1D4E73]">
             Bulletin: {activeWarning.bulletinNo}
           </span>
         )}
@@ -99,10 +99,10 @@ export const WarningTimelineSection: React.FC<WarningTimelineSectionProps> = ({
               key={idx}
               className={`p-3 rounded-md border flex flex-col justify-between gap-2 relative transition-all ${
                 isCurrent
-                  ? 'bg-[#151D26] border-[#E74C3C] shadow-md ring-1 ring-[#E74C3C]/50'
+                  ? 'bg-[#071A2D] border-[#FF0000] shadow-md ring-1 ring-[#FF0000]/50'
                   : isCompleted
-                  ? 'bg-[#151D26]/80 border-[#2ECC71]/40'
-                  : 'bg-[#151D26]/50 border-[#314255]'
+                  ? 'bg-[#071A2D]/80 border-[#008000]/40'
+                  : 'bg-[#071A2D]/50 border-[#1D4E73]'
               }`}
             >
               {/* Top Node Indicator */}
@@ -110,10 +110,10 @@ export const WarningTimelineSection: React.FC<WarningTimelineSectionProps> = ({
                 <span
                   className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider font-mono ${
                     isCurrent
-                      ? 'bg-[#E74C3C] text-white'
+                      ? 'bg-[#FF0000] text-white'
                       : isCompleted
-                      ? 'bg-[#2ECC71]/20 text-[#2ECC71]'
-                      : 'bg-[#1E2733] text-[#8A94A6]'
+                      ? 'bg-[#008000]/20 text-[#008000]'
+                      : 'bg-[#0B2239] text-[#B8C7D9]'
                   }`}
                 >
                   {evt.time}
@@ -122,17 +122,17 @@ export const WarningTimelineSection: React.FC<WarningTimelineSectionProps> = ({
                 <span
                   className={`w-2.5 h-2.5 rounded-full ${
                     isCurrent
-                      ? 'bg-[#E74C3C] animate-ping'
+                      ? 'bg-[#FF0000] animate-ping'
                       : isCompleted
-                      ? 'bg-[#2ECC71]'
-                      : 'bg-[#314255]'
+                      ? 'bg-[#008000]'
+                      : 'bg-[#1D4E73]'
                   }`}
                 />
               </div>
 
               {/* Title & Stage */}
               <div>
-                <div className="text-[10px] font-bold text-[#8A94A6] uppercase tracking-wider">
+                <div className="text-[10px] font-bold text-[#B8C7D9] uppercase tracking-wider">
                   {evt.stage}
                 </div>
                 <div className="text-xs font-bold text-white mt-0.5 leading-snug">
@@ -141,7 +141,7 @@ export const WarningTimelineSection: React.FC<WarningTimelineSectionProps> = ({
               </div>
 
               {/* Description */}
-              <p className="text-[11px] text-[#DCE3EB] leading-relaxed line-clamp-3">
+              <p className="text-[11px] text-[#D7DEE8] leading-relaxed line-clamp-3">
                 {evt.desc}
               </p>
             </div>

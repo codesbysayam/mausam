@@ -35,6 +35,7 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<FilterCategory>('ALL');
   const [sortOption, setSortOption] = useState<SortOption>('NEWEST');
   const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [dateRange, setDateRange] = useState<[Date | null, Date | null]>([null, null]);
   const [selectedPublication, setSelectedPublication] = useState<MeteorologicalPublication | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
@@ -180,26 +181,42 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
           pub.keywords.some((k) => k.toLowerCase().includes('satellite') || k.toLowerCase().includes('isro'));
       }
 
-      return matchesSearch && matchesCategory;
+      // 3. Date Range Filter
+      let matchesDateRange = true;
+      if (dateRange[0] || dateRange[1]) {
+        const pubDate = new Date(pub.date);
+        if (!isNaN(pubDate.getTime())) {
+          if (dateRange[0]) {
+            const start = new Date(dateRange[0]);
+            start.setHours(0, 0, 0, 0);
+            if (pubDate < start) matchesDateRange = false;
+          }
+          if (dateRange[1]) {
+            const end = new Date(dateRange[1]);
+            end.setHours(23, 59, 59, 999);
+            if (pubDate > end) matchesDateRange = false;
+          }
+        }
+      }
+
+      return matchesSearch && matchesCategory && matchesDateRange;
     });
 
     // Sort order
     return [...filtered].sort((a, b) => {
-      if (sortOption === 'SIZE') {
-        const sizeA = parseFloat(a.size) || 0;
-        const sizeB = parseFloat(b.size) || 0;
-        return sizeB - sizeA;
+      if (sortOption === 'TITLE') {
+        return a.title.localeCompare(b.title);
       }
       if (sortOption === 'CATEGORY') {
         return a.category.localeCompare(b.category);
       }
       if (sortOption === 'OLDEST') {
-        return a.date.localeCompare(b.date);
+        return new Date(a.date).getTime() - new Date(b.date).getTime();
       }
       // NEWEST default
-      return b.date.localeCompare(a.date);
+      return new Date(b.date).getTime() - new Date(a.date).getTime();
     });
-  }, [allPublications, searchQuery, selectedCategory, sortOption, savedReportIds]);
+  }, [allPublications, searchQuery, selectedCategory, sortOption, savedReportIds, dateRange]);
 
   const handleOpenPublication = (pub: MeteorologicalPublication) => {
     setSelectedPublication(pub);
@@ -271,6 +288,8 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
           totalFilteredCount={filteredPublications.length}
           totalAvailableCount={allPublications.length}
           savedCount={savedReportIds.length}
+          dateRange={dateRange}
+          onDateRangeChange={setDateRange}
         />
 
         {/* Recently Viewed Strip */}

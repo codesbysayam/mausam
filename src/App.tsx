@@ -29,9 +29,12 @@ import { LocationCenterModal } from './components/location/LocationCenterModal';
 import { LocationPrivacyModal } from './components/location/LocationPrivacyModal';
 import { NetworkStatusBanner } from './components/common/NetworkStatusBanner';
 import { useNetworkStatus } from './hooks/useNetworkStatus';
+import { useSwipeGesture } from './hooks/useSwipeGesture';
 import './styles/mausam.css';
 
 export type AppView = MainNavTab | FooterView;
+
+const SWIPEABLE_TABS: MainNavTab[] = ['home', 'weather', 'forecast', 'warnings', 'radar', 'aqi', 'agromet', 'reports'];
 
 function getTabFromPathname(path: string): AppView {
   const cleanPath = path.toLowerCase().replace(/\/+$/, '');
@@ -195,6 +198,25 @@ export default function App() {
     isCoastal: selectedLocation.coastalStatus === 'coastal',
   };
 
+  const currentTabIdx = SWIPEABLE_TABS.indexOf(activeTab as MainNavTab);
+  const handleSwipeLeft = useCallback(() => {
+    if (currentTabIdx >= 0 && currentTabIdx < SWIPEABLE_TABS.length - 1) {
+      navigateToTab(SWIPEABLE_TABS[currentTabIdx + 1]);
+    }
+  }, [currentTabIdx, navigateToTab]);
+
+  const handleSwipeRight = useCallback(() => {
+    if (currentTabIdx > 0) {
+      navigateToTab(SWIPEABLE_TABS[currentTabIdx - 1]);
+    }
+  }, [currentTabIdx, navigateToTab]);
+
+  const swipeContainerRef = useSwipeGesture<HTMLElement>({
+    onSwipeLeft: handleSwipeLeft,
+    onSwipeRight: handleSwipeRight,
+    disabled: currentTabIdx === -1,
+  });
+
   return (
     <div className="mausam-app min-h-screen bg-[#0F141A] text-[#D7DEE8] flex flex-col font-sans w-full overflow-x-hidden">
       {/* Network Connectivity Status Listener Banner */}
@@ -232,7 +254,7 @@ export default function App() {
       />
 
       {/* 3. Main Body Content */}
-      <main id="main-content" className="relative flex-1 w-full min-w-0">
+      <main id="main-content" ref={swipeContainerRef} className="relative flex-1 w-full min-w-0">
         {/* Slim indeterminate progress bar while weather data is syncing */}
         {isLoadingWeather && (
           <div

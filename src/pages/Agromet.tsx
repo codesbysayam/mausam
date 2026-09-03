@@ -86,6 +86,7 @@ export const AgrometPage: React.FC<AgrometPageProps> = ({
 
   const [selectedCrop, setSelectedCrop] = useState<CropType>('Rice (Paddy)');
   const [selectedStage, setSelectedStage] = useState<PhenologicalStage>('Tillering');
+  const [sowingDate, setSowingDate] = useState<Date>(() => new Date(Date.now() - 42 * 24 * 60 * 60 * 1000));
 
   // Fetch / synthesize extended bulletin based on state & district
   const bulletin: ExtendedAgrometBulletin = useMemo(() => {
@@ -143,6 +144,8 @@ export const AgrometPage: React.FC<AgrometPageProps> = ({
         lastUpdatedStr={lastUpdatedStr}
         stationName={stationName}
         isLive={isLive}
+        sowingDate={sowingDate}
+        onSowingDateChange={setSowingDate}
       />
 
       {/* SECTION 2: FARM STATUS OVERVIEW (6 High-Impact Telemetry Cards) */}
@@ -183,6 +186,7 @@ export const AgrometPage: React.FC<AgrometPageProps> = ({
         selectedCrop={selectedCrop}
         selectedStage={selectedStage}
         onStageSelect={setSelectedStage}
+        sowingDate={sowingDate}
       />
 
       {/* SECTION 7: WEATHER-CROP RISK RADAR (7-Factor Diagnostic) */}

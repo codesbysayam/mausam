@@ -89,7 +89,7 @@ export const PublicationItem: React.FC<PublicationItemProps> = ({
               <Calendar className="w-3 h-3 text-[#38BDF8]" />
               <span>{publication.date}</span>
             </div>
-            <span>{publication.size}</span>
+            <span className="text-[#38BDF8]">{readingTime}</span>
           </div>
 
           <div className="flex items-center justify-between pt-1">
@@ -165,8 +165,6 @@ export const PublicationItem: React.FC<PublicationItemProps> = ({
             <span>Author / Directorate: <strong className="text-[#CBD5E1]">{publication.author}</strong></span>
             <span>•</span>
             <span>Issuing Authority: <strong className="text-[#CBD5E1]">{publication.issuingAuthority}</strong></span>
-            <span>•</span>
-            <span>Size: <strong className="text-[#CBD5E1]">{publication.size}</strong></span>
           </div>
         </div>
       </div>

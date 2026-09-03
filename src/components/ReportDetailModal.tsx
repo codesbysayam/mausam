@@ -154,8 +154,8 @@ export const ReportDetailModal: React.FC<ReportDetailModalProps> = ({
               <tr>
                 <td class="label">Category:</td>
                 <td>${publication.category}</td>
-                <td class="label">Archive Size:</td>
-                <td>${publication.size}</td>
+                <td class="label">Status:</td>
+                <td>Verified Institutional Monograph</td>
               </tr>
             </table>
 
@@ -197,7 +197,7 @@ export const ReportDetailModal: React.FC<ReportDetailModalProps> = ({
 
             <div class="signature-block">
               <div>
-                <div class="official-stamp">MAUSAM OFFICIAL ARCHIVE VERIFIED</div>
+                <div class="official-stamp">MAUSAM OFFICIAL PUBLICATION VERIFIED</div>
                 <div style="margin-top: 4px; color: #555;">Document Digitally Signed &amp; Authenticated</div>
               </div>
               <div style="text-align: right;">
@@ -302,7 +302,7 @@ export const ReportDetailModal: React.FC<ReportDetailModalProps> = ({
   ` : ''}
 
   <div class="footer">
-    <p>Official publication archived via MAUSAM National Meteorological Platform.</p>
+    <p>Official publication catalogued via MAUSAM National Meteorological Platform.</p>
   </div>
 </body>
 </html>
@@ -546,12 +546,12 @@ export const ReportDetailModal: React.FC<ReportDetailModalProps> = ({
               </div>
             </div>
 
-            <div className="flex sm:flex-col sm:items-end gap-3 text-xs">
+            <div className="flex sm:flex-col sm:items-end gap-1.5 text-xs">
               <span className="text-[#8A94A6]">
                 Date: <strong className="text-white">{publication.date}</strong>
               </span>
-              <span className="text-[#8A94A6]">
-                Archive Size: <strong className="text-[#D7DEE8] font-mono">{publication.size}</strong>
+              <span className="text-[#4FA8E0] font-mono text-[11px]">
+                {publication.documentNumber}
               </span>
             </div>
           </div>
@@ -739,7 +739,7 @@ export const ReportDetailModal: React.FC<ReportDetailModalProps> = ({
         <div className="bg-[#0F141A] px-5 py-3 border-t border-[#334155] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#8A94A6]">
           <div className="flex items-center gap-2">
             <span className="w-2 h-2 rounded-full bg-[#2ECC71]"></span>
-            <span>Document Status: Official Open Data Publication (Mausam Archive)</span>
+            <span>Document Status: Official Open Data Publication (MAUSAM National Registry)</span>
           </div>
 
           <div className="flex items-center gap-2">

@@ -43,10 +43,10 @@ export const WarningDetailDrawer: React.FC<WarningDetailDrawerProps> = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby="drawer-warning-title"
-        className="w-full max-w-2xl h-full bg-[#1E2733] border-l border-[#314255] shadow-2xl flex flex-col justify-between overflow-hidden animate-in slide-in-from-right duration-300"
+        className="w-full max-w-2xl h-full bg-[#0B2239] border-l border-[#1D4E73] shadow-2xl flex flex-col justify-between overflow-hidden animate-in slide-in-from-right duration-300"
       >
         {/* Top Sticky Header */}
-        <div className="p-4 sm:p-5 bg-[#151D26] border-b border-[#314255] flex items-center justify-between gap-3 shrink-0">
+        <div className="p-4 sm:p-5 bg-[#071A2D] border-b border-[#1D4E73] flex items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-2.5">
             <span
               className={`inline-flex items-center gap-1.5 px-3 py-1 rounded text-xs font-bold uppercase tracking-wider ${theme.bgBadgeClass} ${theme.textBadgeClass}`}
@@ -57,7 +57,7 @@ export const WarningDetailDrawer: React.FC<WarningDetailDrawerProps> = ({
               <span>{warning.severityLabel}</span>
             </span>
 
-            <span className="text-xs font-mono text-[#8A94A6]">
+            <span className="text-xs font-mono text-[#B8C7D9]">
               {warning.bulletinNo}
             </span>
           </div>
@@ -67,17 +67,17 @@ export const WarningDetailDrawer: React.FC<WarningDetailDrawerProps> = ({
             type="button"
             onClick={onClose}
             aria-label="Close details drawer"
-            className="w-8 h-8 rounded bg-[#1E2733] hover:bg-[#2A3749] text-[#8A94A6] hover:text-white border border-[#314255] flex items-center justify-center transition-colors cursor-pointer"
+            className="w-8 h-8 rounded bg-[#0B2239] hover:bg-[#102D47] text-[#B8C7D9] hover:text-white border border-[#1D4E73] flex items-center justify-center transition-colors cursor-pointer"
           >
             <span className="material-symbols-outlined text-[20px]">close</span>
           </button>
         </div>
 
         {/* Scrollable Body Content */}
-        <div className="p-4 sm:p-6 overflow-y-auto space-y-5 text-xs sm:text-sm text-[#DCE3EB] scrollbar-thin scrollbar-thumb-[#314255]">
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-5 text-xs sm:text-sm text-[#D7DEE8] scrollbar-thin scrollbar-thumb-[#1D4E73]">
           {/* Title & Location Banner */}
-          <div className="space-y-1 pb-4 border-b border-[#314255]">
-            <div className="flex items-center gap-1 text-[#4FA8E0] text-xs font-semibold uppercase tracking-wider">
+          <div className="space-y-1 pb-4 border-b border-[#1D4E73]">
+            <div className="flex items-center gap-1 text-[#E3F2FD] text-xs font-semibold uppercase tracking-wider">
               <span className="material-symbols-outlined text-[15px]">
                 location_city
               </span>
@@ -91,9 +91,9 @@ export const WarningDetailDrawer: React.FC<WarningDetailDrawerProps> = ({
               {warning.title}
             </h2>
 
-            <div className="pt-2 flex flex-wrap items-center gap-3 text-xs text-[#8A94A6]">
+            <div className="pt-2 flex flex-wrap items-center gap-3 text-xs text-[#B8C7D9]">
               <div className="flex items-center gap-1">
-                <span className="material-symbols-outlined text-[15px] text-[#2ECC71]">
+                <span className="material-symbols-outlined text-[15px] text-[#008000]">
                   schedule
                 </span>
                 <span>
@@ -101,7 +101,7 @@ export const WarningDetailDrawer: React.FC<WarningDetailDrawerProps> = ({
                 </span>
               </div>
               <div className="flex items-center gap-1">
-                <span className="material-symbols-outlined text-[15px] text-[#FF8C42]">
+                <span className="material-symbols-outlined text-[15px] text-[#FFA500]">
                   event_busy
                 </span>
                 <span>
@@ -113,8 +113,8 @@ export const WarningDetailDrawer: React.FC<WarningDetailDrawerProps> = ({
 
           {/* Affected Districts Tags */}
           <div className="space-y-1.5">
-            <h4 className="text-xs font-bold text-[#8A94A6] uppercase tracking-wider flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[15px] text-[#4FA8E0]">
+            <h4 className="text-xs font-bold text-[#B8C7D9] uppercase tracking-wider flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[15px] text-[#E3F2FD]">
                 pin_drop
               </span>
               <span>Designated Affected Districts ({warning.affectedDistricts.length})</span>
@@ -123,7 +123,7 @@ export const WarningDetailDrawer: React.FC<WarningDetailDrawerProps> = ({
               {warning.affectedDistricts.map((district, idx) => (
                 <span
                   key={idx}
-                  className="px-2.5 py-1 rounded bg-[#151D26] border border-[#314255] text-xs font-semibold text-white"
+                  className="px-2.5 py-1 rounded bg-[#071A2D] border border-[#1D4E73] text-xs font-semibold text-white"
                 >
                   {district}
                 </span>
@@ -132,18 +132,18 @@ export const WarningDetailDrawer: React.FC<WarningDetailDrawerProps> = ({
           </div>
 
           {/* Detailed Meteorological Synoptic Summary */}
-          <div className="bg-[#151D26] border border-[#314255] rounded-md p-4 space-y-2">
+          <div className="bg-[#071A2D] border border-[#1D4E73] rounded-md p-4 space-y-2">
             <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[16px] text-[#4FA8E0]">
+              <span className="material-symbols-outlined text-[16px] text-[#E3F2FD]">
                 radar
               </span>
               <span>Synoptic Warning Bulletin</span>
             </h4>
-            <p className="text-xs leading-relaxed text-[#DCE3EB]">
+            <p className="text-xs leading-relaxed text-[#D7DEE8]">
               {warning.description}
             </p>
             {warning.meteorologicalSynopsys && (
-              <p className="text-[11px] text-[#8A94A6] italic pt-1 border-t border-[#314255]/70">
+              <p className="text-[11px] text-[#B8C7D9] italic pt-1 border-t border-[#1D4E73]/70">
                 {warning.meteorologicalSynopsys}
               </p>
             )}
@@ -152,8 +152,8 @@ export const WarningDetailDrawer: React.FC<WarningDetailDrawerProps> = ({
           {/* Expected Meteorological Quantities */}
           {warning.expectedConditions && (
             <div className="space-y-2">
-              <h4 className="text-xs font-bold text-[#8A94A6] uppercase tracking-wider flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[15px] text-[#FFB703]">
+              <h4 className="text-xs font-bold text-[#B8C7D9] uppercase tracking-wider flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[15px] text-[#FFFF00]">
                   analytics
                 </span>
                 <span>Expected Numerical Telemetry</span>
@@ -161,8 +161,8 @@ export const WarningDetailDrawer: React.FC<WarningDetailDrawerProps> = ({
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                 {warning.expectedConditions.rainfall && (
-                  <div className="bg-[#151D26] border border-[#314255] rounded p-2.5">
-                    <span className="text-[10px] text-[#8A94A6] uppercase">
+                  <div className="bg-[#071A2D] border border-[#1D4E73] rounded p-2.5">
+                    <span className="text-[10px] text-[#B8C7D9] uppercase">
                       24h Precipitation
                     </span>
                     <div className="text-xs font-bold font-mono text-white mt-0.5">
@@ -172,8 +172,8 @@ export const WarningDetailDrawer: React.FC<WarningDetailDrawerProps> = ({
                 )}
 
                 {warning.expectedConditions.windSpeed && (
-                  <div className="bg-[#151D26] border border-[#314255] rounded p-2.5">
-                    <span className="text-[10px] text-[#8A94A6] uppercase">
+                  <div className="bg-[#071A2D] border border-[#1D4E73] rounded p-2.5">
+                    <span className="text-[10px] text-[#B8C7D9] uppercase">
                       Sustained Wind Speed
                     </span>
                     <div className="text-xs font-bold font-mono text-white mt-0.5">
@@ -183,19 +183,19 @@ export const WarningDetailDrawer: React.FC<WarningDetailDrawerProps> = ({
                 )}
 
                 {warning.expectedConditions.windGusts && (
-                  <div className="bg-[#151D26] border border-[#314255] rounded p-2.5">
-                    <span className="text-[10px] text-[#8A94A6] uppercase">
+                  <div className="bg-[#071A2D] border border-[#1D4E73] rounded p-2.5">
+                    <span className="text-[10px] text-[#B8C7D9] uppercase">
                       Peak Wind Gusts
                     </span>
-                    <div className="text-xs font-bold font-mono text-[#FF8C42] mt-0.5">
+                    <div className="text-xs font-bold font-mono text-[#FFA500] mt-0.5">
                       {warning.expectedConditions.windGusts}
                     </div>
                   </div>
                 )}
 
                 {warning.expectedConditions.visibility && (
-                  <div className="bg-[#151D26] border border-[#314255] rounded p-2.5">
-                    <span className="text-[10px] text-[#8A94A6] uppercase">
+                  <div className="bg-[#071A2D] border border-[#1D4E73] rounded p-2.5">
+                    <span className="text-[10px] text-[#B8C7D9] uppercase">
                       Visibility Range
                     </span>
                     <div className="text-xs font-bold font-mono text-white mt-0.5">
@@ -205,19 +205,19 @@ export const WarningDetailDrawer: React.FC<WarningDetailDrawerProps> = ({
                 )}
 
                 {warning.expectedConditions.waveHeight && (
-                  <div className="bg-[#151D26] border border-[#314255] rounded p-2.5">
-                    <span className="text-[10px] text-[#8A94A6] uppercase">
+                  <div className="bg-[#071A2D] border border-[#1D4E73] rounded p-2.5">
+                    <span className="text-[10px] text-[#B8C7D9] uppercase">
                       Coastal Sea Wave
                     </span>
-                    <div className="text-xs font-bold font-mono text-[#4FA8E0] mt-0.5">
+                    <div className="text-xs font-bold font-mono text-[#E3F2FD] mt-0.5">
                       {warning.expectedConditions.waveHeight}
                     </div>
                   </div>
                 )}
 
                 {warning.expectedConditions.temperature && (
-                  <div className="bg-[#151D26] border border-[#314255] rounded p-2.5">
-                    <span className="text-[10px] text-[#8A94A6] uppercase">
+                  <div className="bg-[#071A2D] border border-[#1D4E73] rounded p-2.5">
+                    <span className="text-[10px] text-[#B8C7D9] uppercase">
                       Temperature Range
                     </span>
                     <div className="text-xs font-bold font-mono text-white mt-0.5">
@@ -231,17 +231,17 @@ export const WarningDetailDrawer: React.FC<WarningDetailDrawerProps> = ({
 
           {/* Potential Impacts */}
           {warning.impacts && (
-            <div className="space-y-2 bg-[#151D26] border border-[#314255] rounded-md p-3.5">
-              <h4 className="text-xs font-bold text-[#FF8C42] uppercase tracking-wider flex items-center gap-1.5">
+            <div className="space-y-2 bg-[#071A2D] border border-[#1D4E73] rounded-md p-3.5">
+              <h4 className="text-xs font-bold text-[#FFA500] uppercase tracking-wider flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-[16px]">
                   report_problem
                 </span>
                 <span>Hazard Impact Assessment</span>
               </h4>
-              <ul className="space-y-1.5 text-xs text-[#DCE3EB]">
+              <ul className="space-y-1.5 text-xs text-[#D7DEE8]">
                 {warning.impacts.map((imp, idx) => (
                   <li key={idx} className="flex items-start gap-2">
-                    <span className="text-[#FF8C42] mt-0.5 font-bold">•</span>
+                    <span className="text-[#FFA500] mt-0.5 font-bold">•</span>
                     <span>{imp}</span>
                   </li>
                 ))}
@@ -251,17 +251,17 @@ export const WarningDetailDrawer: React.FC<WarningDetailDrawerProps> = ({
 
           {/* Actionable Safety Guidance */}
           {warning.recommendedActions && (
-            <div className="space-y-2 bg-[#151D26] border border-[#2ECC71]/40 rounded-md p-3.5">
-              <h4 className="text-xs font-bold text-[#2ECC71] uppercase tracking-wider flex items-center gap-1.5">
+            <div className="space-y-2 bg-[#071A2D] border border-[#008000]/40 rounded-md p-3.5">
+              <h4 className="text-xs font-bold text-[#008000] uppercase tracking-wider flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-[16px]">
                   health_and_safety
                 </span>
                 <span>Actionable Public Advisory &amp; Standard Operating Procedures</span>
               </h4>
-              <ul className="space-y-1.5 text-xs text-[#DCE3EB]">
+              <ul className="space-y-1.5 text-xs text-[#D7DEE8]">
                 {warning.recommendedActions.map((act, idx) => (
                   <li key={idx} className="flex items-start gap-2">
-                    <span className="text-[#2ECC71] font-bold">✓</span>
+                    <span className="text-[#008000] font-bold">✓</span>
                     <span>{act}</span>
                   </li>
                 ))}
@@ -272,30 +272,30 @@ export const WarningDetailDrawer: React.FC<WarningDetailDrawerProps> = ({
           {/* Operational Timeline Progression */}
           {warning.timeline && warning.timeline.length > 0 && (
             <div className="space-y-2">
-              <h4 className="text-xs font-bold text-[#8A94A6] uppercase tracking-wider flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[15px] text-[#4FA8E0]">
+              <h4 className="text-xs font-bold text-[#B8C7D9] uppercase tracking-wider flex items-center gap-1.5">
+                <span className="material-symbols-outlined text-[15px] text-[#E3F2FD]">
                   timeline
                 </span>
                 <span>Bulletin Progression Timeline</span>
               </h4>
 
-              <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-[2px] before:bg-[#314255]">
+              <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-[2px] before:bg-[#1D4E73]">
                 {warning.timeline.map((evt, idx) => (
                   <div key={idx} className="relative">
                     <div
                       className={`absolute -left-6 top-1 w-3 h-3 rounded-full border-2 ${
                         evt.status === 'completed'
-                          ? 'bg-[#2ECC71] border-[#151D26]'
+                          ? 'bg-[#008000] border-[#071A2D]'
                           : evt.status === 'current'
-                          ? 'bg-[#E74C3C] border-[#FFFFFF] animate-pulse'
-                          : 'bg-[#314255] border-[#151D26]'
+                          ? 'bg-[#FF0000] border-[#FFFFFF] animate-pulse'
+                          : 'bg-[#1D4E73] border-[#071A2D]'
                       }`}
                     />
-                    <div className="text-[11px] font-mono text-[#8A94A6]">
+                    <div className="text-[11px] font-mono text-[#B8C7D9]">
                       {evt.date} • {evt.time}
                     </div>
                     <div className="font-bold text-white text-xs">{evt.title}</div>
-                    <div className="text-[11px] text-[#DCE3EB]">{evt.description}</div>
+                    <div className="text-[11px] text-[#D7DEE8]">{evt.description}</div>
                   </div>
                 ))}
               </div>
@@ -303,22 +303,22 @@ export const WarningDetailDrawer: React.FC<WarningDetailDrawerProps> = ({
           )}
 
           {/* Official Issuing Authority & Emergency Helpline Contact */}
-          <div className="bg-[#151D26] border border-[#314255] rounded-md p-4 space-y-3">
+          <div className="bg-[#071A2D] border border-[#1D4E73] rounded-md p-4 space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
               <div>
-                <div className="text-[10px] text-[#8A94A6] uppercase">Issuing Authority</div>
+                <div className="text-[10px] text-[#B8C7D9] uppercase">Issuing Authority</div>
                 <div className="font-bold text-white">{warning.source}</div>
               </div>
               <div>
-                <div className="text-[10px] text-[#8A94A6] uppercase">Tracking Radar</div>
-                <div className="font-mono text-[#4FA8E0]">{warning.radarTrackingStation || 'IMD DWR Network'}</div>
+                <div className="text-[10px] text-[#B8C7D9] uppercase">Tracking Radar</div>
+                <div className="font-mono text-[#E3F2FD]">{warning.radarTrackingStation || 'IMD DWR Network'}</div>
               </div>
             </div>
 
             {warning.emergencyContact && (
-              <div className="pt-2 border-t border-[#314255] flex items-center justify-between gap-3">
+              <div className="pt-2 border-t border-[#1D4E73] flex items-center justify-between gap-3">
                 <div>
-                  <div className="text-[10px] font-bold text-[#FF8C42] uppercase">
+                  <div className="text-[10px] font-bold text-[#FFA500] uppercase">
                     {warning.emergencyContact.title}
                   </div>
                   <div className="text-sm font-bold font-mono text-white">
@@ -328,7 +328,7 @@ export const WarningDetailDrawer: React.FC<WarningDetailDrawerProps> = ({
 
                 <a
                   href={`tel:${warning.emergencyContact.number.split('/')[0].trim()}`}
-                  className="px-3 py-1.5 rounded bg-[#E74C3C] hover:bg-[#C0392B] text-white text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shrink-0 shadow-sm"
+                  className="px-3 py-1.5 rounded bg-[#FF0000] hover:bg-[#CC0000] text-white text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shrink-0 shadow-sm"
                 >
                   <span className="material-symbols-outlined text-[15px]">call</span>
                   <span>Call Helpline</span>
@@ -339,15 +339,15 @@ export const WarningDetailDrawer: React.FC<WarningDetailDrawerProps> = ({
         </div>
 
         {/* Bottom Actions Footer */}
-        <div className="p-4 bg-[#151D26] border-t border-[#314255] flex items-center justify-between gap-3 shrink-0">
-          <div className="text-[11px] text-[#8A94A6] font-mono">
+        <div className="p-4 bg-[#071A2D] border-t border-[#1D4E73] flex items-center justify-between gap-3 shrink-0">
+          <div className="text-[11px] text-[#B8C7D9] font-mono">
             National Meteorological Feed • Confidential &amp; Verified
           </div>
 
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded bg-[#1E2733] hover:bg-[#2A3749] text-white text-xs font-bold border border-[#314255] transition-colors cursor-pointer"
+            className="px-4 py-2 rounded bg-[#0B2239] hover:bg-[#102D47] text-white text-xs font-bold border border-[#1D4E73] transition-colors cursor-pointer"
           >
             Close Bulletin
           </button>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import * as SunCalc from 'suncalc';
 import { Sun, Sunrise, Sunset, Clock, Sparkles, Compass } from 'lucide-react';
-import { calculateSolarEphemeris, SolarEphemeris } from '../../utils/solarCalculator';
 import { LocationRecord, CurrentWeather } from '../../types';
 
 interface HomeSolarCycleProps {
@@ -26,8 +26,63 @@ export const HomeSolarCycle: React.FC<HomeSolarCycleProps> = ({
   const lat = typeof location?.lat === 'number' ? location.lat : 20.2961;
   const lng = typeof location?.lng === 'number' ? location.lng : 85.8245;
 
-  const solarData: SolarEphemeris = useMemo(() => {
-    return calculateSolarEphemeris(lat, lng, now);
+  const solarData = useMemo(() => {
+    // Exact calculation using standard meteorological suncalc library
+    const times = SunCalc.getTimes(now, lat, lng);
+    const pos = SunCalc.getPosition(now, lat, lng);
+
+    const formatT = (d: Date) =>
+      d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    const sr = times.sunrise;
+    const ss = times.sunset;
+    const isDaytime = now >= sr && now <= ss;
+
+    const dayLengthMs = Math.max(0, ss.getTime() - sr.getTime());
+    const dayHours = Math.floor(dayLengthMs / 3600000);
+    const dayMinutes = Math.floor((dayLengthMs % 3600000) / 60000);
+    const dayLengthStr = `${dayHours}h ${dayMinutes.toString().padStart(2, '0')}m`;
+
+    let progressPercent = 0;
+    if (now < sr) progressPercent = 0;
+    else if (now > ss) progressPercent = 100;
+    else if (dayLengthMs > 0) {
+      progressPercent = Math.min(100, Math.max(0, ((now.getTime() - sr.getTime()) / dayLengthMs) * 100));
+    }
+
+    let nextEventName = 'Sunset';
+    let target = ss;
+    if (now > ss) {
+      nextEventName = 'Sunrise';
+      const tmrw = new Date(now);
+      tmrw.setDate(tmrw.getDate() + 1);
+      target = SunCalc.getTimes(tmrw, lat, lng).sunrise;
+    } else if (now < sr) {
+      nextEventName = 'Sunrise';
+      target = sr;
+    }
+
+    const msDiff = Math.max(0, target.getTime() - now.getTime());
+    const h = Math.floor(msDiff / 3600000);
+    const m = Math.floor((msDiff % 3600000) / 60000);
+    const s = Math.floor((msDiff % 60000) / 1000);
+    const countdownFormatted = `${h.toString().padStart(2, '0')}h ${m.toString().padStart(2, '0')}m ${s.toString().padStart(2, '0')}s`;
+
+    const altDeg = (pos.altitude * 180) / Math.PI;
+    const azDeg = ((pos.azimuth * 180) / Math.PI + 180) % 360;
+
+    return {
+      sunriseStr: formatT(sr),
+      sunsetStr: formatT(ss),
+      solarNoonStr: formatT(times.solarNoon),
+      dayLengthStr,
+      isDaytime,
+      progressPercent,
+      nextEventName,
+      countdownFormatted,
+      solarElevationDeg: altDeg,
+      solarAzimuthDeg: azDeg,
+    };
   }, [lat, lng, now]);
 
   const displaySunrise = sunrise || weather?.sunrise || solarData.sunriseStr;

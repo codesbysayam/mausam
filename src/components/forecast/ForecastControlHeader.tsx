@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { NWPModelType, NWP_MODELS, StructuredModelForecast } from '../../services/nwpModelService';
 import { LocationRecord } from '../../types';
+import DateCalendar from '../DateCalendar';
+import { formatDateShort } from '../../utils/dateUtils';
 import {
   Cpu,
   Layers,
@@ -18,6 +20,7 @@ import {
   Wind,
   ShieldCheck,
   Server,
+  X,
 } from 'lucide-react';
 
 interface ForecastControlHeaderProps {
@@ -29,6 +32,8 @@ interface ForecastControlHeaderProps {
   onExportCSV: () => void;
   structuredForecast?: StructuredModelForecast | null;
   isLoadingModel?: boolean;
+  selectedDate?: Date;
+  onSelectDate?: (date: Date) => void;
 }
 
 export const ForecastControlHeader: React.FC<ForecastControlHeaderProps> = ({
@@ -40,8 +45,12 @@ export const ForecastControlHeader: React.FC<ForecastControlHeaderProps> = ({
   onExportCSV,
   structuredForecast,
   isLoadingModel = false,
+  selectedDate = new Date(),
+  onSelectDate,
 }) => {
   const [showModelSpecs, setShowModelSpecs] = useState(false);
+  const [showCalendarPopover, setShowCalendarPopover] = useState(false);
+  const calendarRef = useRef<HTMLDivElement>(null);
   const activeModelMeta = NWP_MODELS[modelType];
 
   const lat = typeof selectedLocation.lat === 'number' ? selectedLocation.lat : 20.2961;
@@ -57,10 +66,33 @@ export const ForecastControlHeader: React.FC<ForecastControlHeaderProps> = ({
     ? `${structuredForecast.metadata.maxWindGust24h} km/h`
     : 'N/A';
 
+  // Calculate 14-day max date limit for NWP forecast
+  const today = new Date();
+  const maxForecastDate = new Date(today);
+  maxForecastDate.setDate(today.getDate() + 14);
+
+  // Close calendar popover on outside click
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (calendarRef.current && !calendarRef.current.contains(e.target as Node)) {
+        setShowCalendarPopover(false);
+      }
+    };
+    if (showCalendarPopover) {
+      document.addEventListener('mousedown', handleOutsideClick);
+    }
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
+  }, [showCalendarPopover]);
+
+  const isToday =
+    selectedDate.getFullYear() === today.getFullYear() &&
+    selectedDate.getMonth() === today.getMonth() &&
+    selectedDate.getDate() === today.getDate();
+
   return (
     <div
       id="forecast-command-header"
-      className="bg-[#0B141E] border border-[#162331] rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col gap-5 relative overflow-hidden"
+      className="bg-[#0B141E] border border-[#162331] rounded-2xl p-5 sm:p-6 shadow-xl flex flex-col gap-5 relative overflow-visible"
     >
       {/* Top Section: Title & Controls */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-[#162331]">
@@ -92,8 +124,9 @@ export const ForecastControlHeader: React.FC<ForecastControlHeaderProps> = ({
           </div>
         </div>
 
-        {/* Right: Model Selector & Actions */}
+        {/* Right: Model Selector, Horizon Date & Actions */}
         <div className="flex items-center gap-2.5 flex-wrap sm:flex-nowrap shrink-0">
+          {/* Model Selector */}
           <div className="flex items-center gap-1 bg-[#071018] p-1.5 rounded-xl border border-[#162331] shadow-inner">
             <span className="text-[10px] text-[#93A4B8] px-2 font-bold uppercase tracking-wider hidden sm:inline">
               MODEL:
@@ -123,6 +156,53 @@ export const ForecastControlHeader: React.FC<ForecastControlHeaderProps> = ({
               );
             })}
           </div>
+
+          {/* Forecast Horizon Target Date Picker */}
+          {onSelectDate && (
+            <div className="relative" ref={calendarRef}>
+              <button
+                type="button"
+                onClick={() => setShowCalendarPopover(!showCalendarPopover)}
+                className={`p-2.5 rounded-xl border transition-colors flex items-center gap-1.5 text-xs font-mono font-semibold cursor-pointer ${
+                  !isToday
+                    ? 'bg-[#1499E8]/20 border-[#1499E8] text-[#43C7F4]'
+                    : 'bg-[#071018] hover:bg-[#111F30] text-[#93A4B8] hover:text-[#F4F7FA] border-[#162331]'
+                }`}
+                title="Select Forecast Horizon Date"
+              >
+                <Calendar className="w-4 h-4 text-[#43C7F4]" />
+                <span className="hidden sm:inline">
+                  {isToday ? 'Today' : formatDateShort(selectedDate)}
+                </span>
+                <ChevronDown className={`w-3 h-3 transition-transform ${showCalendarPopover ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showCalendarPopover && (
+                <div className="absolute right-0 top-full mt-2 z-50 p-2 bg-[#0B141E] border border-[#1E2D3D] rounded-2xl shadow-2xl animate-fade-in">
+                  <div className="flex items-center justify-between px-3 py-1.5 border-b border-[#162331] mb-2 text-xs">
+                    <span className="text-[#F4F7FA] font-bold">NWP Forecast Horizon</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowCalendarPopover(false)}
+                      className="text-[#93A4B8] hover:text-white p-0.5"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <DateCalendar
+                    value={selectedDate}
+                    onChange={(d) => {
+                      onSelectDate(d);
+                      setShowCalendarPopover(false);
+                    }}
+                    minDate={today}
+                    maxDate={maxForecastDate}
+                    showToday={true}
+                  />
+                </div>
+              )}
+            </div>
+          )}
 
           <button
             type="button"

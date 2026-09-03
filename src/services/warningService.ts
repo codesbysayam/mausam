@@ -155,7 +155,7 @@ class WarningService {
         badgeLabel: 'RED ALERT — ACTIVE SEVERE WEATHER',
         headline: 'NATIONAL WEATHER WARNING: SEVERE ADVISORIES ACTIVE',
         description: `IMD has issued Red Warnings across ${redCount} meteorological sub-divisions (Odisha Coast, Brahmaputra Basin & Meghalaya). Disaster relief teams (NDRF/SDRF) on active emergency footing.`,
-        statusColor: '#E74C3C',
+        statusColor: '#FF0000',
       };
     }
 
@@ -166,7 +166,7 @@ class WarningService {
         headline: 'NATIONAL WEATHER STATUS: MODERATE WARNINGS IN EFFECT',
         description:
           'Moderate to heavy precipitation and coastal swell warnings active across Western Ghats and coastal sectors. Public advised to monitor regional bulletins.',
-        statusColor: '#FF8C42',
+        statusColor: '#FFA500',
       };
     }
 
@@ -177,7 +177,7 @@ class WarningService {
         headline: 'NATIONAL WEATHER STATUS: SCATTERED ADVISORIES ISSUED',
         description:
           'Scattered weather watches in effect for isolated thunderstorm activity and thermal variations. Routine precautions recommended.',
-        statusColor: '#F1C40F',
+        statusColor: '#FFFF00',
       };
     }
 
@@ -187,7 +187,7 @@ class WarningService {
       headline: 'NATIONAL WEATHER STATUS: SYNOPTIC ATMOSPHERE STABLE',
       description:
         'No widespread severe meteorological warnings are currently active across India. Diurnal seasonal conditions observed.',
-      statusColor: '#2ECC71',
+      statusColor: '#008000',
     };
   }
 
@@ -272,47 +272,47 @@ class WarningService {
     switch (severity) {
       case 'red':
         return {
-          color: '#E74C3C',
-          borderClass: 'border-[#E74C3C]',
-          bgBadgeClass: 'bg-[#E74C3C]/20 border border-[#E74C3C]/60',
-          textBadgeClass: 'text-[#FF7675]',
+          color: '#FF0000',
+          borderClass: 'border-[#FF0000]',
+          bgBadgeClass: 'bg-[#FF0000]/20 border border-[#FF0000]/60',
+          textBadgeClass: 'text-[#FF4D4D]',
           icon: 'warning',
           label: 'RED ALERT — TAKE ACTION',
         };
       case 'orange':
         return {
-          color: '#FF8C42',
-          borderClass: 'border-[#FF8C42]',
-          bgBadgeClass: 'bg-[#FF8C42]/20 border border-[#FF8C42]/60',
-          textBadgeClass: 'text-[#FF8C42]',
+          color: '#FFA500',
+          borderClass: 'border-[#FFA500]',
+          bgBadgeClass: 'bg-[#FFA500]/20 border border-[#FFA500]/60',
+          textBadgeClass: 'text-[#FFA500]',
           icon: 'priority_high',
           label: 'ORANGE ALERT — BE PREPARED',
         };
       case 'yellow':
         return {
-          color: '#F1C40F',
-          borderClass: 'border-[#F1C40F]',
-          bgBadgeClass: 'bg-[#F1C40F]/20 border border-[#F1C40F]/60',
-          textBadgeClass: 'text-[#F1C40F]',
+          color: '#FFFF00',
+          borderClass: 'border-[#FFFF00]',
+          bgBadgeClass: 'bg-[#FFFF00]/20 border border-[#FFFF00]/60',
+          textBadgeClass: 'text-[#FFFF00]',
           icon: 'lightbulb',
           label: 'YELLOW WATCH — BE UPDATED',
         };
       case 'purple':
         return {
-          color: '#9B59B6',
-          borderClass: 'border-[#9B59B6]',
-          bgBadgeClass: 'bg-[#9B59B6]/20 border border-[#9B59B6]/60',
-          textBadgeClass: 'text-[#D79BE8]',
+          color: '#1565C0',
+          borderClass: 'border-[#1565C0]',
+          bgBadgeClass: 'bg-[#1565C0]/20 border border-[#1565C0]/60',
+          textBadgeClass: 'text-[#E3F2FD]',
           icon: 'info',
           label: 'ADVISORY BULLETIN',
         };
       case 'green':
       default:
         return {
-          color: '#2ECC71',
-          borderClass: 'border-[#2ECC71]',
-          bgBadgeClass: 'bg-[#2ECC71]/20 border border-[#2ECC71]/60',
-          textBadgeClass: 'text-[#2ECC71]',
+          color: '#008000',
+          borderClass: 'border-[#008000]',
+          bgBadgeClass: 'bg-[#008000]/20 border border-[#008000]/60',
+          textBadgeClass: 'text-[#008000]',
           icon: 'verified',
           label: 'GREEN CODE — NO WARNING',
         };

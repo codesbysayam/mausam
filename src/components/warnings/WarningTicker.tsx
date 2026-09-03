@@ -41,18 +41,18 @@ export const WarningTicker: React.FC<WarningTickerProps> = ({
     return (
       <div
         id="warning-ticker-stable"
-        className="flex items-center justify-between gap-3 px-3.5 py-2 bg-[#151D26] border border-[#314255] rounded-md text-xs"
+        className="flex items-center justify-between gap-3 px-3.5 py-2 bg-[#071A2D] border border-[#1D4E73] rounded-md text-xs"
       >
-        <div className="flex items-center gap-2 text-[#2ECC71]">
+        <div className="flex items-center gap-2 text-[#008000]">
           <span className="material-symbols-outlined text-[16px]">verified</span>
           <span className="font-bold uppercase tracking-wider text-[11px]">
             National Synoptic Baseline:
           </span>
-          <span className="text-[#DCE3EB]">
+          <span className="text-[#D7DEE8]">
             No critical severe weather alerts currently in effect across sub-divisions.
           </span>
         </div>
-        <span className="text-[11px] font-mono text-[#8A94A6]">IMD Live Feed</span>
+        <span className="text-[11px] font-mono text-[#B8C7D9]">IMD Live Feed</span>
       </div>
     );
   }
@@ -63,27 +63,27 @@ export const WarningTicker: React.FC<WarningTickerProps> = ({
     switch (severity) {
       case 'red':
         return {
-          bg: 'bg-[#1A1215]',
-          border: 'border-[#E74C3C]/60',
-          tagBg: 'bg-[#E74C3C] text-white',
+          bg: 'bg-[#0B2239]',
+          border: 'border-[#FF0000]/60',
+          tagBg: 'bg-[#FF0000] text-white',
           textColor: 'text-[#FFD2CE]',
-          btnBorder: 'border-[#E74C3C]/50 hover:bg-[#E74C3C] hover:text-white',
+          btnBorder: 'border-[#FF0000]/50 hover:bg-[#FF0000] hover:text-white',
         };
       case 'orange':
         return {
-          bg: 'bg-[#1C1613]',
-          border: 'border-[#FF8C42]/60',
-          tagBg: 'bg-[#FF8C42] text-white',
+          bg: 'bg-[#0B2239]',
+          border: 'border-[#FFA500]/60',
+          tagBg: 'bg-[#FFA500] text-[#071A2D] font-bold',
           textColor: 'text-[#FFE2D1]',
-          btnBorder: 'border-[#FF8C42]/50 hover:bg-[#FF8C42] hover:text-white',
+          btnBorder: 'border-[#FFA500]/50 hover:bg-[#FFA500] hover:text-[#071A2D]',
         };
       default:
         return {
-          bg: 'bg-[#1B1914]',
-          border: 'border-[#F1C40F]/60',
-          tagBg: 'bg-[#F1C40F] text-[#0F141A]',
+          bg: 'bg-[#0B2239]',
+          border: 'border-[#FFFF00]/60',
+          tagBg: 'bg-[#FFFF00] text-[#071A2D] font-bold',
           textColor: 'text-[#FFF3C4]',
-          btnBorder: 'border-[#F1C40F]/50 hover:bg-[#F1C40F] hover:text-[#0F141A]',
+          btnBorder: 'border-[#FFFF00]/50 hover:bg-[#FFFF00] hover:text-[#071A2D]',
         };
     }
   };
@@ -112,16 +112,16 @@ export const WarningTicker: React.FC<WarningTickerProps> = ({
           </span>
         </span>
 
-        <div className="truncate text-xs text-[#DCE3EB] font-medium flex items-center gap-2">
+        <div className="truncate text-xs text-[#D7DEE8] font-medium flex items-center gap-2">
           <span className="font-bold text-white truncate">
             {currentWarning.title}
           </span>
-          <span className="text-[#8A94A6] hidden sm:inline">—</span>
-          <span className="text-[#8A94A6] hidden sm:inline truncate">
+          <span className="text-[#B8C7D9] hidden sm:inline">—</span>
+          <span className="text-[#B8C7D9] hidden sm:inline truncate">
             {currentWarning.state} ({currentWarning.affectedAreaText})
           </span>
-          <span className="text-[#8A94A6] hidden md:inline">•</span>
-          <span className="text-[#4FA8E0] font-mono text-[11px] hidden md:inline">
+          <span className="text-[#B8C7D9] hidden md:inline">•</span>
+          <span className="text-[#E3F2FD] font-mono text-[11px] hidden md:inline">
             Valid until {currentWarning.validUntil}
           </span>
         </div>
@@ -134,21 +134,21 @@ export const WarningTicker: React.FC<WarningTickerProps> = ({
           id={`btn-ticker-view-${currentWarning.id}`}
           type="button"
           onClick={() => onSelectWarning(currentWarning)}
-          className={`px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider text-white bg-[#1E2733] border transition-all cursor-pointer ${style.btnBorder}`}
+          className={`px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider text-white bg-[#071A2D] border transition-all cursor-pointer ${style.btnBorder}`}
         >
           View Bulletin
         </button>
 
         {/* Previous / Next Ticker Buttons */}
         {activeAlerts.length > 1 && (
-          <div className="flex items-center gap-0.5 bg-[#151D26] border border-[#314255] rounded p-0.5">
+          <div className="flex items-center gap-0.5 bg-[#071A2D] border border-[#1D4E73] rounded p-0.5">
             <button
               id="btn-ticker-prev"
               type="button"
               onClick={prevAlert}
               title="Previous Alert"
               aria-label="Previous Warning"
-              className="w-6 h-6 rounded flex items-center justify-center text-[#8A94A6] hover:text-white hover:bg-[#1E2733] transition-colors cursor-pointer"
+              className="w-6 h-6 rounded flex items-center justify-center text-[#B8C7D9] hover:text-white hover:bg-[#102D47] transition-colors cursor-pointer"
             >
               <span className="material-symbols-outlined text-[14px]">chevron_left</span>
             </button>
@@ -158,7 +158,7 @@ export const WarningTicker: React.FC<WarningTickerProps> = ({
               onClick={nextAlert}
               title="Next Alert"
               aria-label="Next Warning"
-              className="w-6 h-6 rounded flex items-center justify-center text-[#8A94A6] hover:text-white hover:bg-[#1E2733] transition-colors cursor-pointer"
+              className="w-6 h-6 rounded flex items-center justify-center text-[#B8C7D9] hover:text-white hover:bg-[#102D47] transition-colors cursor-pointer"
             >
               <span className="material-symbols-outlined text-[14px]">chevron_right</span>
             </button>

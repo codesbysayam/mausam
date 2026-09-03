@@ -14,6 +14,14 @@ import {
 
 dotenv.config();
 
+// Process-level crash prevention (prevents container unexpected closed connection)
+process.on('uncaughtException', (err) => {
+  console.error('[Mausam Server] Uncaught Exception:', err);
+});
+process.on('unhandledRejection', (reason) => {
+  console.error('[Mausam Server] Unhandled Rejection:', reason);
+});
+
 let aiClient: GoogleGenAI | null = null;
 function getAIClient(): GoogleGenAI | null {
   if (!aiClient && process.env.GEMINI_API_KEY) {
@@ -492,6 +500,15 @@ Source: India Meteorological Department (IMD)`;
     }
   });
 
+  // Global Express Error Middleware (catches unexpected router rejections before crashing)
+  app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
+    console.error('[Mausam Express Error]', err);
+    if (res.headersSent) {
+      return next(err);
+    }
+    res.status(500).json({ error: err?.message || 'Internal Server Error' });
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
@@ -507,9 +524,13 @@ Source: India Meteorological Department (IMD)`;
     });
   }
 
-  app.listen(PORT, '0.0.0.0', () => {
+  const server = app.listen(PORT, '0.0.0.0', () => {
     console.log(`Mausam Server running on http://localhost:${PORT}`);
   });
+
+  // Cloud Run / Reverse Proxy Keep-Alive alignment (prevents premature connection drops)
+  server.keepAliveTimeout = 65000;
+  server.headersTimeout = 66000;
 }
 
 startServer();

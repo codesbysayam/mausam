@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { LocationRecord } from '../../types';
-import { Radio, ArrowRight, Layers, Eye, ShieldCheck } from 'lucide-react';
+import { Radio, ArrowRight, Layers, Compass, AlertTriangle, ShieldCheck, Clock } from 'lucide-react';
 import { findNearestRadarStation } from '../../data/radarStations';
+import { fetchLiveRadarData, RadarApiResponse } from '../../services/radarService';
 
 interface HomeRadarPreviewProps {
   location: LocationRecord;
@@ -25,6 +26,30 @@ export const HomeRadarPreview: React.FC<HomeRadarPreviewProps> = ({
     isWithinCoverage: nearestRadarInfo.isWithinCoverage,
   };
 
+  const [radarState, setRadarState] = useState<RadarApiResponse | null>(null);
+
+  useEffect(() => {
+    fetchLiveRadarData('MAXZ')
+      .then(setRadarState)
+      .catch(() => {
+        setRadarState({
+          status: 'ERROR',
+          available: false,
+          message: 'Radar data temporarily unavailable',
+          host: '',
+          pastFrames: [],
+          nowcastFrames: [],
+          sourceAttribution: 'Weather radar data by RainViewer',
+          originalProvider: 'Global weather radar composite network',
+        });
+      });
+  }, []);
+
+  const latestTime =
+    radarState?.pastFrames && radarState.pastFrames.length > 0
+      ? radarState.pastFrames[radarState.pastFrames.length - 1].formattedTime
+      : radarState?.lastAvailableTimestamp;
+
   return (
     <section id="homepage-radar-preview" className="rounded-2xl bg-[#0B141E] border border-[#162331] p-5 flex flex-col gap-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#162331]">
@@ -37,7 +62,7 @@ export const HomeRadarPreview: React.FC<HomeRadarPreviewProps> = ({
               Doppler Radar &amp; Nowcast Reflectivity
             </h2>
             <p className="text-xs text-[#93A4B8]">
-              Live volumetric hydrometeor surveillance from India's DWR Radar Grid
+              Geographic meteorological radar surveillance from India's DWR Radar Grid
             </p>
           </div>
         </div>
@@ -48,7 +73,7 @@ export const HomeRadarPreview: React.FC<HomeRadarPreviewProps> = ({
             onClick={onNavigateToRadar}
             className="text-xs text-[#43C7F4] hover:text-[#1499E8] font-semibold flex items-center gap-1 self-start sm:self-auto cursor-pointer"
           >
-            <span>Open Interactive Radar &amp; Satellite Viewer</span>
+            <span>Open Full Meteorological Radar Scope</span>
             <ArrowRight className="w-3.5 h-3.5" />
           </button>
         )}
@@ -60,10 +85,10 @@ export const HomeRadarPreview: React.FC<HomeRadarPreviewProps> = ({
           <div>
             <div className="flex items-center gap-1.5">
               <span className="text-[10px] font-bold uppercase tracking-wider text-[#43C7F4]">
-                Nearest Active Doppler Radar Node
+                Assigned Doppler Radar Node
               </span>
               <span className={`text-[10px] px-1.5 py-0.2 rounded font-bold ${nearestRadar.isWithinCoverage ? 'bg-[#22C7A0]/20 text-[#22C7A0]' : 'bg-[#FFC857]/20 text-[#FFC857]'}`}>
-                {nearestRadar.isWithinCoverage ? 'In Beam Coverage' : 'Outer Peripheral'}
+                {nearestRadar.isWithinCoverage ? 'In Beam Coverage' : 'Peripheral Range'}
               </span>
             </div>
             <h3 className="text-base font-bold text-[#F4F7FA] mt-0.5">
@@ -81,44 +106,79 @@ export const HomeRadarPreview: React.FC<HomeRadarPreviewProps> = ({
             </div>
             <div className="p-2.5 rounded-lg bg-[#071018] border border-[#162331]">
               <span className="text-[10px] text-[#93A4B8] uppercase block">Surveillance Radius</span>
-              <span className="text-xs font-bold text-[#22C7A0]">{nearestRadar.rangeKm} km Range</span>
+              <span className="text-xs font-bold text-[#22C7A0]">{nearestRadar.rangeKm} km Scope</span>
             </div>
             <div className="p-2.5 rounded-lg bg-[#071018] border border-[#162331]">
-              <span className="text-[10px] text-[#93A4B8] uppercase block">Scan Frequency</span>
+              <span className="text-[10px] text-[#93A4B8] uppercase block">Scan Cadence</span>
               <span className="text-xs font-bold text-[#43C7F4]">10 Min Volumetric</span>
             </div>
             <div className="p-2.5 rounded-lg bg-[#071018] border border-[#162331]">
-              <span className="text-[10px] text-[#93A4B8] uppercase block">Operating Status</span>
+              <span className="text-[10px] text-[#93A4B8] uppercase block">Sweep Status</span>
               <span className="text-xs font-bold text-[#22C7A0]">OPERATIONAL</span>
             </div>
           </div>
         </div>
 
-        {/* Right 7 Cols: Stylized Interactive Radar Graphic Preview */}
+        {/* Right 7 Cols: Professional Geographic Radar Scope Instrument Preview */}
         <div
           onClick={onNavigateToRadar}
-          className="lg:col-span-7 h-52 rounded-xl bg-[#071018] border border-[#162331] relative overflow-hidden flex items-center justify-center cursor-pointer group hover:border-[#1499E8]/50 transition-all shadow-inner"
+          className="lg:col-span-7 h-56 rounded-xl bg-[#070C14] border border-[#162331] relative overflow-hidden flex items-center justify-center cursor-pointer group hover:border-[#1499E8]/60 transition-all shadow-inner"
         >
-          {/* Concentric radar rings */}
-          <div className="absolute w-44 h-44 rounded-full border border-[#162331]" />
-          <div className="absolute w-32 h-32 rounded-full border border-[#162331]" />
-          <div className="absolute w-20 h-20 rounded-full border border-[#162331]" />
-          <div className="absolute w-full h-[1px] bg-[#162331]" />
-          <div className="absolute h-full w-[1px] bg-[#162331]" />
+          {/* Subtle Lat/Lng graticule grid lines */}
+          <div className="absolute inset-0 opacity-15 pointer-events-none bg-[radial-gradient(#43C7F4_1px,transparent_1px)] [background-size:24px_24px]" />
 
-          {/* Rotating radar sweep beam */}
-          <div className="absolute w-48 h-48 rounded-full border-t-2 border-[#1499E8]/40 animate-spin" style={{ animationDuration: '4s' }} />
+          {/* Range rings (50km, 100km, 150km, 200km, 250km) */}
+          <div className="absolute w-52 h-52 rounded-full border border-[#1499E8]/30" />
+          <div className="absolute w-40 h-40 rounded-full border border-[#1499E8]/20 border-dashed" />
+          <div className="absolute w-28 h-28 rounded-full border border-[#1499E8]/25" />
+          <div className="absolute w-16 h-16 rounded-full border border-[#1499E8]/20 border-dashed" />
 
-          {/* Simulated radar reflectivity echoes */}
-          <div className="absolute top-12 right-20 w-12 h-8 rounded-full bg-[#22C7A0]/40 blur-md" />
-          <div className="absolute top-14 right-24 w-6 h-5 rounded-full bg-[#FFC857]/60 blur-xs" />
-          <div className="absolute bottom-14 left-24 w-16 h-10 rounded-full bg-[#43C7F4]/30 blur-md" />
+          {/* Azimuth crosshairs (0°, 90°, 180°, 270°) */}
+          <div className="absolute w-56 h-[1px] bg-[#1499E8]/30" />
+          <div className="absolute h-56 w-[1px] bg-[#1499E8]/30" />
 
-          {/* Center station dot */}
+          {/* Azimuth diagonal markers (45°, 135°, 225°, 315°) */}
+          <div className="absolute w-48 h-[1px] bg-[#1499E8]/15 rotate-45" />
+          <div className="absolute w-48 h-[1px] bg-[#1499E8]/15 -rotate-45" />
+
+          {/* Range ring distance indicators */}
+          <span className="absolute top-4 text-[9px] font-mono text-[#43C7F4]/80 font-bold">250 km</span>
+          <span className="absolute top-10 text-[9px] font-mono text-[#43C7F4]/60">150 km</span>
+          <span className="absolute top-16 text-[9px] font-mono text-[#43C7F4]/50">75 km</span>
+
+          {/* Compass North Arrow */}
+          <div className="absolute top-2.5 right-3 flex items-center gap-1 text-[9px] font-mono font-bold text-[#FF8C42] bg-[#071018]/80 px-1.5 py-0.5 rounded border border-[#162331]">
+            <Compass className="w-3 h-3 text-[#43C7F4]" />
+            <span>N 000°</span>
+          </div>
+
+          {/* Status Overlay: Genuine Real Data or Clearly Labeled Unavailable */}
+          <div className="absolute bottom-2.5 inset-x-3 z-10 flex items-center justify-between pointer-events-none text-[10px]">
+            {radarState?.available ? (
+              <span className="flex items-center gap-1 text-[#22C7A0] bg-[#071018]/90 px-2 py-0.5 rounded border border-[#22C7A0]/30 font-mono">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#22C7A0] animate-pulse" />
+                Live Echo Sweep: {latestTime}
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 text-[#FFC857] bg-[#071018]/90 px-2 py-0.5 rounded border border-[#FFC857]/30 font-mono">
+                <Clock className="w-3 h-3 text-[#FFC857]" />
+                Last Available Image: {latestTime || 'Awaiting Sweep'}
+              </span>
+            )}
+
+            <span className="text-[#43C7F4] font-bold group-hover:underline flex items-center gap-1">
+              Open Full Scope →
+            </span>
+          </div>
+
+          {/* Center Radar Station Crosshair Marker */}
           <div className="relative z-10 flex flex-col items-center">
-            <div className="w-4 h-4 rounded-full bg-[#1499E8] border-2 border-white shadow-lg animate-pulse" />
-            <span className="text-[11px] font-bold text-[#F4F7FA] bg-[#071018]/90 px-2.5 py-1 rounded mt-2 border border-[#162331] group-hover:text-[#43C7F4] transition-colors shadow-lg">
-              Launch DWR {nearestRadar.city} Scope ({nearestRadar.distanceKm} km) →
+            <div className="relative flex items-center justify-center">
+              <div className="w-4 h-4 rounded-full bg-[#1499E8] border-2 border-white shadow-lg" />
+              <div className="absolute w-8 h-8 rounded-full border border-[#43C7F4]/60 animate-ping" />
+            </div>
+            <span className="text-[10px] font-bold text-[#F4F7FA] font-mono bg-[#071018]/95 px-2 py-0.5 rounded mt-2 border border-[#162331] group-hover:text-[#43C7F4] transition-colors shadow-lg">
+              {nearestRadar.city} [{nearestRadar.id}]
             </span>
           </div>
         </div>
@@ -126,3 +186,4 @@ export const HomeRadarPreview: React.FC<HomeRadarPreviewProps> = ({
     </section>
   );
 };
+
