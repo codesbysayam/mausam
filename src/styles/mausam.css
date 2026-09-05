@@ -761,23 +761,74 @@ img, svg, canvas, video {
   filter: brightness(0.65) invert(1) contrast(2.6) hue-rotate(200deg) saturate(0.35);
 }
 
-/* Tactical Leaflet attribution styling */
+/* Tactical Leaflet attribution styling - compact, readable & unobtrusive */
+.leaflet-container .leaflet-control-attribution,
 .leaflet-control-attribution {
-  background: rgba(7, 16, 24, 0.85) !important;
-  color: #93A4B8 !important;
-  font-size: 10px !important;
-  padding: 2px 6px !important;
+  background: rgba(7, 16, 24, 0.72) !important;
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
+  color: #94A3B8 !important;
+  font-size: 9.5px !important;
+  line-height: 1.25 !important;
+  letter-spacing: 0.01em !important;
+  padding: 2px 7px !important;
+  margin: 0 6px 6px 0 !important;
   border-radius: 4px !important;
-  border: 1px solid #162331 !important;
+  border: 1px solid rgba(22, 35, 49, 0.75) !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35) !important;
+  opacity: 0.8 !important;
+  white-space: nowrap !important;
+  user-select: none !important;
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.2s ease, border-color 0.2s ease !important;
 }
 
+.leaflet-container .leaflet-control-attribution:hover,
+.leaflet-control-attribution:hover {
+  opacity: 1 !important;
+  background: rgba(7, 16, 24, 0.92) !important;
+  border-color: rgba(67, 199, 244, 0.4) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5) !important;
+}
+
+.leaflet-container .leaflet-control-attribution a,
 .leaflet-control-attribution a {
-  color: #43C7F4 !important;
+  color: #38BDF8 !important;
+  font-weight: 500 !important;
   text-decoration: none !important;
+  transition: color 0.15s ease !important;
 }
 
-.leaflet-control-attribution a:hover {
+.leaflet-container .leaflet-control-attribution a:hover,
+.leaflet-container .leaflet-control-attribution a:focus,
+.leaflet-control-attribution a:hover,
+.leaflet-control-attribution a:focus {
+  color: #7DD3FC !important;
   text-decoration: underline !important;
+}
+
+.leaflet-container .leaflet-control-attribution span[aria-hidden="true"],
+.leaflet-control-attribution span[aria-hidden="true"] {
+  opacity: 0.45 !important;
+  margin: 0 2px !important;
+}
+
+/* Smooth Leaflet Zoom & Hardware Acceleration */
+.leaflet-zoom-anim .leaflet-zoom-animated {
+  will-change: transform;
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1) !important;
+}
+
+.leaflet-fade-anim .leaflet-tile {
+  will-change: opacity;
+  transition: opacity 0.22s ease-in-out !important;
+}
+
+.leaflet-tile-container {
+  will-change: transform;
+}
+
+.leaflet-container {
+  touch-action: pan-x pan-y pinch-zoom;
 }
 
 /* Leaflet Radar Map Stability & Rendering Fixes */

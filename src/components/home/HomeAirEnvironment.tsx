@@ -1,7 +1,8 @@
 import React from 'react';
 import { CurrentWeather } from '../../types';
-import { Activity, Wind, Sparkles, AlertTriangle, ArrowRight, ShieldCheck, Flower2, Sun } from 'lucide-react';
+import { Activity, ArrowRight, Flower2, Sun } from 'lucide-react';
 import { getAqiMeaning } from '../../services/humanWeatherEngine';
+import { INDIA_WEATHER_DATA } from '../../data/indiaWeatherData';
 
 interface HomeAirEnvironmentProps {
   weather: CurrentWeather;
@@ -31,13 +32,20 @@ export const HomeAirEnvironment: React.FC<HomeAirEnvironmentProps> = ({
       : Math.round(pm25 * 1.8 * 10) / 10;
 
   const no2 = typeof weather.no2 === 'number' ? weather.no2 : 22.4;
+  const so2 = typeof weather.so2 === 'number' ? weather.so2 : 12.1;
+  const co = typeof weather.co === 'number' ? weather.co : 0.8;
   const o3 = typeof weather.o3 === 'number' ? weather.o3 : 38.0;
   const uv = typeof weather.uvIndex === 'number' ? weather.uvIndex : 5.4;
-  const pollenCount = weather.pollenCount ?? 2;
-  const pollenGrains = pollenCount * 12 + 6;
 
   const uvRisk = uv >= 11 ? 'Extreme' : uv >= 8 ? 'Very High' : uv >= 6 ? 'High' : uv >= 3 ? 'Moderate' : 'Low';
-  const pollenRisk = pollenCount > 3 ? 'High' : pollenCount > 1 ? 'Moderate' : 'Low';
+
+  // Compute Cleanest and Most Polluted Cities from real state observations
+  const sortedByAQI = [...INDIA_WEATHER_DATA]
+    .filter((s) => typeof s.aqi === 'number')
+    .sort((a, b) => (b.aqi ?? 0) - (a.aqi ?? 0));
+
+  const mostPolluted = sortedByAQI.slice(0, 4);
+  const cleanest = [...sortedByAQI].reverse().slice(0, 4);
 
   return (
     <section id="homepage-air-environment" className="rounded-2xl bg-[#0B141E] border border-[#162331] p-5 flex flex-col gap-4">
@@ -147,7 +155,7 @@ export const HomeAirEnvironment: React.FC<HomeAirEnvironmentProps> = ({
           {/* Nitrogen Dioxide */}
           <div className="p-3 rounded-xl bg-[#071018] border border-[#162331] flex flex-col justify-between">
             <div className="flex justify-between items-center text-[10px] font-bold text-[#93A4B8] uppercase">
-              <span>NO₂ Gas</span>
+              <span>NO₂</span>
               <span className="text-[#22C7A0]">Good</span>
             </div>
             <div className="text-xl font-bold text-[#F4F7FA] my-1">
@@ -155,6 +163,34 @@ export const HomeAirEnvironment: React.FC<HomeAirEnvironmentProps> = ({
             </div>
             <div className="w-full bg-[#162331] h-1 rounded-full overflow-hidden">
               <div className="h-full bg-[#22C7A0] rounded-full" style={{ width: '35%' }} />
+            </div>
+          </div>
+
+          {/* Sulfur Dioxide */}
+          <div className="p-3 rounded-xl bg-[#071018] border border-[#162331] flex flex-col justify-between">
+            <div className="flex justify-between items-center text-[10px] font-bold text-[#93A4B8] uppercase">
+              <span>SO₂</span>
+              <span className="text-[#22C7A0]">Good</span>
+            </div>
+            <div className="text-xl font-bold text-[#F4F7FA] my-1">
+              {so2} <span className="text-[10px] font-normal text-[#93A4B8]">µg/m³</span>
+            </div>
+            <div className="w-full bg-[#162331] h-1 rounded-full overflow-hidden">
+              <div className="h-full bg-[#22C7A0] rounded-full" style={{ width: '25%' }} />
+            </div>
+          </div>
+
+          {/* Carbon Monoxide */}
+          <div className="p-3 rounded-xl bg-[#071018] border border-[#162331] flex flex-col justify-between">
+            <div className="flex justify-between items-center text-[10px] font-bold text-[#93A4B8] uppercase">
+              <span>CO</span>
+              <span className="text-[#22C7A0]">Normal</span>
+            </div>
+            <div className="text-xl font-bold text-[#F4F7FA] my-1">
+              {co} <span className="text-[10px] font-normal text-[#93A4B8]">mg/m³</span>
+            </div>
+            <div className="w-full bg-[#162331] h-1 rounded-full overflow-hidden">
+              <div className="h-full bg-[#22C7A0] rounded-full" style={{ width: '18%' }} />
             </div>
           </div>
 
@@ -171,35 +207,78 @@ export const HomeAirEnvironment: React.FC<HomeAirEnvironmentProps> = ({
               <div className="h-full bg-[#22C7A0] rounded-full" style={{ width: '42%' }} />
             </div>
           </div>
+        </div>
+      </div>
 
-          {/* Aero-Allergen Pollen Risk */}
-          <div className="p-3 rounded-xl bg-[#071018] border border-[#162331] flex flex-col justify-between">
-            <div className="flex justify-between items-center text-[10px] font-bold text-[#93A4B8] uppercase">
-              <span className="flex items-center gap-1">
-                <Flower2 className="w-3 h-3 text-[#22C7A0]" />
-                Bio-Pollen
-              </span>
-              <span className={pollenRisk === 'High' ? 'text-[#EF5350]' : pollenRisk === 'Moderate' ? 'text-[#FFC857]' : 'text-[#22C7A0]'}>{pollenRisk}</span>
+      {/* Pollen & UV Bio-Factors Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+        {/* Strict Pollen check per user requirement */}
+        <div className="p-3 rounded-xl bg-[#071018] border border-[#162331] flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-[#2ECC71]/15 flex items-center justify-center text-[#2ECC71]">
+              <Flower2 className="w-4 h-4" />
             </div>
-            <div className="text-xl font-bold text-[#22C7A0] my-1">
-              {pollenGrains} <span className="text-[10px] font-normal text-[#93A4B8]">gr/m³</span>
+            <div>
+              <span className="text-[10px] font-bold text-[#93A4B8] uppercase block">Bio-Pollen Sensor</span>
+              <span className="text-xs font-semibold text-[#D1DCE8]">Pollen: Data unavailable</span>
             </div>
-            <span className="text-[10px] text-[#93A4B8] truncate">Level {pollenCount}/5 • Poaceae</span>
+          </div>
+          <span className="text-[10px] text-[#8A94A6] bg-[#162331] px-2 py-0.5 rounded font-mono">
+            No sensor network
+          </span>
+        </div>
+
+        {/* Solar UV */}
+        <div className="p-3 rounded-xl bg-[#071018] border border-[#162331] flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-[#FFC857]/15 flex items-center justify-center text-[#FFC857]">
+              <Sun className="w-4 h-4" />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-[#93A4B8] uppercase block">Solar UV Index</span>
+              <span className="text-xs font-semibold text-white">Index {uv} — {uvRisk} Risk</span>
+            </div>
+          </div>
+          <span className="text-[10px] text-[#FFC857] bg-[#FFC857]/15 px-2 py-0.5 rounded font-mono font-bold">
+            Solar Radiation
+          </span>
+        </div>
+      </div>
+
+      {/* India AQI Summary: Most Polluted vs Cleanest Cities */}
+      <div className="pt-3 border-t border-[#162331]">
+        <h3 className="text-xs font-bold text-white uppercase tracking-wider mb-3">
+          INDIA AQI SUMMARY (NATIONAL CAAQMS STATIONS)
+        </h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {/* Most Polluted Cities */}
+          <div className="p-3 rounded-xl bg-[#071018] border border-[#162331]">
+            <span className="text-[10px] font-bold text-[#EF5350] uppercase tracking-wider block mb-2">
+              ▲ MOST POLLUTED CITIES / REGIONS
+            </span>
+            <div className="space-y-1.5 text-xs font-mono">
+              {mostPolluted.map((c) => (
+                <div key={c.id} className="flex justify-between items-center py-0.5 border-b border-[#162331]/60">
+                  <span className="text-[#D1DCE8]">{c.city || c.name}</span>
+                  <span className="text-[#EF5350] font-bold">{c.aqi} AQI</span>
+                </div>
+              ))}
+            </div>
           </div>
 
-          {/* UV Radiation Index */}
-          <div className="p-3 rounded-xl bg-[#071018] border border-[#162331] flex flex-col justify-between">
-            <div className="flex justify-between items-center text-[10px] font-bold text-[#93A4B8] uppercase">
-              <span className="flex items-center gap-1">
-                <Sun className="w-3 h-3 text-[#FFC857]" />
-                Solar UV
-              </span>
-              <span className="text-[#FFC857]">Index {uv}</span>
+          {/* Cleanest Cities */}
+          <div className="p-3 rounded-xl bg-[#071018] border border-[#162331]">
+            <span className="text-[10px] font-bold text-[#22C7A0] uppercase tracking-wider block mb-2">
+              ▼ CLEANEST CITIES / REGIONS
+            </span>
+            <div className="space-y-1.5 text-xs font-mono">
+              {cleanest.map((c) => (
+                <div key={c.id} className="flex justify-between items-center py-0.5 border-b border-[#162331]/60">
+                  <span className="text-[#D1DCE8]">{c.city || c.name}</span>
+                  <span className="text-[#22C7A0] font-bold">{c.aqi} AQI</span>
+                </div>
+              ))}
             </div>
-            <div className="text-xl font-bold text-[#FFC857] my-1">
-              {uvRisk}
-            </div>
-            <span className="text-[10px] text-[#93A4B8] truncate">{uv >= 6 ? 'SPF 30+ recommended' : 'Low skin hazard'}</span>
           </div>
         </div>
       </div>

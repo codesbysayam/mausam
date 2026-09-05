@@ -2,10 +2,11 @@ import React from 'react';
 
 export type WeatherMapMetric =
   | 'temperature'
-  | 'humidity'
+  | 'rainfall'
   | 'aqi'
-  | 'pollen'
-  | 'rainfall';
+  | 'humidity'
+  | 'wind'
+  | 'warnings';
 
 interface MapLayerControlProps {
   activeMetric: WeatherMapMetric;
@@ -14,10 +15,11 @@ interface MapLayerControlProps {
 
 const METRIC_LAYERS: { id: WeatherMapMetric; label: string; icon: string }[] = [
   { id: 'temperature', label: 'Temperature (°C)', icon: 'thermostat' },
-  { id: 'rainfall', label: '24h Rainfall (mm)', icon: 'rainy' },
+  { id: 'rainfall', label: 'Rainfall (mm)', icon: 'rainy' },
   { id: 'aqi', label: 'Air Quality (AQI)', icon: 'air' },
   { id: 'humidity', label: 'Humidity (RH%)', icon: 'water_drop' },
-  { id: 'pollen', label: 'Pollen Risk', icon: 'grain' },
+  { id: 'wind', label: 'Wind (km/h)', icon: 'air' },
+  { id: 'warnings', label: 'Warnings', icon: 'warning' },
 ];
 
 export const MapLayerControl: React.FC<MapLayerControlProps> = ({

@@ -47,12 +47,21 @@ export const MapLegend: React.FC<MapLegendProps> = ({ metric }) => {
         { label: '> 85% Very Humid', color: '#5AC8E0' },
       ];
     }
-    if (normalizedMetric.includes('pollen')) {
+    if (normalizedMetric.includes('wind')) {
       return [
-        { label: '1–2 Low', color: '#2ECC71' },
-        { label: '3 Moderate', color: '#F1C40F' },
-        { label: '4 High', color: '#FF8C42' },
-        { label: '5 Severe', color: '#E74C3C' },
+        { label: '≤ 10 km/h Light', color: '#5AC8E0' },
+        { label: '11–20 km/h Moderate', color: '#4FA8E0' },
+        { label: '21–35 km/h Fresh', color: '#FFC93C' },
+        { label: '36–50 km/h Strong', color: '#FF8C42' },
+        { label: '> 50 km/h Squall', color: '#E74C3C' },
+      ];
+    }
+    if (normalizedMetric.includes('warn')) {
+      return [
+        { label: '🟢 Normal (Routine)', color: '#2ECC71' },
+        { label: '🟡 Watch (Advisory)', color: '#F1C40F' },
+        { label: '🟠 Alert (Be Prepared)', color: '#FF8C42' },
+        { label: '🔴 Severe (Action)', color: '#E74C3C' },
       ];
     }
     return [

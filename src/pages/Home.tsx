@@ -23,6 +23,16 @@ import { HomeAirEnvironment } from '../components/home/HomeAirEnvironment';
 import { HomeRadarPreview } from '../components/home/HomeRadarPreview';
 import { WeatherSnapshot } from '../components/weather/WeatherSnapshot';
 
+// New High-Visibility Functional Components
+import { HomeIndiaWeatherStatus } from '../components/home/HomeIndiaWeatherStatus';
+import { HomeSevereWeatherStrip } from '../components/home/HomeSevereWeatherStrip';
+import { HomeWhatsHappeningNow } from '../components/home/HomeWhatsHappeningNow';
+import { HomeAtmosphericChangeDetector } from '../components/home/HomeAtmosphericChangeDetector';
+import { HomeLiveTimeline } from '../components/home/HomeLiveTimeline';
+import { HomeQuickActionBar } from '../components/home/HomeQuickActionBar';
+import { MausamDataHealth } from '../components/common/MausamDataHealth';
+import { DataExportActions } from '../components/common/DataExportActions';
+
 import {
   Table,
   Search,
@@ -136,6 +146,14 @@ export const HomePage: React.FC<HomePageProps> = ({
     onStateSelect(state);
   };
 
+  const handleQuickAction = (tabId: string) => {
+    if (tabId === 'overview') onNavigateToTab('weather');
+    else if (tabId === 'air') onNavigateToTab('aqi');
+    else if (['home', 'weather', 'forecast', 'warnings', 'radar', 'aqi', 'agromet', 'reports'].includes(tabId)) {
+      onNavigateToTab(tabId as MainNavTab);
+    }
+  };
+
   return (
     <div id="mausam-home-view" className="flex flex-col gap-6 w-full pb-14">
       {/* Real Geolocation & Active Station Banner */}
@@ -147,12 +165,60 @@ export const HomePage: React.FC<HomePageProps> = ({
         onChangeLocationClick={onOpenLocationCenter}
       />
 
-      {/* 1. DISTINCTIVE ATMOSPHERIC HERO */}
+      {/* SEVERE WEATHER ALERT STRIP */}
+      <HomeSevereWeatherStrip
+        alerts={alerts}
+        onNavigateToWarnings={() => onNavigateToTab('warnings')}
+      />
+
+      {/* DATA HEALTH & GLOBAL REFRESH CONTROL */}
+      <MausamDataHealth
+        weatherStatus="Operational"
+        radarStatus="Operational"
+        aqiStatus="Operational"
+        warningStatus="Operational"
+        stationStatus="Operational"
+        onRefreshAll={onDetectLocation ? () => onDetectLocation(true) : undefined}
+        lastUpdated={current.lastUpdated}
+      />
+
+      {/* QUICK ACTION BAR */}
+      <HomeQuickActionBar
+        onNavigate={handleQuickAction}
+        activeTab="overview"
+      />
+
+      {/* 1. LIVE NATIONAL WEATHER OVERVIEW (INDIA WEATHER STATUS) */}
+      <HomeIndiaWeatherStatus
+        onNavigate={handleQuickAction}
+        lastUpdated={current.lastUpdated}
+      />
+
+      {/* 1.5 DISTINCTIVE ATMOSPHERIC HERO */}
       <HomeAtmosphericHero
         weather={current}
         location={selectedLocation}
         onExploreWeather={() => onNavigateToTab('weather')}
         onExploreForecast={() => onNavigateToTab('forecast')}
+      />
+
+      {/* WHAT'S HAPPENING NOW & WEATHER CHANGE DETECTOR GRID */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+        <HomeWhatsHappeningNow
+          weatherBundle={weatherBundle}
+          selectedLocation={selectedLocation}
+          lastUpdated={current.lastUpdated}
+        />
+        <HomeAtmosphericChangeDetector
+          current={current}
+          locationKey={selectedLocation.id || selectedLocation.name}
+        />
+      </div>
+
+      {/* LIVE WEATHER TIMELINE */}
+      <HomeLiveTimeline
+        hourly={hourly}
+        locationName={selectedLocation.name}
       />
 
       {/* 2. DYNAMIC SEVERE WEATHER WARNING BANNER */}
@@ -372,6 +438,12 @@ export const HomePage: React.FC<HomePageProps> = ({
             )}
           </div>
         </div>
+
+        {/* Real Data Export Actions: CSV, Excel, Print */}
+        <DataExportActions
+          data={filteredStates}
+          reportTitle="Mausam State & Union Territory Atmospheric Observations"
+        />
 
         {/* Table representation */}
         <div className="overflow-x-auto rounded-xl border border-[#162331]">

@@ -11,6 +11,7 @@ import { CropType, PhenologicalStage } from '../services/agronomicEngine';
 import { CurrentLocationBanner } from '../components/location/CurrentLocationBanner';
 
 // Import the 14 Command Center components
+import { AgriculturalWeatherStatusPanel } from '../components/agromet/AgriculturalWeatherStatusPanel';
 import { AgrometCommandHeader } from '../components/agromet/AgrometCommandHeader';
 import { FarmStatusOverview } from '../components/agromet/FarmStatusOverview';
 import { TodaysFarmActionCenter } from '../components/agromet/TodaysFarmActionCenter';
@@ -146,6 +147,13 @@ export const AgrometPage: React.FC<AgrometPageProps> = ({
         isLive={isLive}
         sowingDate={sowingDate}
         onSowingDateChange={setSowingDate}
+      />
+
+      {/* Prominent Agricultural Weather Status Panel */}
+      <AgriculturalWeatherStatusPanel
+        weather={weatherBundle}
+        district={selectedDistrict}
+        state={selectedState}
       />
 
       {/* SECTION 2: FARM STATUS OVERVIEW (6 High-Impact Telemetry Cards) */}

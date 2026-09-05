@@ -179,15 +179,21 @@ function StationViewController({
   useEffect(() => {
     const key = `${station.code || station.id}_${station.lat}_${station.lng}_${selectedRangeKm}`;
     if (prevRef.current === key) return;
+    const isFirst = !prevRef.current;
     prevRef.current = key;
 
     const targetZoom = selectedRangeKm > 250 ? 7 : 8;
-    map.setView([station.lat, station.lng], targetZoom, {
-      animate: false,
-    });
-    requestAnimationFrame(() => {
-      map.invalidateSize({ animate: false, pan: false });
-    });
+    if (isFirst) {
+      map.setView([station.lat, station.lng], targetZoom, {
+        animate: false,
+      });
+    } else {
+      map.flyTo([station.lat, station.lng], targetZoom, {
+        animate: true,
+        duration: 0.75,
+        easeLinearity: 0.25,
+      });
+    }
   }, [map, station.code, station.id, station.lat, station.lng, selectedRangeKm]);
 
   return null;
@@ -285,7 +291,9 @@ function RadarLayerController({
           maxNativeZoom: 7,
           minZoom: 4,
           maxZoom: 12,
-          keepBuffer: 2,
+          keepBuffer: 4,
+          updateWhenZooming: false,
+          updateInterval: 100,
           attribution: productMetadata.sourceAttribution,
         });
 
@@ -723,31 +731,31 @@ export const DopplerRadarViewer: React.FC<DopplerRadarViewerProps> = ({
     if (onProductChange) onProductChange(target);
   };
 
-  // Recenter view on station using single controlled movement
+  // Recenter view on station using smooth animated flyTo
   const handleRecenter = () => {
     if (!mapRef.current) return;
-    mapRef.current.setView([station.lat, station.lng], selectedRangeKm > 250 ? 7 : 8, {
-      animate: false,
-    });
-    requestAnimationFrame(() => {
-      mapRef.current?.invalidateSize({ animate: false, pan: false });
+    const targetZoom = selectedRangeKm > 250 ? 7 : 8;
+    mapRef.current.flyTo([station.lat, station.lng], targetZoom, {
+      animate: true,
+      duration: 0.75,
+      easeLinearity: 0.25,
     });
   };
 
+  // Smooth Zoom In
   const handleZoomIn = () => {
     if (mapRef.current) {
-      mapRef.current.zoomIn();
-      requestAnimationFrame(() => {
-        mapRef.current?.invalidateSize({ animate: false, pan: false });
+      mapRef.current.zoomIn(1, {
+        animate: true,
       });
     }
   };
 
+  // Smooth Zoom Out
   const handleZoomOut = () => {
     if (mapRef.current) {
-      mapRef.current.zoomOut();
-      requestAnimationFrame(() => {
-        mapRef.current?.invalidateSize({ animate: false, pan: false });
+      mapRef.current.zoomOut(1, {
+        animate: true,
       });
     }
   };
@@ -1118,10 +1126,15 @@ export const DopplerRadarViewer: React.FC<DopplerRadarViewerProps> = ({
           minZoom={4}
           maxZoom={12}
           scrollWheelZoom={true}
+          wheelPxPerZoomLevel={120}
+          wheelDebounceTime={40}
+          zoomDelta={1}
+          zoomSnap={1}
           zoomControl={false}
-          zoomAnimation={false}
-          fadeAnimation={false}
-          markerZoomAnimation={false}
+          zoomAnimation={true}
+          zoomAnimationThreshold={4}
+          fadeAnimation={true}
+          markerZoomAnimation={true}
           maxBounds={[
             [0.0, 60.0],
             [40.0, 105.0],
@@ -1146,7 +1159,9 @@ export const DopplerRadarViewer: React.FC<DopplerRadarViewerProps> = ({
           <TileLayer
             url={OSM_TILE_URL}
             attribution={OSM_ATTRIBUTION}
-            keepBuffer={2}
+            keepBuffer={4}
+            updateWhenZooming={false}
+            updateInterval={100}
             minZoom={4}
             maxZoom={12}
             eventHandlers={{
@@ -1186,21 +1201,23 @@ export const DopplerRadarViewer: React.FC<DopplerRadarViewerProps> = ({
           <span className="text-[9px] font-mono text-[#93A4B8] mt-1">TRUE NORTH</span>
         </div>
 
-        {/* Tactical Floating Zoom Controls (+ / -) */}
-        <div className="absolute top-20 right-4 z-20 flex flex-col gap-1 shadow-xl">
+        {/* Tactical Floating Zoom Controls (+ / -) with Smooth Interaction */}
+        <div className="absolute top-20 right-4 z-20 flex flex-col gap-1.5 shadow-xl">
           <button
             type="button"
             onClick={handleZoomIn}
-            className="w-8 h-8 rounded-lg bg-[#071018]/90 hover:bg-[#162331] border border-[#162331] text-[#D1DCE8] hover:text-white flex items-center justify-center cursor-pointer transition-colors"
-            title="Zoom In"
+            className="w-8 h-8 rounded-lg bg-[#071018]/90 hover:bg-[#162331] active:bg-[#43C7F4]/20 active:scale-90 border border-[#162331] text-[#D1DCE8] hover:text-white flex items-center justify-center cursor-pointer transition-all duration-150 shadow-md select-none"
+            title="Smooth Zoom In"
+            aria-label="Zoom In"
           >
             <ZoomIn className="w-4 h-4" />
           </button>
           <button
             type="button"
             onClick={handleZoomOut}
-            className="w-8 h-8 rounded-lg bg-[#071018]/90 hover:bg-[#162331] border border-[#162331] text-[#D1DCE8] hover:text-white flex items-center justify-center cursor-pointer transition-colors"
-            title="Zoom Out"
+            className="w-8 h-8 rounded-lg bg-[#071018]/90 hover:bg-[#162331] active:bg-[#43C7F4]/20 active:scale-90 border border-[#162331] text-[#D1DCE8] hover:text-white flex items-center justify-center cursor-pointer transition-all duration-150 shadow-md select-none"
+            title="Smooth Zoom Out"
+            aria-label="Zoom Out"
           >
             <ZoomOut className="w-4 h-4" />
           </button>

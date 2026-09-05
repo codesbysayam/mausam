@@ -239,6 +239,10 @@ export default function App() {
         onNavigateTab={(tab) => navigateToTab(tab as AppView)}
         activeAlertCount={weatherBundle.alerts?.length || 0}
         onDetectLocation={detectLocation}
+        onRefreshAll={async () => {
+          await loadWeatherData(selectedLocation, true);
+        }}
+        isRefreshing={isLoadingWeather}
         isLocating={isLocating}
         locatePhase={locatePhase}
         locationSource={locationSource}

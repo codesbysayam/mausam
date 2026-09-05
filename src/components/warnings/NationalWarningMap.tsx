@@ -22,7 +22,7 @@ export const NationalWarningMap: React.FC<NationalWarningMapProps> = ({
   selectedState,
   onSelectState,
   onOpenStateDrawer,
-  warnings: _warnings,
+  warnings = [],
 }) => {
   const [hoveredLocation, setHoveredLocation] = useState<{
     id: string;
@@ -33,6 +33,17 @@ export const NationalWarningMap: React.FC<NationalWarningMapProps> = ({
   } | null>(null);
 
   const [zoomLevel, setZoomLevel] = useState(1);
+
+  // Active warnings for the selected state
+  const stateActiveWarnings = useMemo(() => {
+    if (!selectedState || selectedState === 'all') return [];
+    return warnings.filter(
+      (w) =>
+        w.state.toLowerCase().includes(selectedState.toLowerCase()) ||
+        selectedState.toLowerCase().includes(w.state.toLowerCase()) ||
+        (w.stateCode && w.stateCode.toLowerCase() === selectedState.toLowerCase())
+    );
+  }, [selectedState, warnings]);
 
   // Map state codes/names to state summaries
   const stateSummaryMap = useMemo(() => {
@@ -281,6 +292,92 @@ export const NationalWarningMap: React.FC<NationalWarningMapProps> = ({
           </div>
         )}
       </div>
+
+      {/* Selected State Warning Dossier Panel */}
+      {selectedState && selectedState !== 'all' && (
+        <div className="bg-[#071A2D] border border-[#1D4E73] rounded-md p-3 sm:p-4 text-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 mb-2 border-b border-[#1D4E73] gap-2">
+            <div>
+              <span className="text-[10px] uppercase font-bold text-[#64B5F6] tracking-wider block">
+                STATE WARNING DOSSIER
+              </span>
+              <h4 className="text-sm sm:text-base font-bold text-white">
+                {selectedState} Meteorological Division
+              </h4>
+            </div>
+            <button
+              type="button"
+              onClick={() => onSelectState('all', 'all')}
+              className="text-xs text-[#90CAF9] hover:text-white px-2 py-1 bg-[#102D47] rounded cursor-pointer self-start sm:self-auto border border-[#1D4E73]"
+            >
+              Show All India Map
+            </button>
+          </div>
+
+          {stateActiveWarnings.length === 0 ? (
+            <div className="text-[#B8C7D9] py-2">
+              <span className="text-[#2ECC71] font-bold">🟢 No Active Severe Warnings</span> in force for {selectedState}. Routine seasonal synoptic conditions prevail.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {stateActiveWarnings.map((w) => (
+                <div
+                  key={w.id}
+                  className="p-3 rounded bg-[#0B2239] border border-[#1D4E73] flex flex-col gap-2"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="font-bold text-white text-sm">
+                      {w.title || w.hazardLabel}
+                    </span>
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase font-mono ${
+                        w.severity === 'red'
+                          ? 'bg-[#FF0000] text-white'
+                          : w.severity === 'orange'
+                          ? 'bg-[#FFA500] text-black'
+                          : 'bg-[#FFFF00] text-black'
+                      }`}
+                    >
+                      {w.severity.toUpperCase()} ALERT
+                    </span>
+                  </div>
+
+                  {/* Affected Districts */}
+                  <div>
+                    <span className="text-[10px] font-bold uppercase text-[#8A94A6] block mb-1">
+                      Affected Districts:
+                    </span>
+                    <div className="flex flex-wrap gap-1">
+                      {w.affectedDistricts && w.affectedDistricts.length > 0 ? (
+                        w.affectedDistricts.map((d) => (
+                          <span
+                            key={d}
+                            className="px-2 py-0.5 bg-[#172A3D] text-[#D7DEE8] rounded text-[11px] font-mono border border-[#1D4E73]"
+                          >
+                            {d}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="text-[#B8C7D9]">All subdivision districts</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Advisory / Action Item */}
+                  <div className="pt-2 border-t border-[#1D4E73]/70 text-[#E3F2FD] leading-relaxed">
+                    <strong className="text-white text-[11px] uppercase block mb-0.5">
+                      Operational Advisory:
+                    </strong>
+                    {(w.recommendedActions && w.recommendedActions.length > 0
+                      ? w.recommendedActions.join('. ')
+                      : w.description) || 'Observe standard IMD safety protocol. Avoid waterlogged transit corridors and low-lying coastal areas.'}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Official Early Warning Color Legend */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 pt-2 border-t border-[#1D4E73]">

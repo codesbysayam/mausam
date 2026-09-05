@@ -252,6 +252,8 @@ export interface HourlyForecastItem {
   windDirection?: string;
   cloudCover?: number;
   qpf?: number;
+  pressure?: number;
+  precipitation?: number;
 }
 
 export interface DailyForecastItem {

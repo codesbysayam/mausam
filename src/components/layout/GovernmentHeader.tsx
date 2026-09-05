@@ -18,6 +18,8 @@ interface GovernmentHeaderProps {
   onNavigateTab?: (tab: MainNavTab | FooterView) => void;
   activeAlertCount?: number;
   onDetectLocation?: (forceRefresh?: boolean) => Promise<any>;
+  onRefreshAll?: () => Promise<void> | void;
+  isRefreshing?: boolean;
   isLocating?: boolean;
   locatePhase?: LocatingPhase;
   locationSource?: 'DEVICE_GPS' | 'MANUAL_SEARCH';
@@ -33,6 +35,8 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
   onNavigateTab,
   activeAlertCount = 0,
   onDetectLocation,
+  onRefreshAll,
+  isRefreshing = false,
   isLocating = false,
   locatePhase = 'idle',
   locationSource = 'MANUAL_SEARCH',
@@ -256,6 +260,48 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
                   {localizedDateString}
                 </div>
               </div>
+
+              {/* REFRESH ALL Button */}
+              {onRefreshAll && (
+                <button
+                  type="button"
+                  id="header-refresh-all-button"
+                  onClick={() => onRefreshAll()}
+                  disabled={isRefreshing}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0B2239] hover:bg-[#102D47] border border-[#1499E8]/50 hover:border-[#1499E8] text-white text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                  title="Refresh All Meteorological Feeds (Weather, Radar, Alerts, Stations)"
+                >
+                  <span
+                    className={`material-symbols-outlined text-[16px] text-[#64B5F6] ${
+                      isRefreshing ? 'animate-spin' : ''
+                    }`}
+                  >
+                    sync
+                  </span>
+                  <span className="hidden sm:inline">REFRESH ALL</span>
+                </button>
+              )}
+
+              {/* MY WEATHER Button */}
+              {onDetectLocation && (
+                <button
+                  type="button"
+                  id="header-my-weather-button"
+                  onClick={() => onDetectLocation(true)}
+                  disabled={isLocating}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0B72B9] hover:bg-[#1565C0] border border-[#1565C0] text-white text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50"
+                  title="Detect GPS location and show local weather"
+                >
+                  <span
+                    className={`material-symbols-outlined text-[16px] text-white ${
+                      isLocating ? 'animate-spin' : ''
+                    }`}
+                  >
+                    {isLocating ? 'progress_activity' : 'my_location'}
+                  </span>
+                  <span className="hidden sm:inline">MY WEATHER</span>
+                </button>
+              )}
 
               {/* Ask MAUSAM Assistant Trigger */}
               {onOpenAskMausam && (

@@ -20,6 +20,9 @@ export interface StateWeatherData {
   pressure?: number;
   windSpeed?: number;
   windDir?: string;
+  warningLevel?: 'normal' | 'watch' | 'alert' | 'severe';
+  warningMessage?: string;
+  dataSource?: string;
   dewPoint?: number;
   cloudCover?: number;
   tempMin?: number;
@@ -92,7 +95,8 @@ export function normalizeMetric(m?: string): WeatherMapMetric {
   if (lower.includes('rain')) return 'rainfall';
   if (lower.includes('aqi') || lower.includes('air')) return 'aqi';
   if (lower.includes('humid') || lower.includes('rh')) return 'humidity';
-  if (lower.includes('pollen')) return 'pollen';
+  if (lower.includes('wind')) return 'wind';
+  if (lower.includes('warn')) return 'warnings';
   return 'temperature';
 }
 
@@ -104,10 +108,12 @@ function getMetricValue(state: StateWeatherData, metric: WeatherMapMetric): numb
       return state.humidity;
     case 'aqi':
       return state.aqi;
-    case 'pollen':
-      return state.pollen;
+    case 'wind':
+      return state.windSpeed;
     case 'rainfall':
       return state.rainfall;
+    case 'warnings':
+      return state.warningLevel === 'severe' ? 4 : state.warningLevel === 'alert' ? 3 : state.warningLevel === 'watch' ? 2 : 1;
     default:
       return undefined;
   }
@@ -151,15 +157,34 @@ function getRainfallColor(value?: number) {
   return '#2ECC71';
 }
 
-function getPollenColor(value?: number) {
+function getWindColor(value?: number) {
   if (value === undefined) return MAP_THEME.defaultState;
-  if (value <= 2) return '#2ECC71';
-  if (value <= 3) return '#F1C40F';
-  if (value <= 4) return '#FF8C42';
+  if (value <= 10) return '#5AC8E0';
+  if (value <= 20) return '#4FA8E0';
+  if (value <= 35) return '#FFC93C';
+  if (value <= 50) return '#FF8C42';
   return '#E74C3C';
 }
 
+function getWarningColor(level?: string) {
+  if (!level) return '#2ECC71';
+  switch (level.toLowerCase()) {
+    case 'severe':
+      return '#E74C3C';
+    case 'alert':
+      return '#FF8C42';
+    case 'watch':
+      return '#F1C40F';
+    case 'normal':
+    default:
+      return '#2ECC71';
+  }
+}
+
 function getStateColor(state: StateWeatherData, metric: WeatherMapMetric): string {
+  if (metric === 'warnings') {
+    return getWarningColor(state.warningLevel);
+  }
   const value = getMetricValue(state, metric);
   switch (metric) {
     case 'temperature':
@@ -170,8 +195,8 @@ function getStateColor(state: StateWeatherData, metric: WeatherMapMetric): strin
       return getHumidityColor(value);
     case 'rainfall':
       return getRainfallColor(value);
-    case 'pollen':
-      return getPollenColor(value);
+    case 'wind':
+      return getWindColor(value);
     default:
       return MAP_THEME.defaultState;
   }
@@ -278,8 +303,30 @@ export const IndiaWeatherMap: React.FC<IndiaWeatherMapProps> = ({
   const [isCopied, setIsCopied] = useState<boolean>(false);
   const [isStationSaved, setIsStationSaved] = useState<boolean>(false);
   const [showDiagnostics, setShowDiagnostics] = useState<boolean>(false);
+  const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
 
   const mapSvgRef = useRef<SVGSVGElement>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
+
+  const handleToggleFullscreen = async () => {
+    if (!document.fullscreenElement) {
+      if (mapContainerRef.current?.requestFullscreen) {
+        await mapContainerRef.current.requestFullscreen();
+      }
+    } else {
+      if (document.exitFullscreen) {
+        await document.exitFullscreen();
+      }
+    }
+  };
 
   useEffect(() => {
     if (controlledSelectedState) {
@@ -519,11 +566,18 @@ export const IndiaWeatherMap: React.FC<IndiaWeatherMapProps> = ({
         if (val < 40) return { label: 'Dry Air', variant: 'neutral' };
         return { label: 'Comfortable', variant: 'good' };
       }
-      case 'pollen': {
-        const val = state.pollen ?? 2;
-        if (val >= 4) return { label: 'High Pollen', variant: 'alert' };
-        if (val === 3) return { label: 'Moderate', variant: 'warning' };
-        return { label: 'Low Risk', variant: 'good' };
+      case 'wind': {
+        const val = state.windSpeed ?? 15;
+        if (val > 45) return { label: 'Gale / Storm', variant: 'alert' };
+        if (val > 25) return { label: 'Squally Winds', variant: 'warning' };
+        return { label: 'Moderate Breeze', variant: 'good' };
+      }
+      case 'warnings': {
+        const val = state.warningLevel || 'normal';
+        if (val === 'severe') return { label: 'Red Alert', variant: 'alert' };
+        if (val === 'alert') return { label: 'Orange Alert', variant: 'alert' };
+        if (val === 'watch') return { label: 'Yellow Watch', variant: 'warning' };
+        return { label: 'Routine Normal', variant: 'good' };
       }
       default:
         return { label: 'Normal', variant: 'neutral' };
@@ -602,7 +656,12 @@ export const IndiaWeatherMap: React.FC<IndiaWeatherMapProps> = ({
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 items-start">
         {/* SVG India Map Visualizer Canvas */}
-        <div className="lg:col-span-2 relative bg-[#0F141A] border border-[#334155] rounded p-4 flex flex-col items-center justify-center min-h-[460px] overflow-hidden">
+        <div
+          ref={mapContainerRef}
+          className={`lg:col-span-2 relative bg-[#0F141A] border border-[#334155] rounded p-4 flex flex-col items-center justify-center min-h-[460px] overflow-hidden ${
+            isFullscreen ? 'w-screen h-screen fixed inset-0 z-50 p-6' : ''
+          }`}
+        >
           {/* Active Layer Watermark Badge */}
           <div className="absolute top-3 left-3 bg-[#17212B]/90 border border-[#334155] px-2.5 py-1 rounded text-xs flex items-center gap-2 z-10 backdrop-blur-sm">
             <span className="w-2 h-2 rounded-full bg-[#1ABC9C] animate-pulse"></span>
@@ -612,7 +671,7 @@ export const IndiaWeatherMap: React.FC<IndiaWeatherMapProps> = ({
             </strong>
           </div>
 
-          {/* Map Viewport & Overlay Action Buttons (Zoom / Reset / Pins / Labels) */}
+          {/* Map Viewport & Overlay Action Buttons (Zoom / Reset / Pins / Labels / Fullscreen) */}
           <div className="absolute top-3 right-3 flex flex-col gap-1.5 z-10">
             <div className="bg-[#17212B]/95 border border-[#334155] rounded p-1 flex flex-col gap-1 shadow-lg">
               <button
@@ -666,6 +725,19 @@ export const IndiaWeatherMap: React.FC<IndiaWeatherMapProps> = ({
                 }`}
               >
                 <span className="material-symbols-outlined text-[15px]">location_on</span>
+              </button>
+              <button
+                id="btn-toggle-map-fullscreen"
+                type="button"
+                title={isFullscreen ? 'Exit Fullscreen' : 'Enter Fullscreen'}
+                onClick={handleToggleFullscreen}
+                className={`w-7 h-7 rounded flex items-center justify-center transition-colors cursor-pointer text-xs ${
+                  isFullscreen ? 'bg-[#E74C3C] text-white' : 'bg-[#1E2733] text-[#8A94A6] hover:text-white'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[15px]">
+                  {isFullscreen ? 'fullscreen_exit' : 'fullscreen'}
+                </span>
               </button>
             </div>
           </div>
@@ -837,7 +909,8 @@ export const IndiaWeatherMap: React.FC<IndiaWeatherMapProps> = ({
                   {activeMetric === 'rainfall' && `${activeObservationState.rainfall ?? 0} mm`}
                   {activeMetric === 'aqi' && `${activeObservationState.aqi ?? 75} AQI`}
                   {activeMetric === 'humidity' && `${activeObservationState.humidity ?? 65}% RH`}
-                  {activeMetric === 'pollen' && `Level ${activeObservationState.pollen ?? 2} / 5 Risk`}
+                  {activeMetric === 'wind' && `${activeObservationState.windSpeed ?? 14} km/h (${activeObservationState.windDir || 'SW'})`}
+                  {activeMetric === 'warnings' && `${(activeObservationState.warningLevel || 'NORMAL').toUpperCase()} ALERT`}
                 </div>
               </div>
 
@@ -850,7 +923,8 @@ export const IndiaWeatherMap: React.FC<IndiaWeatherMapProps> = ({
                   {activeMetric === 'rainfall' && 'rainy'}
                   {activeMetric === 'aqi' && 'air'}
                   {activeMetric === 'humidity' && 'water_drop'}
-                  {activeMetric === 'pollen' && 'grain'}
+                  {activeMetric === 'wind' && 'air'}
+                  {activeMetric === 'warnings' && 'warning'}
                 </span>
               </div>
             </div>
@@ -863,7 +937,7 @@ export const IndiaWeatherMap: React.FC<IndiaWeatherMapProps> = ({
                 title="Click to view Surface Temperature Layer"
               >
                 <div className="flex justify-between items-center">
-                  <span className="text-[10px] text-[#8A94A6]">Surface Temp</span>
+                  <span className="text-[10px] text-[#8A94A6]">Temperature</span>
                   <span className="material-symbols-outlined text-[12px] text-[#4FA8E0]">open_in_new</span>
                 </div>
                 <span className="text-white font-bold font-mono text-sm">
@@ -874,10 +948,10 @@ export const IndiaWeatherMap: React.FC<IndiaWeatherMapProps> = ({
               <div
                 className="bg-[#17212B] p-2 rounded border border-[#334155] hover:border-[#4FA8E0] transition-colors cursor-pointer"
                 onClick={() => handleMetricChange('rainfall')}
-                title="Click to view 24h Rainfall Layer"
+                title="Click to view Rainfall Layer"
               >
                 <div className="flex justify-between items-center">
-                  <span className="text-[10px] text-[#8A94A6]">24h Rainfall</span>
+                  <span className="text-[10px] text-[#8A94A6]">Rainfall</span>
                   <span className="material-symbols-outlined text-[12px] text-[#4FA8E0]">open_in_new</span>
                 </div>
                 <span className="text-[#4FA8E0] font-bold font-mono text-sm">
@@ -891,7 +965,7 @@ export const IndiaWeatherMap: React.FC<IndiaWeatherMapProps> = ({
                 title="Click to view Air Quality Index Layer"
               >
                 <div className="flex justify-between items-center">
-                  <span className="text-[10px] text-[#8A94A6]">Air Quality</span>
+                  <span className="text-[10px] text-[#8A94A6]">Air Quality (AQI)</span>
                   <span className="material-symbols-outlined text-[12px] text-[#F1C40F]">open_in_new</span>
                 </div>
                 <span className="text-[#F1C40F] font-bold font-mono text-sm">
@@ -905,7 +979,7 @@ export const IndiaWeatherMap: React.FC<IndiaWeatherMapProps> = ({
                 title="Click to view Relative Humidity Layer"
               >
                 <div className="flex justify-between items-center">
-                  <span className="text-[10px] text-[#8A94A6]">Relative Humidity</span>
+                  <span className="text-[10px] text-[#8A94A6]">Humidity (RH)</span>
                   <span className="material-symbols-outlined text-[12px] text-[#4FA8E0]">open_in_new</span>
                 </div>
                 <span className="text-white font-bold font-mono text-sm">
@@ -915,22 +989,61 @@ export const IndiaWeatherMap: React.FC<IndiaWeatherMapProps> = ({
 
               <div
                 className="bg-[#17212B] p-2 rounded border border-[#334155] hover:border-[#4FA8E0] transition-colors cursor-pointer"
-                onClick={() => handleMetricChange('pollen')}
-                title="Click to view Pollen Risk Layer"
+                onClick={() => handleMetricChange('wind')}
+                title="Click to view Wind Velocity Layer"
               >
                 <div className="flex justify-between items-center">
-                  <span className="text-[10px] text-[#8A94A6]">Pollen Bio-Risk</span>
-                  <span className="material-symbols-outlined text-[12px] text-[#2ECC71]">open_in_new</span>
+                  <span className="text-[10px] text-[#8A94A6]">Wind Velocity</span>
+                  <span className="material-symbols-outlined text-[12px] text-[#4FA8E0]">open_in_new</span>
                 </div>
-                <span className="text-[#2ECC71] font-bold font-mono text-sm">
-                  Level {activeObservationState.pollen ?? 2} / 5
+                <span className="text-white font-bold font-mono text-sm">
+                  {activeObservationState.windSpeed ?? 14} km/h {activeObservationState.windDir ?? 'SW'}
                 </span>
               </div>
 
-              <div className="bg-[#17212B] p-2 rounded border border-[#334155]">
-                <span className="text-[10px] text-[#8A94A6] block">Station Network</span>
-                <span className="text-white font-semibold text-[11px] truncate block">
-                  IMD Synoptic AWS
+              <div
+                className="bg-[#17212B] p-2 rounded border border-[#334155] hover:border-[#4FA8E0] transition-colors cursor-pointer"
+                onClick={() => handleMetricChange('warnings')}
+                title="Click to view Active Warning Layer"
+              >
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] text-[#8A94A6]">Active Warning</span>
+                  <span className="material-symbols-outlined text-[12px] text-[#E74C3C]">open_in_new</span>
+                </div>
+                <span className={`font-bold font-mono text-xs uppercase ${
+                  activeObservationState.warningLevel === 'severe'
+                    ? 'text-[#E74C3C]'
+                    : activeObservationState.warningLevel === 'alert'
+                    ? 'text-[#FF8C42]'
+                    : activeObservationState.warningLevel === 'watch'
+                    ? 'text-[#F1C40F]'
+                    : 'text-[#2ECC71]'
+                }`}>
+                  {activeObservationState.warningLevel || 'NORMAL'}
+                </span>
+              </div>
+            </div>
+
+            {/* Warning Message Strip if active */}
+            {activeObservationState.warningMessage && (
+              <div className="bg-[#17212B] p-2.5 rounded border border-[#334155] text-xs">
+                <span className="text-[10px] text-[#8A94A6] uppercase font-semibold block mb-0.5">Warning Bulletin</span>
+                <p className="text-[#D7DEE8] text-[11px] leading-relaxed">
+                  {activeObservationState.warningMessage}
+                </p>
+              </div>
+            )}
+
+            {/* Observation Timestamp & Data Source Metadata */}
+            <div className="bg-[#0F141A] p-2.5 rounded border border-[#334155] text-[11px] flex flex-col gap-1 font-mono">
+              <div className="flex justify-between items-center">
+                <span className="text-[#8A94A6]">Observation Time:</span>
+                <span className="text-[#4FA8E0] font-bold">{activeObservationState.updatedAt || '21:00 IST'}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[#8A94A6]">Data Source:</span>
+                <span className="text-white font-medium truncate max-w-[200px]" title={activeObservationState.dataSource || 'IMD Synoptic Network'}>
+                  {activeObservationState.dataSource || 'IMD Synoptic Network'}
                 </span>
               </div>
             </div>

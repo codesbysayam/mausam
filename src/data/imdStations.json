@@ -46,7 +46,7 @@
   { "stationId": "43295", "stationName": "Bengaluru (City)", "state": "Karnataka", "city": "Bengaluru", "latitude": 12.97, "longitude": 77.59, "elevation": 920, "active": true, "verified": true },
   { "stationId": "43296", "stationName": "Bengaluru (HAL Airport)", "state": "Karnataka", "city": "Bengaluru", "latitude": 12.95, "longitude": 77.67, "elevation": 888, "active": true, "verified": true },
   { "stationId": "43284", "stationName": "Mangaluru", "state": "Karnataka", "city": "Mangaluru", "latitude": 12.91, "longitude": 74.86, "elevation": 22, "active": true, "verified": true },
-  { "stationId": "43321", "stationName": "Mysuru", "state": "Karnataka", "city": "Mysuru", "latitude": 12.30, "longitude": 76.64, "elevation": 770, "active": true, "verified": true },
+  { "stationId": "43326", "stationName": "Mysuru", "state": "Karnataka", "city": "Mysuru", "latitude": 12.30, "longitude": 76.64, "elevation": 770, "active": true, "verified": true },
   { "stationId": "43198", "stationName": "Belagavi", "state": "Karnataka", "city": "Belagavi", "latitude": 15.85, "longitude": 74.50, "elevation": 762, "active": true, "verified": true },
   { "stationId": "43201", "stationName": "Hubballi-Dharwad", "state": "Karnataka", "city": "Hubballi", "latitude": 15.36, "longitude": 75.12, "elevation": 671, "active": true, "verified": true },
 
@@ -126,7 +126,7 @@
 
   { "stationId": "42111", "stationName": "Chandigarh", "state": "Chandigarh", "city": "Chandigarh", "latitude": 30.73, "longitude": 76.78, "elevation": 321, "active": true, "verified": true },
 
-  { "stationId": "43371", "stationName": "Thiruvananthapuram", "state": "Kerala", "city": "Thiruvananthapuram", "latitude": 8.52, "longitude": 76.94, "elevation": 64, "active": true, "verified": true },
+  { "stationId": "43372", "stationName": "Thiruvananthapuram", "state": "Kerala", "city": "Thiruvananthapuram", "latitude": 8.52, "longitude": 76.94, "elevation": 64, "active": true, "verified": true },
   { "stationId": "43346", "stationName": "Kochi", "state": "Kerala", "city": "Kochi", "latitude": 9.93, "longitude": 76.27, "elevation": 3, "active": true, "verified": true },
   { "stationId": "43319", "stationName": "Kozhikode", "state": "Kerala", "city": "Kozhikode", "latitude": 11.26, "longitude": 75.78, "elevation": 5, "active": true, "verified": true },
   { "stationId": "43315", "stationName": "Kannur", "state": "Kerala", "city": "Kannur", "latitude": 11.87, "longitude": 75.37, "elevation": 12, "active": true, "verified": true },
@@ -135,12 +135,12 @@
 
   { "stationId": "43189", "stationName": "Visakhapatnam", "state": "Andhra Pradesh", "city": "Visakhapatnam", "latitude": 17.69, "longitude": 83.22, "elevation": 3, "active": true, "verified": true },
   { "stationId": "43185", "stationName": "Vijayawada", "state": "Andhra Pradesh", "city": "Vijayawada", "latitude": 16.51, "longitude": 80.65, "elevation": 20, "active": true, "verified": true },
-  { "stationId": "43371", "stationName": "Tirupati", "state": "Andhra Pradesh", "city": "Tirupati", "latitude": 13.63, "longitude": 79.42, "elevation": 162, "active": true, "verified": true },
+  { "stationId": "43373", "stationName": "Tirupati", "state": "Andhra Pradesh", "city": "Tirupati", "latitude": 13.63, "longitude": 79.42, "elevation": 162, "active": true, "verified": true },
   { "stationId": "43223", "stationName": "Kurnool", "state": "Andhra Pradesh", "city": "Kurnool", "latitude": 15.83, "longitude": 78.04, "elevation": 281, "active": true, "verified": true },
   { "stationId": "43187", "stationName": "Kakinada", "state": "Andhra Pradesh", "city": "Kakinada", "latitude": 16.99, "longitude": 82.25, "elevation": 2, "active": true, "verified": true },
 
   { "stationId": "43314", "stationName": "Panaji", "state": "Goa", "city": "Panaji", "latitude": 15.49, "longitude": 73.83, "elevation": 60, "active": true, "verified": true },
-  { "stationId": "43315", "stationName": "Marmagao", "state": "Goa", "city": "Marmagao", "latitude": 15.40, "longitude": 73.80, "elevation": 62, "active": true, "verified": true },
+  { "stationId": "43317", "stationName": "Marmagao", "state": "Goa", "city": "Marmagao", "latitude": 15.40, "longitude": 73.80, "elevation": 62, "active": true, "verified": true },
   { "stationId": "43316", "stationName": "Dabolim Airport", "state": "Goa", "city": "Dabolim", "latitude": 15.38, "longitude": 73.83, "elevation": 56, "active": true, "verified": true },
 
   { "stationId": "42798", "stationName": "Ranchi", "state": "Jharkhand", "city": "Ranchi", "latitude": 23.34, "longitude": 85.31, "elevation": 655, "active": true, "verified": true },

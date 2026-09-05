@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
+import html2canvas from 'html2canvas';
 import { CurrentWeather as CurrentWeatherType, LocationRecord } from '../../types';
 import { StatusBadge } from '../common/StatusBadge';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -18,13 +19,76 @@ export const CurrentWeather: React.FC<CurrentWeatherProps> = ({
   onRefresh,
 }) => {
   const { t, tCondition } = useLanguage();
+  const cardRef = useRef<HTMLDivElement>(null);
+  const [isCapturing, setIsCapturing] = useState<boolean>(false);
+  const [shareToast, setShareToast] = useState<string | null>(null);
+
   const isHighTemp = weather.temp >= 35;
   const isRain = weather.precipitationMm > 0 || weather.condition.toLowerCase().includes('rain');
 
   const translatedCondition = tCondition(weather.condition);
 
+  const handleShareCard = async () => {
+    if (!cardRef.current || isCapturing) return;
+    try {
+      setIsCapturing(true);
+      const canvas = await html2canvas(cardRef.current, {
+        backgroundColor: '#0B1724',
+        scale: 2,
+        useCORS: true,
+        logging: false,
+      });
+
+      canvas.toBlob((blob) => {
+        if (!blob) {
+          setIsCapturing(false);
+          return;
+        }
+
+        const fileName = `MAUSAM_${(location.city || 'Weather').replace(/\s+/g, '_')}_Summary.png`;
+
+        if (
+          navigator.share &&
+          navigator.canShare &&
+          navigator.canShare({ files: [new File([blob], fileName, { type: 'image/png' })] })
+        ) {
+          navigator
+            .share({
+              title: `MAUSAM Meteorological Report - ${location.city}`,
+              text: `Weather in ${location.city}: ${weather.temp}°C, ${weather.condition}`,
+              files: [new File([blob], fileName, { type: 'image/png' })],
+            })
+            .catch(() => {
+              // Fallback download on share cancellation
+              triggerDownload(blob, fileName);
+            });
+        } else {
+          triggerDownload(blob, fileName);
+        }
+
+        setShareToast('PNG Snapshot Created!');
+        setTimeout(() => setShareToast(null), 2500);
+        setIsCapturing(false);
+      }, 'image/png');
+    } catch (err) {
+      console.error('Weather card snapshot error:', err);
+      setIsCapturing(false);
+    }
+  };
+
+  const triggerDownload = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
-    <div className="mausam-card flex flex-col justify-between">
+    <div ref={cardRef} className="mausam-card flex flex-col justify-between relative">
       {/* Location Bar / Observation Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#334155] gap-2">
         <div>
@@ -50,6 +114,25 @@ export const CurrentWeather: React.FC<CurrentWeatherProps> = ({
           <span className="text-[#8A94A6] text-[11px]">
             {t('updated', 'Updated')}: <strong className="text-[#D7DEE8]">{lastUpdated || t('justNow', 'Just Now')}</strong>
           </span>
+
+          {/* Social Share PNG Button */}
+          <button
+            type="button"
+            id="current-weather-share-btn"
+            onClick={handleShareCard}
+            disabled={isCapturing}
+            className="mausam-btn mausam-btn--secondary mausam-btn--sm flex items-center gap-1 text-[#4FA8E0] hover:text-white"
+            title="Share Weather Card (PNG Snapshot)"
+            aria-label="Share Weather Card Snapshot"
+          >
+            <span className="material-symbols-outlined text-[14px]">
+              {isCapturing ? 'hourglass_top' : 'share'}
+            </span>
+            <span className="hidden sm:inline text-[11px]">
+              {isCapturing ? 'Capturing...' : 'Share'}
+            </span>
+          </button>
+
           {onRefresh && (
             <button
               type="button"
@@ -64,6 +147,12 @@ export const CurrentWeather: React.FC<CurrentWeatherProps> = ({
           )}
         </div>
       </div>
+
+      {shareToast && (
+        <div className="absolute top-2 right-2 bg-[#0B72B9] text-white px-3 py-1 rounded text-xs shadow-lg animate-fade-in z-20">
+          {shareToast}
+        </div>
+      )}
 
       {/* Main Temperature & Weather State Display */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4 items-center">
