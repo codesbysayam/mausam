@@ -77,12 +77,12 @@ body {
 
 /* Centered responsive container per government spec */
 .container {
-  width: min(100% - 32px, 1520px);
+  width: min(100% - 32px, 1560px);
   margin-inline: auto;
 }
 
 .mausam-container {
-  width: min(100% - 32px, 1520px);
+  width: min(100% - 32px, 1560px);
   margin-inline: auto;
 }
 
