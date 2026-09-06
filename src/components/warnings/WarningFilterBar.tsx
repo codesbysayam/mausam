@@ -4,43 +4,35 @@ import {
   IndiaMetRegion,
   HazardCategory,
   AlertSeverity,
-  WarningValidityPeriod,
 } from '../../types/warningTypes';
-import { HAZARD_DEFINITIONS } from '../../data/nationalWarningsData';
-import { INDIA_WEATHER_DATA } from '../../data/indiaWeatherData';
 
 interface WarningFilterBarProps {
   filter: WarningFilterState;
   onFilterChange: (newFilter: WarningFilterState) => void;
   onResetFilters: () => void;
   activeCount: number;
+  totalCount: number;
 }
 
 const REGION_OPTIONS: { id: IndiaMetRegion; label: string }[] = [
   { id: 'all', label: 'All India' },
-  { id: 'north', label: 'North' },
-  { id: 'east', label: 'East' },
-  { id: 'west', label: 'West' },
-  { id: 'south', label: 'South' },
+  { id: 'north', label: 'Northwest' },
+  { id: 'east', label: 'East & Northeast' },
   { id: 'central', label: 'Central' },
-  { id: 'northeast', label: 'North-East' },
+  { id: 'south', label: 'South Peninsular' },
+  { id: 'west', label: 'Island Territories' },
 ];
 
-const SEVERITY_OPTIONS: { id: AlertSeverity | 'all'; label: string; color?: string }[] = [
-  { id: 'all', label: 'All Severity Levels' },
-  { id: 'red', label: '🔴 Red Alert (Take Action)' },
-  { id: 'orange', label: '🟠 Orange Alert (Be Prepared)' },
-  { id: 'yellow', label: '🟡 Yellow Watch (Be Updated)' },
-  { id: 'purple', label: '🟣 Advisory Bulletin (Agromet/Special)' },
-  { id: 'green', label: '🟢 Green Code (Normal)' },
-];
-
-const VALIDITY_OPTIONS: { id: WarningValidityPeriod; label: string }[] = [
-  { id: 'active_now', label: 'Active Now' },
-  { id: 'next_24h', label: 'Next 24 Hours' },
-  { id: 'next_48h', label: 'Next 48 Hours' },
-  { id: 'next_5d', label: 'Next 5 Days' },
-  { id: 'all', label: 'All Bulletins' },
+const HAZARD_PILLS: { id: HazardCategory | 'all'; label: string; icon: string }[] = [
+  { id: 'all', label: 'All Hazards', icon: 'apps' },
+  { id: 'heavy_rain', label: 'Rainfall', icon: 'rainy' },
+  { id: 'flood', label: 'Flood', icon: 'flood' },
+  { id: 'thunderstorm', label: 'Thunderstorm', icon: 'thunderstorm' },
+  { id: 'cyclone', label: 'Cyclone', icon: 'cyclone' },
+  { id: 'heatwave', label: 'Heatwave', icon: 'local_fire_department' },
+  { id: 'dense_fog', label: 'Fog', icon: 'foggy' },
+  { id: 'strong_wind', label: 'Wind', icon: 'air' },
+  { id: 'coastal_warning', label: 'Coastal', icon: 'tsunami' },
 ];
 
 export const WarningFilterBar: React.FC<WarningFilterBarProps> = ({
@@ -48,183 +40,212 @@ export const WarningFilterBar: React.FC<WarningFilterBarProps> = ({
   onFilterChange,
   onResetFilters,
   activeCount,
+  totalCount,
 }) => {
   const isFiltered =
     filter.region !== 'all' ||
     filter.state !== 'all' ||
     filter.hazard !== 'all' ||
     filter.severity !== 'all' ||
-    filter.validity !== 'all' ||
     filter.searchQuery.trim() !== '';
 
-  const handleFieldChange = <K extends keyof WarningFilterState>(
-    field: K,
+  const handleUpdate = <K extends keyof WarningFilterState>(
+    key: K,
     value: WarningFilterState[K]
   ) => {
     onFilterChange({
       ...filter,
-      [field]: value,
+      [key]: value,
     });
   };
 
   return (
     <div
-      id="warning-filter-bar-panel"
-      className="bg-[#0B2239] border border-[#1D4E73] rounded-md p-3 sm:p-4 shadow-sm flex flex-col gap-3"
+      id="warning-filter-bar-container"
+      className="bg-[#0B263D] border border-[#1D5278] rounded-md p-4 shadow-sm flex flex-col gap-3.5"
     >
-      {/* Top row: Search input & quick stats */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
-        {/* Search Input with Clear Button */}
+      {/* 1. Top Search Bar */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
         <div className="relative flex-1">
-          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#B8C7D9] text-[18px] pointer-events-none">
+          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#AFC4D8] text-[18px] pointer-events-none">
             search
           </span>
-
           <input
             id="input-warning-search"
             type="text"
             value={filter.searchQuery}
-            onChange={(e) => handleFieldChange('searchQuery', e.target.value)}
-            placeholder="Search state, district, city, hazard or bulletin..."
+            onChange={(e) => handleUpdate('searchQuery', e.target.value)}
+            placeholder="Search by state, district, hazard keyword, or bulletin ID..."
             aria-label="Search weather warnings"
-            className="w-full pl-9 pr-8 py-2 bg-[#071A2D] border border-[#1D4E73] rounded text-xs text-white placeholder-[#B8C7D9] focus:outline-none focus:border-[#1565C0] transition-colors"
+            className="w-full pl-9 pr-9 py-2 bg-[#081F33] border border-[#1D5278] rounded text-xs text-white placeholder-[#AFC4D8] focus:outline-none focus:border-[#1565C0] transition-colors"
           />
-
           {filter.searchQuery && (
             <button
               id="btn-clear-warning-search"
               type="button"
-              onClick={() => handleFieldChange('searchQuery', '')}
+              onClick={() => handleUpdate('searchQuery', '')}
               aria-label="Clear search input"
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#B8C7D9] hover:text-white cursor-pointer"
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#AFC4D8] hover:text-white cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">close</span>
             </button>
           )}
         </div>
 
-        {/* Results Counter & Reset Filter Button */}
-        <div className="flex items-center justify-between sm:justify-end gap-2.5">
-          <span className="text-xs text-[#B8C7D9] whitespace-nowrap">
-            Showing <strong className="text-white font-mono">{activeCount}</strong> bulletin{activeCount === 1 ? '' : 's'}
-          </span>
+        <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+          <div className="text-xs text-[#AFC4D8] font-mono px-2.5 py-1 rounded bg-[#081F33] border border-[#1D5278]">
+            <span>Showing: </span>
+            <strong className="text-white">{activeCount}</strong>
+            <span className="text-[#AFC4D8]"> of {totalCount} Bulletins</span>
+          </div>
 
           {isFiltered && (
             <button
-              id="btn-reset-warning-filters"
+              id="btn-reset-filters"
               type="button"
               onClick={onResetFilters}
-              className="px-2.5 py-1.5 rounded bg-[#071A2D] hover:bg-[#102D47] text-[#E3F2FD] hover:text-white border border-[#1D4E73] text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+              className="px-2.5 py-1 rounded bg-[#081F33] hover:bg-[#102D47] text-[#AFC4D8] hover:text-white border border-[#1D5278] text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[14px]">restart_alt</span>
-              <span>Reset Filters</span>
+              <span className="material-symbols-outlined text-[14px]">filter_alt_off</span>
+              <span>Reset</span>
             </button>
           )}
         </div>
       </div>
 
-      {/* Bottom row: Structured Select Controls */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5 pt-2 border-t border-[#1D4E73]/70">
-        {/* 1. Region Dropdown */}
-        <div className="flex flex-col gap-1">
-          <label htmlFor="select-warning-region" className="text-[11px] font-semibold text-[#B8C7D9] uppercase tracking-wider">
-            Region
+      {/* 2. Severity Tabs & Region Selector */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pt-1 border-t border-[#1D5278]">
+        {/* Severity Tabs / Pills */}
+        <div
+          id="severity-filter-pills"
+          role="tablist"
+          aria-label="Filter warnings by alert level"
+          className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none"
+        >
+          <button
+            id="tab-sev-all"
+            type="button"
+            onClick={() => handleUpdate('severity', 'all')}
+            className={`px-3 py-1.5 rounded text-xs font-bold transition-all cursor-pointer border whitespace-nowrap ${
+              filter.severity === 'all'
+                ? 'bg-[#1565C0] text-white border-[#E3F2FD] shadow-xs'
+                : 'bg-[#081F33] text-[#AFC4D8] hover:text-white border-[#1D5278]'
+            }`}
+          >
+            All Warnings
+          </button>
+
+          <button
+            id="tab-sev-red"
+            type="button"
+            onClick={() => handleUpdate('severity', 'red')}
+            className={`px-3 py-1.5 rounded text-xs font-bold transition-all cursor-pointer border flex items-center gap-1.5 whitespace-nowrap ${
+              filter.severity === 'red'
+                ? 'bg-[#FF0000] text-white border-white shadow-xs'
+                : 'bg-[#081F33] text-[#FF4D4D] hover:bg-[#FF0000]/10 border-[#FF0000]/50'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-[#FF0000]" />
+            <span>Red Alert</span>
+          </button>
+
+          <button
+            id="tab-sev-orange"
+            type="button"
+            onClick={() => handleUpdate('severity', 'orange')}
+            className={`px-3 py-1.5 rounded text-xs font-bold transition-all cursor-pointer border flex items-center gap-1.5 whitespace-nowrap ${
+              filter.severity === 'orange'
+                ? 'bg-[#FFA500] text-[#0B263D] border-white shadow-xs'
+                : 'bg-[#081F33] text-[#FFA500] hover:bg-[#FFA500]/10 border-[#FFA500]/50'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-[#FFA500]" />
+            <span>Orange Alert</span>
+          </button>
+
+          <button
+            id="tab-sev-yellow"
+            type="button"
+            onClick={() => handleUpdate('severity', 'yellow')}
+            className={`px-3 py-1.5 rounded text-xs font-bold transition-all cursor-pointer border flex items-center gap-1.5 whitespace-nowrap ${
+              filter.severity === 'yellow'
+                ? 'bg-[#FFFF00] text-[#0B263D] border-white shadow-xs'
+                : 'bg-[#081F33] text-[#FFFF00] hover:bg-[#FFFF00]/10 border-[#FFFF00]/50'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-[#FFFF00]" />
+            <span>Yellow Watch</span>
+          </button>
+
+          <button
+            id="tab-sev-green"
+            type="button"
+            onClick={() => handleUpdate('severity', 'green')}
+            className={`px-3 py-1.5 rounded text-xs font-bold transition-all cursor-pointer border flex items-center gap-1.5 whitespace-nowrap ${
+              filter.severity === 'green'
+                ? 'bg-[#008000] text-white border-white shadow-xs'
+                : 'bg-[#081F33] text-[#00E676] hover:bg-[#008000]/10 border-[#008000]/50'
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-[#008000]" />
+            <span>Green / Normal</span>
+          </button>
+        </div>
+
+        {/* Region Selector */}
+        <div className="flex items-center gap-2 shrink-0">
+          <label
+            htmlFor="select-met-region"
+            className="text-xs text-[#AFC4D8] font-semibold flex items-center gap-1"
+          >
+            <span className="material-symbols-outlined text-[16px]">travel_explore</span>
+            <span className="hidden sm:inline">Region:</span>
           </label>
           <select
-            id="select-warning-region"
+            id="select-met-region"
             value={filter.region}
-            onChange={(e) => handleFieldChange('region', e.target.value as IndiaMetRegion)}
-            className="w-full px-2.5 py-1.5 bg-[#071A2D] border border-[#1D4E73] rounded text-xs text-[#D7DEE8] focus:outline-none focus:border-[#1565C0] cursor-pointer"
+            onChange={(e) => handleUpdate('region', e.target.value as IndiaMetRegion)}
+            className="bg-[#081F33] border border-[#1D5278] text-white text-xs rounded px-2.5 py-1.5 focus:outline-none focus:border-[#1565C0] cursor-pointer"
           >
             {REGION_OPTIONS.map((opt) => (
-              <option key={opt.id} value={opt.id} className="bg-[#071A2D] text-white">
+              <option key={opt.id} value={opt.id}>
                 {opt.label}
               </option>
             ))}
           </select>
         </div>
+      </div>
 
-        {/* 2. State Dropdown */}
-        <div className="flex flex-col gap-1">
-          <label htmlFor="select-warning-state" className="text-[11px] font-semibold text-[#B8C7D9] uppercase tracking-wider">
-            State / UT
-          </label>
-          <select
-            id="select-warning-state"
-            value={filter.state}
-            onChange={(e) => handleFieldChange('state', e.target.value)}
-            className="w-full px-2.5 py-1.5 bg-[#071A2D] border border-[#1D4E73] rounded text-xs text-[#D7DEE8] focus:outline-none focus:border-[#1565C0] cursor-pointer"
-          >
-            <option value="all" className="bg-[#071A2D] text-white">
-              All States &amp; UTs
-            </option>
-            {INDIA_WEATHER_DATA.map((st) => (
-              <option key={st.id} value={st.name} className="bg-[#071A2D] text-white">
-                {st.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* 3. Hazard Dropdown */}
-        <div className="flex flex-col gap-1">
-          <label htmlFor="select-warning-hazard" className="text-[11px] font-semibold text-[#B8C7D9] uppercase tracking-wider">
-            Hazard Type
-          </label>
-          <select
-            id="select-warning-hazard"
-            value={filter.hazard}
-            onChange={(e) => handleFieldChange('hazard', e.target.value as HazardCategory | 'all')}
-            className="w-full px-2.5 py-1.5 bg-[#071A2D] border border-[#1D4E73] rounded text-xs text-[#D7DEE8] focus:outline-none focus:border-[#1565C0] cursor-pointer"
-          >
-            <option value="all" className="bg-[#071A2D] text-white">
-              All Hazard Types
-            </option>
-            {HAZARD_DEFINITIONS.map((hz) => (
-              <option key={hz.id} value={hz.id} className="bg-[#071A2D] text-white">
-                {hz.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* 4. Severity Dropdown */}
-        <div className="flex flex-col gap-1">
-          <label htmlFor="select-warning-severity" className="text-[11px] font-semibold text-[#B8C7D9] uppercase tracking-wider">
-            Severity Level
-          </label>
-          <select
-            id="select-warning-severity"
-            value={filter.severity}
-            onChange={(e) => handleFieldChange('severity', e.target.value as AlertSeverity | 'all')}
-            className="w-full px-2.5 py-1.5 bg-[#071A2D] border border-[#1D4E73] rounded text-xs text-[#D7DEE8] focus:outline-none focus:border-[#1565C0] cursor-pointer"
-          >
-            {SEVERITY_OPTIONS.map((sev) => (
-              <option key={sev.id} value={sev.id} className="bg-[#071A2D] text-white">
-                {sev.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* 5. Validity Dropdown */}
-        <div className="flex flex-col gap-1">
-          <label htmlFor="select-warning-validity" className="text-[11px] font-semibold text-[#B8C7D9] uppercase tracking-wider">
-            Validity Horizon
-          </label>
-          <select
-            id="select-warning-validity"
-            value={filter.validity}
-            onChange={(e) => handleFieldChange('validity', e.target.value as WarningValidityPeriod)}
-            className="w-full px-2.5 py-1.5 bg-[#071A2D] border border-[#1D4E73] rounded text-xs text-[#D7DEE8] focus:outline-none focus:border-[#1565C0] cursor-pointer"
-          >
-            {VALIDITY_OPTIONS.map((val) => (
-              <option key={val.id} value={val.id} className="bg-[#071A2D] text-white">
-                {val.label}
-              </option>
-            ))}
-          </select>
-        </div>
+      {/* 3. Hazard Category Pills */}
+      <div
+        id="hazard-category-pills-row"
+        role="tablist"
+        aria-label="Filter warnings by hazard category"
+        className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-1 border-t border-[#1D5278] scrollbar-thin scrollbar-thumb-[#1D5278]"
+      >
+        {HAZARD_PILLS.map((pill) => {
+          const isActive = filter.hazard === pill.id;
+          return (
+            <button
+              key={pill.id}
+              id={`btn-hazard-pill-${pill.id}`}
+              type="button"
+              role="tab"
+              aria-selected={isActive}
+              onClick={() => handleUpdate('hazard', pill.id)}
+              className={`px-3 py-1 rounded text-xs font-semibold shrink-0 flex items-center gap-1.5 transition-colors cursor-pointer border whitespace-nowrap ${
+                isActive
+                  ? 'bg-[#102D47] text-[#E3F2FD] border-[#1565C0] shadow-xs'
+                  : 'bg-[#081F33] text-[#AFC4D8] hover:text-white hover:bg-[#102D47] border-[#1D5278]'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[15px] text-[#4FA8E0]">
+                {pill.icon}
+              </span>
+              <span>{pill.label}</span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

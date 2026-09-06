@@ -1,113 +1,141 @@
-import React, { useState } from 'react';
+import React from 'react';
+
+interface MatrixRow {
+  level: string;
+  colorName: string;
+  colorHex: string;
+  badgeBg: string;
+  badgeBorder: string;
+  badgeText: string;
+  threshold: string;
+  action: string;
+}
+
+const MATRIX_ROWS: MatrixRow[] = [
+  {
+    level: 'Red (Warning — Take Action)',
+    colorName: 'Red (#FF0000)',
+    colorHex: '#FF0000',
+    badgeBg: 'bg-[#FF0000]/20',
+    badgeBorder: 'border-[#FF0000]',
+    badgeText: 'text-[#FF4D4D]',
+    threshold:
+      'Extremely Heavy Rainfall (≥ 204.5 mm in 24h), Super/Very Severe Cyclonic Storm (wind > 90 km/h), Violent Flash Flooding, or Severe Heatwave (> 45°C with severe departure).',
+    action:
+      'Immediate disaster response deployment (NDRF/SDRF). Total ban on coastal ventures. Evacuate vulnerable settlements. Follow all local administration movement restrictions.',
+  },
+  {
+    level: 'Orange (Alert — Be Prepared)',
+    colorName: 'Orange (#FFA500)',
+    colorHex: '#FFA500',
+    badgeBg: 'bg-[#FFA500]/20',
+    badgeBorder: 'border-[#FFA500]',
+    badgeText: 'text-[#FFA500]',
+    threshold:
+      'Very Heavy Rainfall (115.6 mm to 204.4 mm in 24h), Squally Winds (50 to 70 km/h), Severe Thunderstorm with squall line / hail, or Elevated Heatwave conditions.',
+    action:
+      'Keep emergency kits ready. Secure loose outdoor fixtures and farm produce. Avoid travel through known waterlogging corridors. Fishermen to avoid deep sea.',
+  },
+  {
+    level: 'Yellow (Watch — Be Updated)',
+    colorName: 'Yellow (#FFFF00)',
+    colorHex: '#FFFF00',
+    badgeBg: 'bg-[#FFFF00]/20',
+    badgeBorder: 'border-[#FFFF00]',
+    badgeText: 'text-[#FFFF00]',
+    threshold:
+      'Heavy Rainfall (64.5 mm to 115.5 mm in 24h), Scattered Thunderstorm with lightning activity, Moderate Wind Gusts (40 to 50 km/h), or Dense Fog (visibility 50-200m).',
+    action:
+      'Monitor daily IMD district weather updates. Exercise caution while commuting. Seek immediate indoor shelter upon hearing thunder or noticing dark squall clouds.',
+  },
+  {
+    level: 'Green (No Warning — Normal)',
+    colorName: 'Green (#008000)',
+    colorHex: '#008000',
+    badgeBg: 'bg-[#008000]/20',
+    badgeBorder: 'border-[#008000]',
+    badgeText: 'text-[#00E676]',
+    threshold:
+      'Routine seasonal meteorological conditions. No severe weather or high-impact weather hazards predicted over the subdivision during the forecast period.',
+    action:
+      'Normal daily outdoor, agricultural, commercial, and maritime operations may proceed without weather-induced restrictions. Follow routine advisories.',
+  },
+];
 
 export const NationalClassificationMatrix: React.FC = () => {
-  const [isOpen, setIsOpen] = useState(false);
-
   return (
     <section
       id="national-classification-matrix-section"
       aria-label="IMD National Early Warning Alert Matrix"
-      className="bg-[#0B2239] border border-[#1D4E73] rounded-md p-4 sm:p-5 shadow-md flex flex-col gap-3"
+      className="bg-[#0B263D] border border-[#1D5278] rounded-md p-4 sm:p-5 shadow-sm flex flex-col gap-3"
     >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded bg-[#071A2D] border border-[#1D4E73] flex items-center justify-center text-[#E3F2FD]">
-            <span className="material-symbols-outlined text-[18px]">
-              table_chart
-            </span>
-          </div>
-          <div>
-            <h4 className="text-xs sm:text-sm font-bold text-white uppercase tracking-tight">
-              IMD 4-Stage Meteorological Warning Matrix &amp; Operational Thresholds
-            </h4>
-            <p className="text-[10px] text-[#B8C7D9]">
-              Standardized classification protocol published by the India Meteorological Department
-            </p>
-          </div>
+      <div className="flex items-center gap-2.5 pb-2.5 border-b border-[#1D5278]">
+        <div className="w-8 h-8 rounded bg-[#081F33] border border-[#1D5278] flex items-center justify-center text-[#E3F2FD] shrink-0">
+          <span className="material-symbols-outlined text-[18px]">table_chart</span>
         </div>
-
-        <button
-          id="btn-toggle-matrix-details"
-          type="button"
-          onClick={() => setIsOpen((prev) => !prev)}
-          className="px-2.5 py-1 rounded bg-[#071A2D] hover:bg-[#102D47] text-[#E3F2FD] hover:text-white border border-[#1D4E73] text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
-        >
-          <span>{isOpen ? 'Collapse Protocol' : 'Expand Matrix'}</span>
-          <span className="material-symbols-outlined text-[15px]">
-            {isOpen ? 'expand_less' : 'expand_more'}
-          </span>
-        </button>
+        <div>
+          <h3 className="text-sm sm:text-base font-bold text-white uppercase tracking-tight">
+            National Meteorological Classification Matrix
+          </h3>
+          <p className="text-[11px] text-[#AFC4D8]">
+            Authoritative 4-Stage Warning Thresholds &amp; Standard Operating Procedures (IMD)
+          </p>
+        </div>
       </div>
 
-      {isOpen && (
-        <div className="pt-3 border-t border-[#1D4E73] space-y-3 text-xs">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-            {/* Red Alert */}
-            <div className="bg-[#071A2D] border-l-4 border-l-[#FF0000] border-t border-r border-b border-[#1D4E73] rounded p-3 space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-[#FF0000] uppercase tracking-wider">
-                  Red (Take Action)
-                </span>
-                <span className="w-2.5 h-2.5 rounded-full bg-[#FF0000]" />
-              </div>
-              <div className="text-[11px] text-white font-semibold">
-                Extremely Severe Weather
-              </div>
-              <p className="text-[11px] text-[#B8C7D9] leading-relaxed">
-                Extremely Heavy Rain (&gt; 204.4 mm / 24h), Super/Very Severe Cyclonic Storm (&gt; 90 km/h gusts), or Severe Heat Wave (&gt; 45°C + 6.5°C departure).
-              </p>
-            </div>
+      {/* Responsive Table / Structured Matrix */}
+      <div className="overflow-x-auto border border-[#1D5278] rounded bg-[#081F33]">
+        <table className="w-full text-left text-xs border-collapse">
+          <thead>
+            <tr className="border-b border-[#1D5278] bg-[#061A2B] text-[#AFC4D8] uppercase tracking-wider text-[10px] font-bold">
+              <th className="py-2.5 px-3 border-r border-[#1D5278] min-w-[150px]">
+                Alert Level
+              </th>
+              <th className="py-2.5 px-3 border-r border-[#1D5278] min-w-[120px]">
+                Color Code
+              </th>
+              <th className="py-2.5 px-3 border-r border-[#1D5278] min-w-[280px]">
+                Atmospheric Threshold / Severity Meaning
+              </th>
+              <th className="py-2.5 px-3 min-w-[280px]">
+                Standard Public Action
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-[#1D5278]/60 text-[#AFC4D8]">
+            {MATRIX_ROWS.map((row, idx) => (
+              <tr
+                key={idx}
+                className="hover:bg-[#102D47]/40 transition-colors align-top"
+              >
+                <td className="py-3 px-3 border-r border-[#1D5278] font-bold text-white whitespace-nowrap">
+                  {row.level}
+                </td>
 
-            {/* Orange Alert */}
-            <div className="bg-[#071A2D] border-l-4 border-l-[#FFA500] border-t border-r border-b border-[#1D4E73] rounded p-3 space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-[#FFA500] uppercase tracking-wider">
-                  Orange (Be Prepared)
-                </span>
-                <span className="w-2.5 h-2.5 rounded-full bg-[#FFA500]" />
-              </div>
-              <div className="text-[11px] text-white font-semibold">
-                Very Heavy Weather
-              </div>
-              <p className="text-[11px] text-[#B8C7D9] leading-relaxed">
-                Very Heavy Rain (115.6 to 204.4 mm / 24h), Squally Wind (50 to 70 km/h), Severe Thunderstorm with squall / hail, or Heat Wave conditions.
-              </p>
-            </div>
+                <td className="py-3 px-3 border-r border-[#1D5278]">
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-bold border ${row.badgeBg} ${row.badgeBorder} ${row.badgeText}`}
+                  >
+                    <span
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ backgroundColor: row.colorHex }}
+                    />
+                    <span>{row.colorName}</span>
+                  </span>
+                </td>
 
-            {/* Yellow Watch */}
-            <div className="bg-[#071A2D] border-l-4 border-l-[#FFFF00] border-t border-r border-b border-[#1D4E73] rounded p-3 space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-[#FFFF00] uppercase tracking-wider">
-                  Yellow (Be Updated)
-                </span>
-                <span className="w-2.5 h-2.5 rounded-full bg-[#FFFF00]" />
-              </div>
-              <div className="text-[11px] text-white font-semibold">
-                Weather Watch
-              </div>
-              <p className="text-[11px] text-[#B8C7D9] leading-relaxed">
-                Heavy Rain (64.5 to 115.5 mm / 24h), isolated thunderstorm / lightning activity, Dense Fog (visibility 50-200m), or thermal variations.
-              </p>
-            </div>
+                <td className="py-3 px-3 border-r border-[#1D5278] leading-relaxed text-[#F5F9FC]">
+                  {row.threshold}
+                </td>
 
-            {/* Green Code */}
-            <div className="bg-[#071A2D] border-l-4 border-l-[#008000] border-t border-r border-b border-[#1D4E73] rounded p-3 space-y-1.5">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-[#008000] uppercase tracking-wider">
-                  Green (No Warning)
-                </span>
-                <span className="w-2.5 h-2.5 rounded-full bg-[#008000]" />
-              </div>
-              <div className="text-[11px] text-white font-semibold">
-                Normal Weather
-              </div>
-              <p className="text-[11px] text-[#B8C7D9] leading-relaxed">
-                No adverse synoptic conditions. Light to moderate rainfall (&lt; 64.4 mm / 24h), seasonal temperatures within standard climatological norms.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+                <td className="py-3 px-3 leading-relaxed text-[#AFC4D8]">
+                  {row.action}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </section>
   );
 };

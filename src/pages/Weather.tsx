@@ -10,6 +10,7 @@ import { WeatherWidgets } from '../components/weather/WeatherWidgets';
 import { HourlyWeatherTimeline } from '../components/weather/HourlyWeatherTimeline';
 import { SevenDaySynopticForecast } from '../components/weather/SevenDaySynopticForecast';
 import { SolarCycleCard } from '../components/weather/SolarCycleCard';
+import { SolarDynamics } from '../components/weather/SolarDynamics';
 import { PersonaWeatherHub } from '../components/weather/personas/PersonaWeatherHub';
 import { buildHumanWeatherStory } from '../services/humanWeatherEngine';
 import { LocatingPhase, GeolocationServiceError, NearestStationResult } from '../services/geolocationService';
@@ -273,6 +274,13 @@ export const WeatherPage: React.FC<WeatherPageProps> = ({
       ========================================================================= */}
       <div className="w-full">
         <WeatherWidgets weather={current} />
+      </div>
+
+      {/* =========================================================================
+          8B. SOLAR DYNAMICS & REAL-TIME EPHEMERIS
+      ========================================================================= */}
+      <div className="w-full">
+        <SolarDynamics location={selectedLocation} weather={current} />
       </div>
 
       {/* =========================================================================

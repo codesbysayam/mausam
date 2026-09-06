@@ -1,73 +1,48 @@
 :root {
   --primary: #0B3D91;
   --primary-dark: #062A63;
+  --primary-light: #1565C0;
   --secondary: #1565C0;
-  --primary-light: #E3F2FD;
 
-  --background: #F5F9FC;
-  --surface: #FFFFFF;
-  --surface-secondary: #EEF4F9;
+  --background: #061827;
+  --background-alt: #081F30;
+  --surface: #101E2C;
+  --surface-secondary: #172738;
+  --surface-hover: #1C334A;
 
-  --text-primary: #172B4D;
-  --text-secondary: #607D8B;
+  --text-primary: #F5F9FC;
+  --text-secondary: #B8C7D9;
+  --text: #F5F9FC;
+  --text-body: #B8C7D9;
 
-  --border: #D9E2EC;
+  --border: #1E3852;
+  --border-light: rgba(184, 199, 217, 0.15);
 
-  --success: #008000;
-  --watch: #FFFF00;
-  --alert: #FFA500;
-  --danger: #FF0000;
+  --accent: #18A7E8;
+  --accent-teal: #00C897;
 
   /* Weather severity colors */
-  --status-normal: #008000;
-  --status-watch: #FFFF00;
-  --status-alert: #FFA500;
-  --status-warning: #FF0000;
+  --status-normal: #00C897;
+  --status-watch: #F59E0B;
+  --status-alert: #F97316;
+  --status-severe: #EF4444;
 
-  /* Government Dark & Navy equivalents where dark surfaces are preserved */
-  --dark-background: #071A2D;
-  --dark-surface: #0B2239;
-  --dark-surface-2: #102D47;
-  --dark-border: #1D4E73;
-  --dark-text: #FFFFFF;
+  --success: #00C897;
+  --watch: #F59E0B;
+  --alert: #F97316;
+  --danger: #EF4444;
+
+  /* Dark palette aliases */
+  --bg: #061827;
+  --bg-alt: #081F30;
+  --dark-background: #061827;
+  --dark-surface: #101E2C;
+  --dark-surface-2: #172738;
+  --dark-border: #1E3852;
+  --dark-text: #F5F9FC;
   --dark-muted: #B8C7D9;
 
-  /* Compatible alias tokens */
-  --bg: #071A2D;
-  --bg-alt: #0B2239;
-  --surface-2: #102D47;
-  --surface-hover: #153658;
-
-  --border-light: rgba(217, 226, 236, 0.18);
-  --border-focus: #1565C0;
-
-  --text: #FFFFFF;
-  --text-body: #D7DEE8;
-
-  --good: #008000;
-  --warning: #FFFF00;
-
-  --rain: #1565C0;
-  --fog: #B8C7D9;
-  --storm: #0B3D91;
-
-  --font:
-    "Noto Sans",
-    "Inter",
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Roboto,
-    Arial,
-    sans-serif;
-
-  --font-indic:
-    "Noto Sans",
-    "Noto Sans Devanagari",
-    "Noto Sans Oriya",
-    Arial,
-    sans-serif;
-
+  --font: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
   --radius: 12px;
   --radius-small: 8px;
   --radius-pill: 9999px;
@@ -82,15 +57,15 @@ html,
 body,
 #root {
   width: 100%;
-  min-height: 100%;
-  min-height: 100dvh;
+  max-width: 100%;
   margin: 0;
   padding: 0;
-  background: var(--bg);
-  color: var(--text);
+  background: #061827;
+  color: #F5F9FC;
   font-family: var(--font);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
 body {
@@ -100,11 +75,35 @@ body {
   line-height: 1.6;
 }
 
-/* Fluid responsive container */
-.mausam-container {
-  width: min(1440px, calc(100% - 48px));
+/* Centered responsive container per government spec */
+.container {
+  width: min(100% - 32px, 1520px);
   margin-inline: auto;
-  max-width: 100%;
+}
+
+.mausam-container {
+  width: min(100% - 32px, 1520px);
+  margin-inline: auto;
+}
+
+@media (max-width: 1100px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 700px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .container {
+    width: min(100% - 20px, 100%);
+  }
+
+  .mausam-container {
+    width: min(100% - 20px, 100%);
+  }
 }
 
 /* =========================================
@@ -869,5 +868,57 @@ img, svg, canvas, video {
   z-index: 30;
   pointer-events: none;
 }
+
+/* ==========================================================
+   MAUSAM Authoritative Meteorological Warning Bulletin Cards
+   ========================================================== */
+.warning-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+}
+
+.warning-card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.warning-card-footer {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 16px;
+}
+
+.warning-title {
+  line-height: 1.25;
+  min-height: 54px;
+}
+
+.bulletin-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.metadata-grid {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  row-gap: 8px;
+  column-gap: 16px;
+}
+
+.zone-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
 
 

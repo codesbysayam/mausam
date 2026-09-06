@@ -901,12 +901,20 @@ export const DopplerRadarViewer: React.FC<DopplerRadarViewerProps> = ({
       {/* Real Source Attribution & Active Stream Specification HUD */}
       <div className="bg-[#070D14] px-4 py-1.5 border-b border-[#162331] flex flex-wrap items-center justify-between gap-2 text-[11px] text-[#8A94A6]">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-bold text-[#D1DCE8]">PRODUCT:</span>
-          <span className="font-semibold text-white">{currentProdConfig.label}</span>
+          <span className="font-bold text-[#D1DCE8]">
+            {productMetadata?.isFallback || productMetadata?.source?.includes('RainViewer')
+              ? 'Weather radar imagery'
+              : 'PRODUCT:'}
+          </span>
+          {!(productMetadata?.isFallback || productMetadata?.source?.includes('RainViewer')) && (
+            <span className="font-semibold text-white">{currentProdConfig.label}</span>
+          )}
           <span className="text-[#162331]">|</span>
           <span className="font-bold text-[#D1DCE8]">SOURCE:</span>
           <span className="font-semibold text-[#43C7F4]">
-            {productMetadata?.source || 'India Meteorological Department (IMD)'}
+            {productMetadata?.isFallback || productMetadata?.source?.includes('RainViewer')
+              ? 'RainViewer'
+              : (productMetadata?.source || 'India Meteorological Department (IMD)')}
           </span>
           <span className="text-[#162331]">|</span>
           <span className="font-bold text-[#D1DCE8]">STATUS:</span>
@@ -927,7 +935,7 @@ export const DopplerRadarViewer: React.FC<DopplerRadarViewerProps> = ({
             <>
               <span className="text-[#162331]">|</span>
               <span className="text-[10px] text-[#FFC857] italic">
-                (Composite Reflectivity Mosaic Active)
+                (RainViewer Composite Reflectivity Mosaic Active)
               </span>
             </>
           )}
@@ -945,19 +953,40 @@ export const DopplerRadarViewer: React.FC<DopplerRadarViewerProps> = ({
 
           {PRODUCT_LIST.map((prod) => {
             const isSelected = activeProduct === prod.key;
+            // Check if product is supported by current source/feed
+            const isFallback = productMetadata?.isFallback || productMetadata?.source?.includes('RainViewer');
+            // RainViewer only provides composite reflectivity (MAXZ / PPZ equivalent); velocity and SRI/PAC/VVP2 are not in RainViewer
+            const isSupportedByFeed = !isFallback || prod.key === 'MAXZ' || prod.key === 'PPZ';
+
             return (
               <button
                 key={prod.key}
                 type="button"
-                onClick={() => handleProductSelect(prod.key)}
-                className={`px-3 py-1 rounded text-xs font-bold transition-all cursor-pointer ${
-                  isSelected
-                    ? 'bg-[#1499E8] text-white shadow-md'
-                    : 'bg-[#071018] text-[#93A4B8] hover:text-white hover:bg-[#162331] border border-[#162331]'
+                disabled={!isSupportedByFeed}
+                onClick={() => {
+                  if (isSupportedByFeed) {
+                    handleProductSelect(prod.key);
+                  }
+                }}
+                className={`px-3 py-1 rounded text-xs font-bold transition-all ${
+                  !isSupportedByFeed
+                    ? 'bg-[#071018]/50 text-[#5A6878] border border-[#162331]/40 cursor-not-allowed opacity-60'
+                    : isSelected
+                    ? 'bg-[#1499E8] text-white shadow-md cursor-pointer'
+                    : 'bg-[#071018] text-[#93A4B8] hover:text-white hover:bg-[#162331] border border-[#162331] cursor-pointer'
                 }`}
-                title={prod.tooltip}
+                title={
+                  !isSupportedByFeed
+                    ? `${prod.label}: Unavailable from current feed`
+                    : prod.tooltip
+                }
               >
-                {prod.label}
+                <span>{prod.label}</span>
+                {!isSupportedByFeed && (
+                  <span className="text-[9px] block text-[#EF4444] font-normal leading-none mt-0.5">
+                    Unavailable from current feed
+                  </span>
+                )}
               </button>
             );
           })}

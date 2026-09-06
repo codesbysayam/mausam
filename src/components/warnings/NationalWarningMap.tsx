@@ -1,7 +1,9 @@
-import React, { useState, useMemo } from 'react';
-import India from '@svg-maps/india';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, Tooltip, useMap } from 'react-leaflet';
+import L from 'leaflet';
 import { AlertSeverity, StateWarningSummary, WarningRecord } from '../../types/warningTypes';
 import { STATE_ALERT_SEVERITIES } from '../../data/nationalWarningsData';
+import { ALL_INDIA_STATES_MET_PROFILES, StateMeteorologicalProfile } from '../../data/allIndiaStatesProfiles';
 
 interface NationalWarningMapProps {
   selectedState: string | null;
@@ -10,13 +12,99 @@ interface NationalWarningMapProps {
   warnings: WarningRecord[];
 }
 
-const SEVERITY_COLORS: Record<AlertSeverity, { fill: string; stroke: string; label: string; text: string }> = {
-  red: { fill: '#FF0000', stroke: '#FF4D4D', label: 'Red Alert (Take Action)', text: 'Severe / Heavy Inundation' },
-  orange: { fill: '#FFA500', stroke: '#FFB833', label: 'Orange Alert (Be Prepared)', text: 'Moderate / Squally Weather' },
-  yellow: { fill: '#FFFF00', stroke: '#FFF566', label: 'Yellow Watch (Be Updated)', text: 'Watch / Advisory' },
-  purple: { fill: '#1565C0', stroke: '#64B5F6', label: 'Advisory Bulletin (Agromet)', text: 'GKMS / Research Advisory' },
-  green: { fill: '#008000', stroke: '#1B9A1B', label: 'Green Code (No Severe Warning)', text: 'Normal Seasonal Weather' },
+const SEVERITY_CONFIG: Record<
+  AlertSeverity,
+  { fill: string; border: string; label: string; text: string; action: string }
+> = {
+  red: {
+    fill: '#FF0000',
+    border: '#B30000',
+    label: 'Red Alert',
+    text: 'Take Action',
+    action: 'Extremely Heavy Rain / Cyclone / Severe Squall',
+  },
+  orange: {
+    fill: '#FFA500',
+    border: '#CC8400',
+    label: 'Orange Alert',
+    text: 'Be Prepared',
+    action: 'Very Heavy Rain / Thunderstorm & Squall',
+  },
+  yellow: {
+    fill: '#FFFF00',
+    border: '#CCCC00',
+    label: 'Yellow Watch',
+    text: 'Be Updated',
+    action: 'Heavy Rain / Lightning / Dense Fog / Wind',
+  },
+  purple: {
+    fill: '#1565C0',
+    border: '#0B3D91',
+    label: 'Agromet Advisory',
+    text: 'Advisory Bulletin',
+    action: 'Agromet & GKMS Specialized Agricultural Bulletin',
+  },
+  green: {
+    fill: '#008000',
+    border: '#006600',
+    label: 'Green Code',
+    text: 'No Warning',
+    action: 'Normal Atmospheric & Seasonal Conditions',
+  },
 };
+
+/**
+ * Reusable map resize observer requested by IMD operations specification
+ */
+function MapResizeFix() {
+  const map = useMap();
+
+  useEffect(() => {
+    const container = map.getContainer();
+
+    const resizeObserver = new ResizeObserver(() => {
+      map.invalidateSize({
+        pan: false,
+        animate: false,
+      });
+    });
+
+    resizeObserver.observe(container);
+
+    const timer = setTimeout(() => {
+      map.invalidateSize({
+        pan: false,
+        animate: false,
+      });
+    }, 200);
+
+    return () => {
+      resizeObserver.disconnect();
+      clearTimeout(timer);
+    };
+  }, [map]);
+
+  return null;
+}
+
+/**
+ * Programmatic map centering controller
+ */
+function MapCenterController({
+  center,
+  zoom,
+}: {
+  center: [number, number];
+  zoom: number;
+}) {
+  const map = useMap();
+
+  useEffect(() => {
+    map.setView(center, zoom, { animate: true });
+  }, [center, zoom, map]);
+
+  return null;
+}
 
 export const NationalWarningMap: React.FC<NationalWarningMapProps> = ({
   selectedState,
@@ -24,26 +112,11 @@ export const NationalWarningMap: React.FC<NationalWarningMapProps> = ({
   onOpenStateDrawer,
   warnings = [],
 }) => {
-  const [hoveredLocation, setHoveredLocation] = useState<{
-    id: string;
-    name: string;
-    summary: StateWarningSummary;
-    x: number;
-    y: number;
-  } | null>(null);
+  const INDIA_CENTER: [number, number] = [22.8, 80.5];
+  const DEFAULT_ZOOM = 4.5;
 
-  const [zoomLevel, setZoomLevel] = useState(1);
-
-  // Active warnings for the selected state
-  const stateActiveWarnings = useMemo(() => {
-    if (!selectedState || selectedState === 'all') return [];
-    return warnings.filter(
-      (w) =>
-        w.state.toLowerCase().includes(selectedState.toLowerCase()) ||
-        selectedState.toLowerCase().includes(w.state.toLowerCase()) ||
-        (w.stateCode && w.stateCode.toLowerCase() === selectedState.toLowerCase())
-    );
-  }, [selectedState, warnings]);
+  const [mapCenter, setMapCenter] = useState<[number, number]>(INDIA_CENTER);
+  const [mapZoom, setMapZoom] = useState<number>(DEFAULT_ZOOM);
 
   // Map state codes/names to state summaries
   const stateSummaryMap = useMemo(() => {
@@ -57,371 +130,379 @@ export const NationalWarningMap: React.FC<NationalWarningMapProps> = ({
     return map;
   }, []);
 
-  const resolveStateSummary = (loc: { id: string; name: string }): StateWarningSummary => {
-    const sId = (loc.id || '').toLowerCase();
-    const sName = (loc.name || '').toLowerCase();
-    const cleanId = sId.replace('in-', '');
+  const resolveStateSummary = useCallback(
+    (profile: StateMeteorologicalProfile): StateWarningSummary => {
+      const sId = profile.id.toLowerCase();
+      const sName = profile.name.toLowerCase();
+      const sCode = profile.code.toLowerCase();
 
-    if (stateSummaryMap.has(sId)) return stateSummaryMap.get(sId)!;
-    if (stateSummaryMap.has(sName)) return stateSummaryMap.get(sName)!;
-    if (stateSummaryMap.has(cleanId)) return stateSummaryMap.get(cleanId)!;
+      if (stateSummaryMap.has(`in-${sCode}`)) return stateSummaryMap.get(`in-${sCode}`)!;
+      if (stateSummaryMap.has(sName)) return stateSummaryMap.get(sName)!;
+      if (stateSummaryMap.has(sId)) return stateSummaryMap.get(sId)!;
 
-    // Partial search
-    for (const [k, v] of stateSummaryMap.entries()) {
-      if (sName.includes(k) || k.includes(sName)) {
-        return v;
+      // Partial lookup
+      for (const [k, v] of stateSummaryMap.entries()) {
+        if (sName.includes(k) || k.includes(sName)) {
+          return v;
+        }
+      }
+
+      return {
+        stateCode: `in-${profile.code.toLowerCase()}`,
+        stateName: profile.name,
+        capital: profile.capital,
+        highestSeverity: 'green',
+        activeCount: 0,
+        primaryHazard: 'heavy_rain',
+        primaryHazardLabel: 'Normal Seasonal Weather',
+        representativeStation: profile.representativeStation,
+        bulletinHeadline: 'Green Code • Normal atmospheric conditions',
+        validityRange: 'Routine Synoptic Observation',
+      };
+    },
+    [stateSummaryMap]
+  );
+
+  // If a state is selected externally, center the map on it
+  useEffect(() => {
+    if (selectedState && selectedState !== 'all') {
+      const match = ALL_INDIA_STATES_MET_PROFILES.find(
+        (p) =>
+          p.name.toLowerCase() === selectedState.toLowerCase() ||
+          p.code.toLowerCase() === selectedState.toLowerCase() ||
+          selectedState.toLowerCase().includes(p.name.toLowerCase())
+      );
+      if (match) {
+        setMapCenter([match.lat, match.lng]);
+        setMapZoom(6);
       }
     }
+  }, [selectedState]);
 
-    return {
-      stateCode: loc.id,
-      stateName: loc.name,
-      capital: 'Regional Center',
-      highestSeverity: 'green',
-      activeCount: 0,
-      primaryHazard: 'heavy_rain',
-      primaryHazardLabel: 'Normal Weather',
-      representativeStation: `${loc.name} AWS`,
-      bulletinHeadline: 'Green Code • Normal atmospheric conditions',
-      validityRange: 'Routine Synoptic Observation',
-    };
-  };
-
-  const getStateFillColor = (loc: { id: string; name: string }) => {
-    const summary = resolveStateSummary(loc);
-    const sev = summary.highestSeverity;
-    const isSelected =
-      selectedState &&
-      (selectedState.toLowerCase() === summary.stateName.toLowerCase() ||
-        selectedState.toLowerCase() === summary.stateCode.toLowerCase() ||
-        selectedState.toLowerCase() === loc.name.toLowerCase());
-
-    if (isSelected) {
-      return '#0B3D91';
-    }
-
-    return SEVERITY_COLORS[sev]?.fill || '#008000';
-  };
-
-  const handleStateClick = (loc: { id: string; name: string }) => {
-    const summary = resolveStateSummary(loc);
-    onSelectState(summary.stateName, summary.stateCode);
-    if (onOpenStateDrawer) {
-      onOpenStateDrawer(summary);
+  const handleResetView = () => {
+    setMapCenter(INDIA_CENTER);
+    setMapZoom(DEFAULT_ZOOM);
+    if (selectedState && selectedState !== 'all') {
+      onSelectState('All India', 'all');
     }
   };
 
-  const handleMouseMove = (e: React.MouseEvent, loc: { id: string; name: string }) => {
-    const summary = resolveStateSummary(loc);
-    setHoveredLocation({
-      id: loc.id,
-      name: loc.name,
-      summary,
-      x: e.clientX,
-      y: e.clientY,
+  // Create custom marker icons for each state based on severity
+  const createSeverityMarker = (
+    severity: AlertSeverity,
+    isSelected: boolean,
+    code: string,
+    count: number
+  ) => {
+    const config = SEVERITY_CONFIG[severity] || SEVERITY_CONFIG.green;
+    const isRed = severity === 'red';
+    const isOrange = severity === 'orange';
+    const isYellow = severity === 'yellow';
+
+    const textFill = isYellow ? '#0B263D' : '#FFFFFF';
+    const size = isSelected ? 34 : 28;
+
+    const html = `
+      <div class="relative flex items-center justify-center cursor-pointer transition-transform duration-150 ${
+        isSelected ? 'scale-115 z-50' : 'hover:scale-110 z-20'
+      }" style="width: ${size}px; height: ${size}px;">
+        ${
+          isRed
+            ? `<div class="absolute inset-0 rounded-full animate-ping opacity-60" style="background-color: ${config.fill};"></div>`
+            : ''
+        }
+        <div class="relative flex items-center justify-center rounded-full font-mono font-bold text-[10px] shadow-md border" style="width: ${size}px; height: ${size}px; background-color: ${
+      config.fill
+    }; border-color: ${isSelected ? '#FFFFFF' : config.border}; color: ${textFill}; ${
+      isSelected ? 'box-shadow: 0 0 0 3px #FFFFFF, 0 0 12px rgba(255,255,255,0.7);' : ''
+    }">
+          <span>${code}</span>
+        </div>
+        ${
+          count > 1
+            ? `<span class="absolute -top-1 -right-1 flex items-center justify-center rounded-full text-[9px] font-bold text-white shadow-xs" style="width: 15px; height: 15px; background: #0B263D; border: 1px solid ${config.fill};">${count}</span>`
+            : ''
+        }
+      </div>
+    `;
+
+    return L.divIcon({
+      html,
+      className: 'custom-state-alert-marker',
+      iconSize: [size, size],
+      iconAnchor: [size / 2, size / 2],
+      popupAnchor: [0, -size / 2 - 4],
     });
   };
+
+  // Severity tallies for map header
+  const stateCounts = useMemo(() => {
+    let red = 0;
+    let orange = 0;
+    let yellow = 0;
+    let green = 0;
+
+    ALL_INDIA_STATES_MET_PROFILES.forEach((p) => {
+      const summary = resolveStateSummary(p);
+      if (summary.highestSeverity === 'red') red++;
+      else if (summary.highestSeverity === 'orange') orange++;
+      else if (summary.highestSeverity === 'yellow') yellow++;
+      else green++;
+    });
+
+    return { red, orange, yellow, green, total: ALL_INDIA_STATES_MET_PROFILES.length };
+  }, [resolveStateSummary]);
 
   return (
     <div
       id="national-weather-alert-map-card"
-      className="bg-[#0B2239] border border-[#1D4E73] rounded-md p-4 sm:p-5 shadow-md flex flex-col gap-4"
+      className="bg-[#0B263D] border border-[#1D5278] rounded-md p-4 sm:p-5 shadow-md flex flex-col justify-between gap-3.5 h-full"
     >
-      {/* Header with Title and Mode Toggles */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#1D4E73] gap-3">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded bg-[#071A2D] border border-[#1D4E73] flex items-center justify-center text-[#E3F2FD]">
-            <span className="material-symbols-outlined text-[20px]">map</span>
-          </div>
-          <div>
-            <h3 className="text-sm sm:text-base font-bold text-white uppercase tracking-tight">
+      {/* 1. Header Bar: Title, Synoptic Status, Reset View Control */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-[#1D5278] gap-2.5">
+        <div>
+          <div className="flex items-center gap-2">
+            <span className="material-symbols-outlined text-[20px] text-[#4FA8E0]">
+              public
+            </span>
+            <h3 className="text-sm sm:text-base font-bold text-[#F5F9FC] uppercase tracking-tight">
               National Weather Alert Map
             </h3>
-            <p className="text-[11px] text-[#B8C7D9]">
-              All-India Meteorological Subdivisions &amp; State Early Warning Severity
-            </p>
           </div>
+          <p className="text-[11px] text-[#AFC4D8] mt-0.5">
+            Geographic Warning Classification Across Indian States &amp; Union Territories
+          </p>
         </div>
 
-        {/* Legend & Controls */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center bg-[#071A2D] border border-[#1D4E73] rounded p-0.5">
-            <button
-              id="btn-map-zoom-in"
-              type="button"
-              onClick={() => setZoomLevel((z) => Math.min(1.6, z + 0.15))}
-              title="Zoom In"
-              aria-label="Zoom in map"
-              className="w-7 h-7 flex items-center justify-center text-[#B8C7D9] hover:text-white hover:bg-[#102D47] rounded cursor-pointer transition-colors"
-            >
-              <span className="material-symbols-outlined text-[16px]">add</span>
-            </button>
-            <button
-              id="btn-map-zoom-out"
-              type="button"
-              onClick={() => setZoomLevel((z) => Math.max(0.9, z - 0.15))}
-              title="Zoom Out"
-              aria-label="Zoom out map"
-              className="w-7 h-7 flex items-center justify-center text-[#B8C7D9] hover:text-white hover:bg-[#102D47] rounded cursor-pointer transition-colors"
-            >
-              <span className="material-symbols-outlined text-[16px]">remove</span>
-            </button>
-            <button
-              id="btn-map-zoom-reset"
-              type="button"
-              onClick={() => setZoomLevel(1)}
-              title="Reset Zoom"
-              aria-label="Reset map zoom"
-              className="w-7 h-7 flex items-center justify-center text-[#B8C7D9] hover:text-white hover:bg-[#102D47] rounded cursor-pointer transition-colors"
-            >
-              <span className="material-symbols-outlined text-[16px]">restart_alt</span>
-            </button>
-          </div>
+        <div className="flex items-center gap-2 self-start sm:self-auto">
+          {selectedState && selectedState !== 'all' && (
+            <span className="text-[11px] font-semibold px-2 py-0.5 rounded bg-[#102D47] border border-[#1565C0] text-[#E3F2FD] flex items-center gap-1">
+              <span>Focus: {selectedState}</span>
+            </span>
+          )}
+
+          <button
+            id="btn-reset-map-view"
+            type="button"
+            onClick={handleResetView}
+            className="px-2.5 py-1 rounded bg-[#081F33] hover:bg-[#102D47] text-[#AFC4D8] hover:text-[#F5F9FC] border border-[#1D5278] text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer shadow-xs"
+            title="Reset to All-India Synoptic Overview"
+          >
+            <span className="material-symbols-outlined text-[15px]">crop_free</span>
+            <span>Reset View</span>
+          </button>
         </div>
       </div>
 
-      {/* Main Map Container */}
-      <div className="relative w-full bg-[#071A2D] border border-[#1D4E73] rounded-md overflow-hidden min-h-[380px] sm:min-h-[460px] flex items-center justify-center p-2">
-        {/* Interactive Map SVG */}
-        <div
-          className="w-full flex items-center justify-center transition-transform duration-300 ease-out"
-          style={{
-            transform: `scale(${zoomLevel})`,
-            transformOrigin: 'center center',
-          }}
+      {/* 2. Map Container with Strict Container Height & ResizeObserver */}
+      <div
+        id="map-container-wrapper"
+        className="w-full h-[460px] sm:h-[500px] lg:h-[540px] rounded overflow-hidden relative border border-[#1D5278] bg-[#061A2B]"
+      >
+        <MapContainer
+          center={mapCenter}
+          zoom={mapZoom}
+          minZoom={4}
+          maxZoom={9}
+          scrollWheelZoom={false}
+          attributionControl={true}
+          zoomControl={true}
+          style={{ width: '100%', height: '100%', backgroundColor: '#061A2B' }}
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox={India.viewBox}
-            className="w-full max-h-[480px] select-none"
-            aria-label="Geographical Warning Map of India"
-          >
-            {India.locations.map((loc: any) => {
-              const fill = getStateFillColor(loc);
-              const summary = resolveStateSummary(loc);
-              const isHovered = hoveredLocation?.id === loc.id;
-              const isSelected =
-                selectedState &&
-                (selectedState.toLowerCase() === summary.stateName.toLowerCase() ||
-                  selectedState.toLowerCase() === summary.stateCode.toLowerCase());
+          {/* Map Resize Observer Fix */}
+          <MapResizeFix />
 
-              return (
-                <path
-                  key={loc.id}
-                  id={`warning-state-path-${loc.id}`}
-                  name={loc.name}
-                  d={loc.path}
-                  fill={fill}
-                  stroke={
-                    isSelected
-                      ? '#FFFFFF'
-                      : isHovered
-                      ? '#E3F2FD'
-                      : '#102D47'
-                  }
-                  strokeWidth={isSelected ? '2.5' : isHovered ? '1.8' : '0.8'}
-                  className="cursor-pointer transition-all duration-150"
-                  onClick={() => handleStateClick(loc)}
-                  onMouseMove={(e) => handleMouseMove(e, loc)}
-                  onMouseLeave={() => setHoveredLocation(null)}
-                />
-              );
-            })}
-          </svg>
-        </div>
+          {/* Programmatic Center Controller */}
+          <MapCenterController center={mapCenter} zoom={mapZoom} />
 
-        {/* Floating Tooltip */}
-        {hoveredLocation && (
-          <div
-            className="fixed z-50 pointer-events-none bg-[#0B2239] border border-[#1D4E73] rounded shadow-2xl p-3 text-xs w-64 transform -translate-x-1/2 -translate-y-full -mt-3"
-            style={{
-              left: `${hoveredLocation.x}px`,
-              top: `${hoveredLocation.y}px`,
-            }}
-          >
-            <div className="flex items-center justify-between pb-1.5 border-b border-[#1D4E73] gap-2">
-              <span className="font-bold text-white text-sm">
-                {hoveredLocation.summary.stateName}
-              </span>
-              <span
-                className={`px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider ${
-                  hoveredLocation.summary.highestSeverity === 'red'
-                    ? 'bg-[#FF0000] text-white'
-                    : hoveredLocation.summary.highestSeverity === 'orange'
-                    ? 'bg-[#FFA500] text-white'
-                    : hoveredLocation.summary.highestSeverity === 'yellow'
-                    ? 'bg-[#FFFF00] text-[#071A2D]'
-                    : hoveredLocation.summary.highestSeverity === 'purple'
-                    ? 'bg-[#1565C0] text-white'
-                    : 'bg-[#008000] text-white'
-                }`}
+          {/* Standard OpenStreetMap TileLayer */}
+          <TileLayer
+            attribution='&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors'
+            url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
+            maxZoom={18}
+          />
+
+          {/* Interactive State Markers with Official Coordinates */}
+          {ALL_INDIA_STATES_MET_PROFILES.map((profile) => {
+            const summary = resolveStateSummary(profile);
+            const severity = summary.highestSeverity;
+            const isSelected =
+              selectedState &&
+              (selectedState.toLowerCase() === profile.name.toLowerCase() ||
+                selectedState.toLowerCase() === profile.code.toLowerCase() ||
+                selectedState.toLowerCase() === summary.stateCode.toLowerCase());
+
+            const icon = createSeverityMarker(
+              severity,
+              Boolean(isSelected),
+              profile.code,
+              summary.activeCount
+            );
+
+            const badgeConfig = SEVERITY_CONFIG[severity] || SEVERITY_CONFIG.green;
+
+            return (
+              <Marker
+                key={profile.id}
+                position={[profile.lat, profile.lng]}
+                icon={icon}
+                eventHandlers={{
+                  click: () => {
+                    onSelectState(profile.name, summary.stateCode);
+                  },
+                }}
               >
-                {hoveredLocation.summary.highestSeverity.toUpperCase()} ALERT
-              </span>
-            </div>
-
-            <div className="pt-2 space-y-1.5">
-              <div className="text-[11px] text-[#D7DEE8]">
-                <strong>Primary Hazard:</strong>{' '}
-                <span className="text-white font-semibold">
-                  {hoveredLocation.summary.primaryHazardLabel}
-                </span>
-              </div>
-
-              <div className="text-[11px] text-[#B8C7D9] leading-tight">
-                {hoveredLocation.summary.bulletinHeadline}
-              </div>
-
-              <div className="pt-1.5 border-t border-[#1D4E73] flex items-center justify-between text-[10px] text-[#B8C7D9]">
-                <span>{hoveredLocation.summary.validityRange}</span>
-                <span className="text-[#E3F2FD] font-semibold">Click to filter</span>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Selected State Marker Banner on top left of map */}
-        {selectedState && selectedState !== 'all' && (
-          <div className="absolute top-3 left-3 bg-[#0B2239]/90 backdrop-blur-sm border border-[#1565C0] px-3 py-1.5 rounded text-xs text-white flex items-center gap-2 shadow-lg">
-            <span className="material-symbols-outlined text-[#E3F2FD] text-[16px]">
-              location_on
-            </span>
-            <span>
-              Focused State: <strong className="text-[#E3F2FD]">{selectedState}</strong>
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Selected State Warning Dossier Panel */}
-      {selectedState && selectedState !== 'all' && (
-        <div className="bg-[#071A2D] border border-[#1D4E73] rounded-md p-3 sm:p-4 text-xs">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-2 mb-2 border-b border-[#1D4E73] gap-2">
-            <div>
-              <span className="text-[10px] uppercase font-bold text-[#64B5F6] tracking-wider block">
-                STATE WARNING DOSSIER
-              </span>
-              <h4 className="text-sm sm:text-base font-bold text-white">
-                {selectedState} Meteorological Division
-              </h4>
-            </div>
-            <button
-              type="button"
-              onClick={() => onSelectState('all', 'all')}
-              className="text-xs text-[#90CAF9] hover:text-white px-2 py-1 bg-[#102D47] rounded cursor-pointer self-start sm:self-auto border border-[#1D4E73]"
-            >
-              Show All India Map
-            </button>
-          </div>
-
-          {stateActiveWarnings.length === 0 ? (
-            <div className="text-[#B8C7D9] py-2">
-              <span className="text-[#2ECC71] font-bold">🟢 No Active Severe Warnings</span> in force for {selectedState}. Routine seasonal synoptic conditions prevail.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {stateActiveWarnings.map((w) => (
-                <div
-                  key={w.id}
-                  className="p-3 rounded bg-[#0B2239] border border-[#1D4E73] flex flex-col gap-2"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <span className="font-bold text-white text-sm">
-                      {w.title || w.hazardLabel}
-                    </span>
+                {/* Clean Hover Tooltip */}
+                <Tooltip direction="top" offset={[0, -18]} opacity={0.95}>
+                  <div className="font-sans text-xs">
+                    <strong className="text-white block">{profile.name}</strong>
                     <span
-                      className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase font-mono ${
-                        w.severity === 'red'
-                          ? 'bg-[#FF0000] text-white'
-                          : w.severity === 'orange'
-                          ? 'bg-[#FFA500] text-black'
-                          : 'bg-[#FFFF00] text-black'
-                      }`}
+                      className="text-[10px] font-bold uppercase tracking-wider block mt-0.5"
+                      style={{ color: badgeConfig.fill }}
                     >
-                      {w.severity.toUpperCase()} ALERT
+                      {badgeConfig.label} ({summary.activeCount} Alert{summary.activeCount === 1 ? '' : 's'})
                     </span>
                   </div>
+                </Tooltip>
 
-                  {/* Affected Districts */}
-                  <div>
-                    <span className="text-[10px] font-bold uppercase text-[#8A94A6] block mb-1">
-                      Affected Districts:
-                    </span>
-                    <div className="flex flex-wrap gap-1">
-                      {w.affectedDistricts && w.affectedDistricts.length > 0 ? (
-                        w.affectedDistricts.map((d) => (
-                          <span
-                            key={d}
-                            className="px-2 py-0.5 bg-[#172A3D] text-[#D7DEE8] rounded text-[11px] font-mono border border-[#1D4E73]"
-                          >
-                            {d}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="text-[#B8C7D9]">All subdivision districts</span>
+                {/* Detailed Interactive Popup */}
+                <Popup className="mausam-dark-popup">
+                  <div className="p-1 min-w-[230px] max-w-[280px] text-xs font-sans">
+                    <div className="flex items-center justify-between pb-1.5 border-b border-[#1D5278] mb-2">
+                      <div>
+                        <h4 className="font-bold text-white text-sm leading-tight">
+                          {profile.name}
+                        </h4>
+                        <span className="text-[10px] text-[#AFC4D8]">
+                          Capital: {profile.capital}
+                        </span>
+                      </div>
+                      <span
+                        className="text-[9px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider"
+                        style={{
+                          backgroundColor: `${badgeConfig.fill}22`,
+                          borderColor: badgeConfig.fill,
+                          color: badgeConfig.fill,
+                        }}
+                      >
+                        {badgeConfig.label}
+                      </span>
+                    </div>
+
+                    <div className="space-y-1.5 text-[#F5F9FC]">
+                      <div className="text-[11px] text-[#AFC4D8]">
+                        <strong className="text-[#F5F9FC]">Primary Hazard:</strong>{' '}
+                        {summary.primaryHazardLabel}
+                      </div>
+
+                      <div className="text-[11px] leading-snug bg-[#081F33] p-1.5 rounded border border-[#1D5278]/60">
+                        {summary.bulletinHeadline}
+                      </div>
+
+                      <div className="text-[10px] text-[#AFC4D8]">
+                        <span>Station: </span>
+                        <strong className="text-white font-mono">{summary.representativeStation}</strong>
+                      </div>
+                    </div>
+
+                    <div className="pt-2.5 mt-2 border-t border-[#1D5278] flex items-center justify-between gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          onSelectState(profile.name, summary.stateCode);
+                        }}
+                        className="w-full py-1.5 px-2 rounded bg-[#1565C0] hover:bg-[#0B3D91] text-white font-bold text-[11px] transition-colors cursor-pointer text-center"
+                      >
+                        Filter Warnings ({profile.name})
+                      </button>
+
+                      {onOpenStateDrawer && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenStateDrawer(summary)}
+                          className="py-1.5 px-2 rounded bg-[#081F33] hover:bg-[#102D47] text-[#AFC4D8] hover:text-white border border-[#1D5278] font-semibold text-[11px] transition-colors cursor-pointer"
+                          title="View Full State Advisory"
+                        >
+                          Advisory
+                        </button>
                       )}
                     </div>
                   </div>
+                </Popup>
+              </Marker>
+            );
+          })}
+        </MapContainer>
+      </div>
 
-                  {/* Advisory / Action Item */}
-                  <div className="pt-2 border-t border-[#1D4E73]/70 text-[#E3F2FD] leading-relaxed">
-                    <strong className="text-white text-[11px] uppercase block mb-0.5">
-                      Operational Advisory:
-                    </strong>
-                    {(w.recommendedActions && w.recommendedActions.length > 0
-                      ? w.recommendedActions.join('. ')
-                      : w.description) || 'Observe standard IMD safety protocol. Avoid waterlogged transit corridors and low-lying coastal areas.'}
-                  </div>
-                </div>
-              ))}
+      {/* 3. Official Legend Directly Below the Map */}
+      <div
+        id="warning-map-legend"
+        className="pt-2 border-t border-[#1D5278] flex flex-col gap-2"
+      >
+        <div className="flex items-center justify-between text-[11px] text-[#AFC4D8]">
+          <span className="font-semibold text-white uppercase tracking-wider text-[10px]">
+            Official IMD Warning Classifications
+          </span>
+          <span className="font-mono text-[10px]">
+            {stateCounts.red} Red • {stateCounts.orange} Orange • {stateCounts.yellow} Yellow • {stateCounts.green} Normal
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {/* Red Alert */}
+          <div className="flex items-center gap-2 p-1.5 rounded bg-[#081F33] border border-[#1D5278]/80">
+            <span className="w-3 h-3 rounded-full bg-[#FF0000] shrink-0 shadow-xs" />
+            <div className="min-w-0">
+              <div className="text-[11px] font-bold text-[#FF4D4D] leading-tight truncate">
+                Red Alert
+              </div>
+              <div className="text-[10px] text-[#AFC4D8] leading-tight truncate">
+                Take Action
+              </div>
             </div>
-          )}
-        </div>
-      )}
-
-      {/* Official Early Warning Color Legend */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 pt-2 border-t border-[#1D4E73]">
-        <div className="flex items-center gap-2 p-2 rounded bg-[#071A2D] border border-[#1D4E73]">
-          <span className="w-3.5 h-3.5 rounded-sm bg-[#FF0000] shrink-0"></span>
-          <div className="leading-tight">
-            <div className="text-xs font-bold text-white">Red Alert</div>
-            <div className="text-[10px] text-[#B8C7D9]">Take Action / Emergency</div>
           </div>
-        </div>
 
-        <div className="flex items-center gap-2 p-2 rounded bg-[#071A2D] border border-[#1D4E73]">
-          <span className="w-3.5 h-3.5 rounded-sm bg-[#FFA500] shrink-0"></span>
-          <div className="leading-tight">
-            <div className="text-xs font-bold text-white">Orange Alert</div>
-            <div className="text-[10px] text-[#B8C7D9]">Be Prepared / High Vigil</div>
+          {/* Orange Alert */}
+          <div className="flex items-center gap-2 p-1.5 rounded bg-[#081F33] border border-[#1D5278]/80">
+            <span className="w-3 h-3 rounded-full bg-[#FFA500] shrink-0 shadow-xs" />
+            <div className="min-w-0">
+              <div className="text-[11px] font-bold text-[#FFA500] leading-tight truncate">
+                Orange Alert
+              </div>
+              <div className="text-[10px] text-[#AFC4D8] leading-tight truncate">
+                Be Prepared
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div className="flex items-center gap-2 p-2 rounded bg-[#071A2D] border border-[#1D4E73]">
-          <span className="w-3.5 h-3.5 rounded-sm bg-[#FFFF00] shrink-0"></span>
-          <div className="leading-tight">
-            <div className="text-xs font-bold text-white">Yellow Watch</div>
-            <div className="text-[10px] text-[#B8C7D9]">Be Updated / Advisory</div>
+          {/* Yellow Watch */}
+          <div className="flex items-center gap-2 p-1.5 rounded bg-[#081F33] border border-[#1D5278]/80">
+            <span className="w-3 h-3 rounded-full bg-[#FFFF00] shrink-0 shadow-xs" />
+            <div className="min-w-0">
+              <div className="text-[11px] font-bold text-[#FFFF00] leading-tight truncate">
+                Yellow Watch
+              </div>
+              <div className="text-[10px] text-[#AFC4D8] leading-tight truncate">
+                Be Updated
+              </div>
+            </div>
           </div>
-        </div>
 
-        <div className="flex items-center gap-2 p-2 rounded bg-[#071A2D] border border-[#1D4E73]">
-          <span className="w-3.5 h-3.5 rounded-sm bg-[#1565C0] shrink-0"></span>
-          <div className="leading-tight">
-            <div className="text-xs font-bold text-white">Advisory Bulletin</div>
-            <div className="text-[10px] text-[#B8C7D9]">Agromet / GKMS Field</div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 p-2 rounded bg-[#071A2D] border border-[#1D4E73] col-span-2 sm:col-span-1">
-          <span className="w-3.5 h-3.5 rounded-sm bg-[#008000] border border-[#008000] shrink-0"></span>
-          <div className="leading-tight">
-            <div className="text-xs font-bold text-[#008000]">Green Code</div>
-            <div className="text-[10px] text-[#B8C7D9]">No Warning / Normal</div>
+          {/* Green Code */}
+          <div className="flex items-center gap-2 p-1.5 rounded bg-[#081F33] border border-[#1D5278]/80">
+            <span className="w-3 h-3 rounded-full bg-[#008000] shrink-0 shadow-xs" />
+            <div className="min-w-0">
+              <div className="text-[11px] font-bold text-[#00E676] leading-tight truncate">
+                Green Code
+              </div>
+              <div className="text-[10px] text-[#AFC4D8] leading-tight truncate">
+                No Severe Warning
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
   );
 };
-

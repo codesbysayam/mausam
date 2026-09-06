@@ -249,3 +249,39 @@ export function generateCalendarGrid(
 
   return days;
 }
+
+/**
+ * Standard Indian Meteorological Date-Time format:
+ * "06 Sep 2026 • 07:07 PM IST"
+ */
+export function formatIndianDateTime(dateInput: Date | string | number = new Date()): string {
+  const d = parseDateSafe(dateInput);
+  try {
+    const formatter = new Intl.DateTimeFormat('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+    const parts = formatter.formatToParts(d);
+    const day = parts.find((p) => p.type === 'day')?.value || String(d.getDate()).padStart(2, '0');
+    const month = parts.find((p) => p.type === 'month')?.value || MONTH_NAMES_SHORT[d.getMonth()];
+    const year = parts.find((p) => p.type === 'year')?.value || String(d.getFullYear());
+    const hour = parts.find((p) => p.type === 'hour')?.value || '12';
+    const minute = parts.find((p) => p.type === 'minute')?.value || '00';
+    const dayPeriod = (parts.find((p) => p.type === 'dayPeriod')?.value || 'AM').toUpperCase();
+    return `${day} ${month} ${year} • ${hour}:${minute} ${dayPeriod} IST`;
+  } catch {
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = MONTH_NAMES_SHORT[d.getMonth()];
+    const year = d.getFullYear();
+    let hours = d.getHours();
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12 || 12;
+    return `${day} ${month} ${year} • ${String(hours).padStart(2, '0')}:${minutes} ${ampm} IST`;
+  }
+}

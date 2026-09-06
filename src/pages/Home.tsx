@@ -21,6 +21,7 @@ import { HomePersonalizedHub } from '../components/home/HomePersonalizedHub';
 import { HomeSolarCycle } from '../components/home/HomeSolarCycle';
 import { HomeAirEnvironment } from '../components/home/HomeAirEnvironment';
 import { HomeRadarPreview } from '../components/home/HomeRadarPreview';
+import { HomeHistoricalClimateTrends } from '../components/home/HomeHistoricalClimateTrends';
 import { WeatherSnapshot } from '../components/weather/WeatherSnapshot';
 
 // New High-Visibility Functional Components
@@ -198,6 +199,7 @@ export const HomePage: React.FC<HomePageProps> = ({
       <HomeAtmosphericHero
         weather={current}
         location={selectedLocation}
+        lastUpdated={current.lastUpdated}
         onExploreWeather={() => onNavigateToTab('weather')}
         onExploreForecast={() => onNavigateToTab('forecast')}
       />
@@ -285,6 +287,8 @@ export const HomePage: React.FC<HomePageProps> = ({
         <div className="lg:col-span-7">
           <HomeAirEnvironment
             weather={current}
+            location={selectedLocation}
+            lastUpdated={current.lastUpdated}
             onNavigateToAqi={() => onNavigateToTab('aqi')}
           />
         </div>
@@ -294,6 +298,11 @@ export const HomePage: React.FC<HomePageProps> = ({
       <HomeRadarPreview
         location={selectedLocation}
         onNavigateToRadar={() => onNavigateToTab('radar')}
+      />
+
+      {/* 8B. HISTORICAL CLIMATE TRENDS & IMD NORMALS */}
+      <HomeHistoricalClimateTrends
+        location={selectedLocation}
       />
 
       {/* 9. NATIONAL WEATHER SNAPSHOT (36 STATES & UNION TERRITORIES) */}

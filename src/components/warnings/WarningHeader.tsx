@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { useLanguage } from '../../i18n/LanguageContext';
+import { formatIndianDateTime } from '../../utils/dateUtils';
 
 interface WarningHeaderProps {
-  lastUpdated: string;
+  lastUpdated?: string;
   onRefresh: () => void;
   isLoading?: boolean;
 }
@@ -12,81 +12,84 @@ export const WarningHeader: React.FC<WarningHeaderProps> = ({
   onRefresh,
   isLoading = false,
 }) => {
-  const { t } = useLanguage();
   const [justRefreshed, setJustRefreshed] = useState(false);
 
   const handleRefreshClick = () => {
     setJustRefreshed(true);
     onRefresh();
-    setTimeout(() => setJustRefreshed(false), 1200);
+    setTimeout(() => setJustRefreshed(false), 1000);
   };
+
+  const displayTimestamp = lastUpdated || formatIndianDateTime(new Date());
 
   return (
     <header
       id="warning-page-official-header"
-      className="relative bg-[#071A2D] border-b border-[#1D4E73] px-4 py-4 sm:px-6 lg:px-8 transition-colors"
+      className="bg-[#0B263D] border border-[#1D5278] rounded-md p-4 sm:p-5 shadow-sm"
     >
-      {/* Subtle top meteorological primary accent line */}
-      <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#0B3D91] via-[#1565C0] to-[#E3F2FD]" />
-
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        {/* Left: Official Title & Identity */}
-        <div className="flex items-start gap-3.5">
-          <div className="w-11 h-11 rounded bg-[#0B2239] border border-[#1D4E73] flex items-center justify-center text-[#E3F2FD] shrink-0 shadow-inner">
-            <span className="material-symbols-outlined text-[26px]">
-              warning_amber
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        {/* Left: Indian Meteorological Department Identity */}
+        <div className="flex items-center gap-3.5">
+          <div className="w-12 h-12 rounded bg-[#081F33] border border-[#1D5278] flex items-center justify-center text-[#E3F2FD] shrink-0 shadow-inner">
+            <span className="material-symbols-outlined text-[28px] text-[#4FA8E0]">
+              crisis_alert
             </span>
           </div>
 
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white uppercase font-sans">
-                {t('majorWeatherWarnings', 'National Weather Warnings')}
-              </h1>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-[#1565C0]/25 text-[#E3F2FD] border border-[#1565C0]/50">
-                IMD Synoptic Alert Feed
+              <span className="text-[11px] font-bold tracking-wider uppercase text-[#E3F2FD] bg-[#102D47] px-2 py-0.5 rounded border border-[#1565C0]">
+                India Meteorological Department
+              </span>
+              <span className="text-[10px] font-mono text-[#AFC4D8]">
+                IMD Synoptic Alert Division
               </span>
             </div>
-
-            <p className="text-xs sm:text-sm text-[#B8C7D9] mt-0.5 flex items-center gap-1.5 flex-wrap">
-              <span className="text-[#D7DEE8] font-medium">
-                India Meteorological Monitoring &amp; Public Safety Centre
-              </span>
-              <span className="text-[#1D4E73] hidden sm:inline">•</span>
-              <span>Live synoptic warnings, advisories &amp; emergency bulletins</span>
+            <p className="text-[11px] sm:text-xs text-[#AFC4D8] mt-0.5">
+              Ministry of Earth Sciences • Government of India
             </p>
           </div>
         </div>
 
-        {/* Right: Operational Status & Sync */}
-        <div className="flex items-center gap-3 self-start md:self-center bg-[#0B2239] border border-[#1D4E73] px-3.5 py-2 rounded-md shadow-sm">
-          <div className="flex flex-col text-right">
-            <div className="flex items-center gap-1.5 justify-end">
+        {/* Center: Official Title */}
+        <div className="text-left lg:text-center">
+          <h1 className="text-lg sm:text-xl lg:text-2xl font-bold tracking-tight text-white uppercase font-sans">
+            National Weather Warning Bulletin
+          </h1>
+          <p className="text-[11px] sm:text-xs text-[#AFC4D8] mt-0.5">
+            Real-Time Meteorological Warnings, Flash Flood Advisories &amp; Synoptic Watches
+          </p>
+        </div>
+
+        {/* Right: Last Updated IST timestamp with live status indicator & refresh */}
+        <div className="flex items-center gap-3 self-start lg:self-center bg-[#081F33] border border-[#1D5278] px-3.5 py-2 rounded shadow-xs">
+          <div className="flex flex-col text-left sm:text-right">
+            <div className="flex items-center gap-1.5 sm:justify-end">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#008000] opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-[#008000]"></span>
               </span>
-              <span className="text-[11px] font-bold text-[#008000] uppercase tracking-wider">
-                System Operational
+              <span className="text-[10px] font-bold text-[#00E676] uppercase tracking-wider">
+                Live IMD Telemetry
               </span>
             </div>
 
-            <div className="text-[11px] text-[#B8C7D9] font-mono mt-0.5">
-              <span className="text-[#B8C7D9]">Updated: </span>
-              <span className="text-[#D7DEE8] font-semibold">{lastUpdated}</span>
+            <div className="text-[11px] text-[#AFC4D8] font-mono mt-0.5 flex items-center gap-1">
+              <span>Updated:</span>
+              <span className="text-white font-semibold">{displayTimestamp}</span>
             </div>
           </div>
 
-          <div className="h-7 w-[1px] bg-[#1D4E73]" />
+          <div className="h-7 w-[1px] bg-[#1D5278]" />
 
           <button
             id="btn-refresh-warning-telemetry"
             type="button"
             onClick={handleRefreshClick}
             disabled={isLoading || justRefreshed}
-            title="Refresh National Warning Bulletins"
+            title="Refresh National Warning Feed"
             aria-label="Refresh warning data"
-            className="w-8 h-8 rounded bg-[#071A2D] hover:bg-[#1565C0] text-[#B8C7D9] hover:text-white border border-[#1D4E73] hover:border-[#E3F2FD] flex items-center justify-center transition-all cursor-pointer disabled:opacity-50"
+            className="w-8 h-8 rounded bg-[#102D47] hover:bg-[#1565C0] text-[#AFC4D8] hover:text-white border border-[#1D5278] flex items-center justify-center transition-colors cursor-pointer disabled:opacity-50"
           >
             <span
               className={`material-symbols-outlined text-[18px] ${

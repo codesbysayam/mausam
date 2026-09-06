@@ -1,6 +1,5 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { WarningRecord } from '../../types/warningTypes';
-import { warningService } from '../../services/warningService';
 
 interface WarningCardProps {
   warning: WarningRecord;
@@ -15,161 +14,204 @@ export const WarningCard: React.FC<WarningCardProps> = ({
   onViewOnMap,
   isLocationTarget = false,
 }) => {
-  const theme = warningService.getSeverityTheme(warning.severity);
+  const [copied, setCopied] = useState(false);
+
+  // Standardized Severity Themes (only border and badge change; card background is identical)
+  const getSeverityTheme = () => {
+    switch (warning.severity) {
+      case 'red':
+        return {
+          border: 'border-[#FF0000]/70',
+          badge: 'bg-[#FF0000]/20 text-[#FF4D4D] border-[#FF0000]/60',
+          dot: 'bg-[#FF0000]',
+          label: 'RED ALERT',
+        };
+      case 'orange':
+        return {
+          border: 'border-[#FFA500]/70',
+          badge: 'bg-[#FFA500]/20 text-[#FFA500] border-[#FFA500]/60',
+          dot: 'bg-[#FFA500]',
+          label: 'ORANGE ALERT',
+        };
+      case 'yellow':
+        return {
+          border: 'border-[#FFFF00]/70',
+          badge: 'bg-[#FFFF00]/20 text-[#FFFF00] border-[#FFFF00]/60',
+          dot: 'bg-[#FFFF00]',
+          label: 'YELLOW WATCH',
+        };
+      case 'purple':
+        return {
+          border: 'border-[#1565C0]/70',
+          badge: 'bg-[#1565C0]/20 text-[#E3F2FD] border-[#1565C0]/60',
+          dot: 'bg-[#1565C0]',
+          label: 'ADVISORY',
+        };
+      default:
+        return {
+          border: 'border-[#008000]/70',
+          badge: 'bg-[#008000]/20 text-[#00E676] border-[#008000]/60',
+          dot: 'bg-[#008000]',
+          label: 'GREEN CODE',
+        };
+    }
+  };
+
+  const theme = getSeverityTheme();
+
+  const handleShare = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const shareText = `[IMD Weather Warning] ${warning.severity.toUpperCase()} ALERT: ${warning.title} (${warning.subdivision}, ${warning.state}). Valid until: ${warning.validUntil}. Issued by ${warning.source}`;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(shareText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   return (
     <article
       id={`warning-card-${warning.id}`}
-      aria-label={`${warning.severityLabel}: ${warning.title}`}
-      className={`bg-[#0B2239] border border-[#1D4E73] rounded-md shadow-md p-4 sm:p-5 flex flex-col justify-between gap-3.5 transition-all hover:border-[#1565C0]/60 ${
-        warning.severity === 'red'
-          ? 'border-l-4 border-l-[#FF0000]'
-          : warning.severity === 'orange'
-          ? 'border-l-4 border-l-[#FFA500]'
-          : warning.severity === 'yellow'
-          ? 'border-l-4 border-l-[#FFFF00]'
-          : warning.severity === 'purple'
-          ? 'border-l-4 border-l-[#1565C0]'
-          : 'border-l-4 border-l-[#008000]'
-      }`}
+      className={`warning-card bg-[#0B263D] border rounded-md p-6 shadow-sm flex flex-col min-w-0 h-full transition-all hover:border-[#1565C0] ${theme.border}`}
     >
-      {/* Top Header: Badge, Bulletin ID & Agency */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-[#1D4E73]">
-        <div className="flex items-center gap-2 flex-wrap">
-          {/* Severity Badge */}
-          <span
-            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider ${theme.bgBadgeClass} ${theme.textBadgeClass}`}
-          >
-            <span className="material-symbols-outlined text-[14px]">
-              {theme.icon}
+      {/* 1. HEADER: State/Region + Location and Severity Badge */}
+      <header className="bulletin-header flex items-start justify-between gap-3 mb-[14px]">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline gap-2 flex-wrap">
+            <h4 className="text-sm font-bold text-white uppercase tracking-tight truncate">
+              {warning.state}
+            </h4>
+            <span className="text-xs text-[#AFC4D8] font-mono">
+              • {warning.subdivision}
             </span>
-            <span>{warning.severityLabel}</span>
-          </span>
-
-          {/* Hazard Chip */}
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-[#071A2D] text-[#D7DEE8] border border-[#1D4E73]">
-            <span className="material-symbols-outlined text-[13px] text-[#E3F2FD]">
-              {warning.hazardIcon}
-            </span>
-            <span>{warning.hazardLabel}</span>
-          </span>
-
+          </div>
           {isLocationTarget && (
-            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#1565C0] text-white">
-              Your Location
-            </span>
+            <div className="mt-1">
+              <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold bg-[#1565C0] text-white tracking-wide">
+                Your Region
+              </span>
+            </div>
           )}
         </div>
 
-        <div className="text-[11px] font-mono text-[#B8C7D9]">
-          <span>Bulletin: </span>
-          <strong className="text-[#D7DEE8]">{warning.bulletinNo}</strong>
-        </div>
-      </div>
+        <span
+          className={`px-2.5 py-1 rounded text-[10px] font-bold border uppercase tracking-wider shrink-0 flex items-center gap-1.5 whitespace-nowrap ${theme.badge}`}
+        >
+          <span className={`w-2 h-2 rounded-full ${theme.dot}`} />
+          <span>{theme.label}</span>
+        </span>
+      </header>
 
-      {/* Main Title & Geographic Subtitle */}
-      <div>
-        <h3 className="text-base sm:text-lg font-bold text-white tracking-tight leading-snug">
+      {/* DIVIDER */}
+      <div className="border-b border-[#1D5278]" />
+
+      {/* 2. CARD CONTENT CONTAINER (Flexible, perfectly structured) */}
+      <div className="warning-card-content flex-1 flex flex-col min-w-0">
+        {/* HAZARD ICON + HAZARD TYPE */}
+        <div className="mt-[16px] flex items-center gap-2 text-xs font-bold text-[#4FA8E0] uppercase tracking-wider">
+          <span className="material-symbols-outlined text-[18px]">
+            {warning.hazardIcon}
+          </span>
+          <span>{warning.hazardLabel}</span>
+        </div>
+
+        {/* WARNING TITLE (Min-height 54px with no ellipsis cutoffs) */}
+        <h3 className="warning-title mt-[8px] text-base font-bold text-white tracking-tight leading-[1.25] min-h-[54px] flex items-start">
           {warning.title}
         </h3>
-        <p className="text-xs sm:text-sm text-[#E3F2FD] font-medium mt-0.5 flex items-center gap-1">
-          <span className="material-symbols-outlined text-[15px]">location_on</span>
-          <span>{warning.affectedAreaText}</span>
-        </p>
-      </div>
 
-      {/* Validity Timing Horizon Box */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 p-2.5 bg-[#071A2D] border border-[#1D4E73] rounded text-xs">
-        <div className="flex items-center gap-1.5 text-[#B8C7D9]">
-          <span className="material-symbols-outlined text-[15px] text-[#008000]">
-            schedule
+        {/* METADATA: 3-row structured grid (Bulletin No, Issued At, Valid Until) */}
+        <div className="metadata-grid mt-[16px] bg-[#081F33] border border-[#1D5278] rounded p-3 text-xs font-mono grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-2">
+          <span className="text-[#AFC4D8] whitespace-nowrap">Bulletin No.</span>
+          <span
+            className="text-white font-semibold text-right break-words min-w-0"
+            title={warning.bulletinNo}
+          >
+            {warning.bulletinNo}
           </span>
-          <span>
-            Issued: <strong className="text-[#D7DEE8] font-mono">{warning.issuedAt}</strong>
-          </span>
-        </div>
 
-        <div className="flex items-center gap-1.5 text-[#B8C7D9]">
-          <span className="material-symbols-outlined text-[15px] text-[#FFA500]">
-            event_busy
+          <span className="text-[#AFC4D8] whitespace-nowrap">Issued At</span>
+          <span className="text-white font-semibold text-right break-words min-w-0">
+            {warning.issuedAt}
           </span>
-          <span>
-            Valid until: <strong className="text-white font-mono">{warning.validUntil}</strong>
+
+          <span className="text-[#AFC4D8] whitespace-nowrap">Valid Until</span>
+          <span className="text-white font-semibold text-right break-words min-w-0">
+            {warning.validUntil}
           </span>
         </div>
-      </div>
 
-      {/* Structured Description */}
-      <p className="text-xs text-[#D7DEE8] leading-relaxed line-clamp-3">
-        {warning.description}
-      </p>
-
-      {/* Potential Meteorological Impacts */}
-      {warning.impacts && warning.impacts.length > 0 && (
-        <div className="bg-[#071A2D]/70 border border-[#1D4E73]/70 rounded p-2.5">
-          <div className="text-[11px] font-bold text-[#B8C7D9] uppercase tracking-wider mb-1.5 flex items-center gap-1">
-            <span className="material-symbols-outlined text-[13px] text-[#FFA500]">
-              report
-            </span>
-            <span>Expected Meteorological Impacts</span>
+        {/* AFFECTED DISTRICTS & ZONES */}
+        <div className="mt-[16px]">
+          <div className="text-[10px] font-bold text-[#AFC4D8] uppercase tracking-wider mb-2">
+            Affected Districts &amp; Zones
           </div>
-          <ul className="space-y-1 text-xs text-[#D7DEE8]">
-            {warning.impacts.slice(0, 2).map((imp, idx) => (
-              <li key={idx} className="flex items-start gap-1.5">
-                <span className="text-[#E3F2FD] mt-0.5">•</span>
-                <span>{imp}</span>
-              </li>
+          <div className="zone-list flex flex-wrap gap-[6px]">
+            {warning.affectedDistricts.slice(0, 4).map((dist, idx) => (
+              <span
+                key={idx}
+                className="h-[24px] px-2.5 rounded bg-[#081F33] border border-[#1D5278] text-[11px] text-[#AFC4D8] font-medium inline-flex items-center justify-center whitespace-nowrap max-w-full truncate"
+              >
+                {dist}
+              </span>
             ))}
-          </ul>
-        </div>
-      )}
-
-      {/* Recommended Action Items */}
-      {warning.recommendedActions && warning.recommendedActions.length > 0 && (
-        <div className="bg-[#071A2D] border border-[#1D4E73] rounded p-2.5 text-xs text-[#D7DEE8]">
-          <div className="text-[11px] font-bold text-[#008000] uppercase tracking-wider mb-1 flex items-center gap-1">
-            <span className="material-symbols-outlined text-[13px]">
-              health_and_safety
-            </span>
-            <span>Recommended Public Action</span>
+            {warning.affectedDistricts.length > 4 && (
+              <span className="h-[24px] px-2 rounded bg-[#081F33] border border-[#1D5278] text-[11px] text-[#AFC4D8] font-medium inline-flex items-center justify-center whitespace-nowrap">
+                +{warning.affectedDistricts.length - 4} more
+              </span>
+            )}
           </div>
-          <p className="line-clamp-2 text-[#D7DEE8]">
-            {warning.recommendedActions[0]}
+        </div>
+
+        {/* DESCRIPTION (Readable 14px, line-height 1.6, naturally wrapping) */}
+        <div className="mt-[16px] flex-1 min-w-0">
+          <p className="text-[14px] leading-[1.6] text-[#AFC4D8] text-left break-words">
+            {warning.description}
           </p>
         </div>
-      )}
+      </div>
 
-      {/* Footer: Source & Interactive Action Buttons */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-[#1D4E73]">
-        <div className="text-[11px] text-[#B8C7D9] truncate max-w-xs">
-          <span>Source: </span>
-          <span className="text-[#D7DEE8] font-medium">{warning.source}</span>
-        </div>
+      {/* DIVIDER */}
+      <div className="border-b border-[#1D5278] mt-[18px]" />
 
-        <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+      {/* 3. FOOTER: Strict baseline alignment, standardized 42px controls */}
+      <footer className="warning-card-footer mt-auto pt-4 flex items-center justify-between gap-3 flex-wrap sm:flex-nowrap">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             id={`btn-map-focus-${warning.id}`}
             type="button"
             onClick={() => onViewOnMap(warning)}
-            className="px-3 py-1.5 rounded bg-[#071A2D] hover:bg-[#102D47] text-[#D7DEE8] hover:text-[#E3F2FD] border border-[#1D4E73] text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
+            className="h-[42px] w-[42px] rounded bg-[#081F33] hover:bg-[#102D47] text-[#AFC4D8] hover:text-white border border-[#1D5278] flex items-center justify-center transition-colors cursor-pointer shrink-0"
+            title="Focus Subdivision on Map"
+            aria-label="Focus on Map"
           >
-            <span className="material-symbols-outlined text-[15px]">map</span>
-            <span>Map Focus</span>
+            <span className="material-symbols-outlined text-[18px]">location_searching</span>
           </button>
 
           <button
-            id={`btn-view-details-${warning.id}`}
+            id={`btn-share-warning-${warning.id}`}
             type="button"
-            onClick={() => onViewDetails(warning)}
-            className="px-3.5 py-1.5 rounded bg-[#1565C0] hover:bg-[#0B3D91] text-white text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+            onClick={handleShare}
+            className="h-[42px] w-[42px] rounded bg-[#081F33] hover:bg-[#102D47] text-[#AFC4D8] hover:text-white border border-[#1D5278] flex items-center justify-center transition-colors cursor-pointer shrink-0"
+            title={copied ? 'Copied Alert to Clipboard' : 'Copy Official Bulletin text'}
+            aria-label="Share bulletin"
           >
-            <span>View Full Details</span>
-            <span className="material-symbols-outlined text-[15px]">
-              chevron_right
+            <span className="material-symbols-outlined text-[18px]">
+              {copied ? 'check' : 'share'}
             </span>
           </button>
         </div>
-      </div>
+
+        <button
+          id={`btn-view-details-${warning.id}`}
+          type="button"
+          onClick={() => onViewDetails(warning)}
+          className="h-[42px] px-4 rounded bg-[#1565C0] hover:bg-[#0B3D91] text-white text-xs font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs shrink-0"
+        >
+          <span>View Advisory</span>
+          <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+        </button>
+      </footer>
     </article>
   );
 };

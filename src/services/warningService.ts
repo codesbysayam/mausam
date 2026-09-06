@@ -14,6 +14,7 @@ import {
   STATE_DISASTER_NUMBERS,
 } from '../data/nationalWarningsData';
 import { LocationRecord } from '../types';
+import { formatIndianDateTime } from '../utils/dateUtils';
 
 class WarningService {
   /**
@@ -111,16 +112,7 @@ class WarningService {
     });
 
     const now = new Date();
-    const lastUpdatedIst = new Intl.DateTimeFormat('en-IN', {
-      timeZone: 'Asia/Kolkata',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: true,
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-    }).format(now);
+    const lastUpdatedIst = formatIndianDateTime(now);
 
     return {
       totalActive: severeRed + moderateOrange + advisoryYellow + infoPurple,
@@ -130,7 +122,7 @@ class WarningService {
       advisoryYellow,
       infoPurple,
       greenNormalStates: 36 - statesSet.size,
-      lastUpdatedIst: `${lastUpdatedIst} IST`,
+      lastUpdatedIst,
     };
   }
 

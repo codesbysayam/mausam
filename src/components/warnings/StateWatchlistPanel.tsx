@@ -16,6 +16,7 @@ export const StateWatchlistPanel: React.FC<StateWatchlistPanelProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [severityFilter, setSeverityFilter] = useState<AlertSeverity | 'all'>('all');
 
+  // Sort states strictly by severity: Red -> Orange -> Yellow -> Purple -> Green, then alphabetical
   const statesList = useMemo(() => {
     return Object.values(STATE_ALERT_SEVERITIES).sort((a, b) => {
       const order: Record<AlertSeverity, number> = {
@@ -51,7 +52,8 @@ export const StateWatchlistPanel: React.FC<StateWatchlistPanelProps> = ({
       statesList.find(
         (s) =>
           s.stateName.toLowerCase() === selectedState.toLowerCase() ||
-          s.stateCode.toLowerCase() === selectedState.toLowerCase()
+          s.stateCode.toLowerCase() === selectedState.toLowerCase() ||
+          selectedState.toLowerCase().includes(s.stateName.toLowerCase())
       ) || null
     );
   }, [statesList, selectedState]);
@@ -60,31 +62,31 @@ export const StateWatchlistPanel: React.FC<StateWatchlistPanelProps> = ({
     switch (sev) {
       case 'red':
         return {
-          bg: 'bg-[#FF0000]/20 text-[#FF4D4D] border-[#FF0000]/50',
+          bg: 'bg-[#FF0000]/20 text-[#FF4D4D] border-[#FF0000]/60',
           dot: 'bg-[#FF0000]',
           label: 'RED ALERT',
         };
       case 'orange':
         return {
-          bg: 'bg-[#FFA500]/20 text-[#FFA500] border-[#FFA500]/50',
+          bg: 'bg-[#FFA500]/20 text-[#FFA500] border-[#FFA500]/60',
           dot: 'bg-[#FFA500]',
           label: 'ORANGE ALERT',
         };
       case 'yellow':
         return {
-          bg: 'bg-[#FFFF00]/20 text-[#FFFF00] border-[#FFFF00]/50',
+          bg: 'bg-[#FFFF00]/20 text-[#FFFF00] border-[#FFFF00]/60',
           dot: 'bg-[#FFFF00]',
           label: 'YELLOW WATCH',
         };
       case 'purple':
         return {
-          bg: 'bg-[#1565C0]/20 text-[#E3F2FD] border-[#1565C0]/50',
+          bg: 'bg-[#1565C0]/20 text-[#E3F2FD] border-[#1565C0]/60',
           dot: 'bg-[#1565C0]',
           label: 'ADVISORY',
         };
       default:
         return {
-          bg: 'bg-[#008000]/20 text-[#008000] border-[#008000]/50',
+          bg: 'bg-[#008000]/20 text-[#00E676] border-[#008000]/60',
           dot: 'bg-[#008000]',
           label: 'GREEN CODE',
         };
@@ -98,33 +100,33 @@ export const StateWatchlistPanel: React.FC<StateWatchlistPanelProps> = ({
   return (
     <div
       id="state-warning-watchlist-panel"
-      className="bg-[#0B2239] border border-[#1D4E73] rounded-md p-4 sm:p-5 shadow-md flex flex-col justify-between gap-4 h-full"
+      className="bg-[#0B263D] border border-[#1D5278] rounded-md p-4 sm:p-5 shadow-md flex flex-col justify-between gap-3.5 h-full"
     >
-      {/* Panel Header */}
-      <div className="flex flex-col gap-2.5 pb-3 border-b border-[#1D4E73]">
+      {/* 1. Header Bar: Title, Tally Chips */}
+      <div className="flex flex-col gap-2.5 pb-3 border-b border-[#1D5278]">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded bg-[#071A2D] border border-[#1D4E73] flex items-center justify-center text-[#E3F2FD]">
+            <div className="w-8 h-8 rounded bg-[#081F33] border border-[#1D5278] flex items-center justify-center text-[#E3F2FD]">
               <span className="material-symbols-outlined text-[18px]">travel_explore</span>
             </div>
             <div>
-              <h3 className="text-sm font-bold text-white uppercase tracking-tight">
+              <h3 className="text-sm font-bold text-[#F5F9FC] uppercase tracking-tight">
                 State Warning Watchlist
               </h3>
-              <p className="text-[11px] text-[#B8C7D9]">
+              <p className="text-[11px] text-[#AFC4D8]">
                 Subdivision Early Warning Telemetry &amp; Status
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-1.5">
-            <span className="text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-[#FF0000]/20 text-[#FF4D4D] border border-[#FF0000]/40">
+            <span className="text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-[#FF0000]/20 text-[#FF4D4D] border border-[#FF0000]/50">
               {redCount} Red
             </span>
-            <span className="text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-[#FFA500]/20 text-[#FFA500] border border-[#FFA500]/40">
+            <span className="text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-[#FFA500]/20 text-[#FFA500] border border-[#FFA500]/50">
               {orangeCount} Orange
             </span>
-            <span className="text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-[#FFFF00]/20 text-[#FFFF00] border border-[#FFFF00]/40">
+            <span className="text-[10px] px-2 py-0.5 rounded font-mono font-bold bg-[#FFFF00]/20 text-[#FFFF00] border border-[#FFFF00]/50">
               {yellowCount} Yellow
             </span>
           </div>
@@ -133,7 +135,7 @@ export const StateWatchlistPanel: React.FC<StateWatchlistPanelProps> = ({
         {/* Search & Severity Filter Bar */}
         <div className="flex items-center gap-2 pt-1">
           <div className="relative flex-1">
-            <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[16px] text-[#B8C7D9]">
+            <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[16px] text-[#AFC4D8]">
               search
             </span>
             <input
@@ -141,14 +143,14 @@ export const StateWatchlistPanel: React.FC<StateWatchlistPanelProps> = ({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search state, UT, or capital..."
-              className="w-full pl-8 pr-3 py-1.5 bg-[#071A2D] border border-[#1D4E73] rounded text-xs text-white placeholder-[#B8C7D9] focus:outline-none focus:border-[#1565C0]"
+              placeholder="Search state or hazard..."
+              className="w-full pl-8 pr-3 py-1.5 bg-[#081F33] border border-[#1D5278] rounded text-xs text-white placeholder-[#AFC4D8] focus:outline-none focus:border-[#1565C0]"
             />
             {searchQuery && (
               <button
                 type="button"
                 onClick={() => setSearchQuery('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-[#B8C7D9] hover:text-white"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-[#AFC4D8] hover:text-white"
               >
                 <span className="material-symbols-outlined text-[14px]">close</span>
               </button>
@@ -159,23 +161,23 @@ export const StateWatchlistPanel: React.FC<StateWatchlistPanelProps> = ({
             id="select-watchlist-severity"
             value={severityFilter}
             onChange={(e) => setSeverityFilter(e.target.value as any)}
-            className="bg-[#071A2D] border border-[#1D4E73] rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#1565C0] cursor-pointer"
+            className="bg-[#081F33] border border-[#1D5278] rounded px-2 py-1.5 text-xs text-white focus:outline-none focus:border-[#1565C0] cursor-pointer"
           >
-            <option value="all">All Alerts ({statesList.length})</option>
-            <option value="red">Red Only ({redCount})</option>
-            <option value="orange">Orange Only ({orangeCount})</option>
-            <option value="yellow">Yellow Only ({yellowCount})</option>
-            <option value="purple">Advisories</option>
-            <option value="green">Green Code</option>
+            <option value="all">All ({statesList.length})</option>
+            <option value="red">Red ({redCount})</option>
+            <option value="orange">Orange ({orangeCount})</option>
+            <option value="yellow">Yellow ({yellowCount})</option>
+            <option value="purple">Advisory</option>
+            <option value="green">Green</option>
           </select>
         </div>
       </div>
 
-      {/* Focused State Banner (if selected) */}
+      {/* 2. Focused State Summary Banner (When a state is active) */}
       {activeFocusedState && (
         <div
           id="watchlist-focused-state-card"
-          className="p-3 rounded bg-[#071A2D] border border-[#1565C0] flex flex-col gap-2 relative overflow-hidden"
+          className="p-3 rounded bg-[#081F33] border border-[#1565C0] flex flex-col gap-2 relative"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
@@ -184,6 +186,9 @@ export const StateWatchlistPanel: React.FC<StateWatchlistPanelProps> = ({
               </span>
               <span className="text-xs font-bold text-white uppercase tracking-tight">
                 {activeFocusedState.stateName}
+              </span>
+              <span className="text-[10px] text-[#AFC4D8] font-mono">
+                ({activeFocusedState.capital})
               </span>
             </div>
             {(() => {
@@ -198,31 +203,33 @@ export const StateWatchlistPanel: React.FC<StateWatchlistPanelProps> = ({
             })()}
           </div>
 
-          <p className="text-[11px] text-[#D7DEE8] leading-tight line-clamp-2">
+          <p className="text-[11px] text-[#AFC4D8] leading-tight line-clamp-2">
             {activeFocusedState.bulletinHeadline}
           </p>
 
-          <div className="flex items-center justify-between text-[10px] text-[#B8C7D9] pt-1 border-t border-[#1D4E73]">
-            <span>Station: {activeFocusedState.representativeStation}</span>
-            <button
-              type="button"
-              onClick={() => onOpenStateDrawer && onOpenStateDrawer(activeFocusedState)}
-              className="text-[#E3F2FD] hover:underline font-semibold flex items-center gap-1"
-            >
-              <span>Full Advisory</span>
-              <span className="material-symbols-outlined text-[12px]">arrow_forward</span>
-            </button>
+          <div className="flex items-center justify-between text-[10px] text-[#AFC4D8] pt-1 border-t border-[#1D5278]/80">
+            <span className="truncate max-w-[180px]">Station: {activeFocusedState.representativeStation}</span>
+            {onOpenStateDrawer && (
+              <button
+                type="button"
+                onClick={() => onOpenStateDrawer(activeFocusedState)}
+                className="text-[#E3F2FD] hover:underline font-semibold flex items-center gap-0.5 cursor-pointer shrink-0"
+              >
+                <span>Full Advisory</span>
+                <span className="material-symbols-outlined text-[12px]">arrow_forward</span>
+              </button>
+            )}
           </div>
         </div>
       )}
 
-      {/* State List Scrollable View */}
+      {/* 3. State List Scrollable View with Clean Scrollbar */}
       <div
         id="watchlist-states-scroll"
-        className="flex-1 overflow-y-auto max-h-[340px] sm:max-h-[380px] pr-1 space-y-1.5 scrollbar-thin scrollbar-thumb-[#1D4E73]"
+        className="flex-1 overflow-y-auto max-h-[380px] sm:max-h-[420px] pr-1 space-y-1.5 scrollbar-thin scrollbar-thumb-[#1D5278]"
       >
         {filteredStates.length === 0 ? (
-          <div className="text-center py-8 text-[#B8C7D9] text-xs">
+          <div className="text-center py-8 text-[#AFC4D8] text-xs">
             No states match filter criteria.
           </div>
         ) : (
@@ -230,7 +237,8 @@ export const StateWatchlistPanel: React.FC<StateWatchlistPanelProps> = ({
             const isSelected =
               selectedState &&
               (selectedState.toLowerCase() === st.stateName.toLowerCase() ||
-                selectedState.toLowerCase() === st.stateCode.toLowerCase());
+                selectedState.toLowerCase() === st.stateCode.toLowerCase() ||
+                selectedState.toLowerCase().includes(st.stateName.toLowerCase()));
             const badge = getSeverityBadge(st.highestSeverity);
 
             return (
@@ -241,33 +249,33 @@ export const StateWatchlistPanel: React.FC<StateWatchlistPanelProps> = ({
                 className={`p-2.5 rounded border transition-all cursor-pointer flex items-center justify-between gap-2.5 ${
                   isSelected
                     ? 'bg-[#102D47] border-[#1565C0] shadow-sm'
-                    : 'bg-[#071A2D]/80 border-[#1D4E73]/60 hover:bg-[#071A2D] hover:border-[#1D4E73]'
+                    : 'bg-[#081F33]/90 border-[#1D5278]/70 hover:bg-[#081F33] hover:border-[#1D5278]'
                 }`}
               >
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className={`w-2 h-2 rounded-full shrink-0 ${badge.dot}`}></span>
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${badge.dot}`} />
                   <div className="min-w-0">
                     <div className="text-xs font-bold text-white truncate flex items-center gap-1.5">
                       <span>{st.stateName}</span>
                       {st.activeCount > 0 && (
-                        <span className="text-[10px] font-mono text-[#B8C7D9] font-normal">
+                        <span className="text-[10px] font-mono text-[#AFC4D8] font-normal">
                           ({st.activeCount} alert{st.activeCount > 1 ? 's' : ''})
                         </span>
                       )}
                     </div>
-                    <div className="text-[10px] text-[#B8C7D9] truncate">
+                    <div className="text-[10px] text-[#AFC4D8] truncate">
                       {st.primaryHazardLabel} • {st.capital}
                     </div>
                   </div>
                 </div>
 
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <span
                     className={`text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase tracking-wider whitespace-nowrap ${badge.bg}`}
                   >
                     {badge.label}
                   </span>
-                  <span className="material-symbols-outlined text-[16px] text-[#B8C7D9]">
+                  <span className="material-symbols-outlined text-[16px] text-[#AFC4D8]">
                     chevron_right
                   </span>
                 </div>
@@ -277,13 +285,13 @@ export const StateWatchlistPanel: React.FC<StateWatchlistPanelProps> = ({
         )}
       </div>
 
-      {/* Telemetry Status Footer */}
-      <div className="pt-2.5 border-t border-[#1D4E73] flex items-center justify-between text-[10px] text-[#B8C7D9]">
+      {/* 4. Footer: Status Indication */}
+      <div className="pt-2 border-t border-[#1D5278] flex items-center justify-between text-[10px] text-[#AFC4D8]">
         <div className="flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-[#008000]"></span>
-          <span>DWR Radar Network: 37/37 Active</span>
+          <span className="w-2 h-2 rounded-full bg-[#008000]" />
+          <span>IMD National Warning Database</span>
         </div>
-        <span>All-India GKMS Grid</span>
+        <span>36 States &amp; UTs</span>
       </div>
     </div>
   );

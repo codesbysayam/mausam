@@ -5,7 +5,6 @@ import {
   WarningRecord,
   WarningFilterState,
   StateWarningSummary,
-  HazardCategory,
 } from '../types/warningTypes';
 import { NATIONAL_WARNINGS_DATABASE } from '../data/nationalWarningsData';
 import { warningService } from '../services/warningService';
@@ -13,14 +12,11 @@ import { WarningHeader } from '../components/warnings/WarningHeader';
 import { NationalAlertStatus } from '../components/warnings/NationalAlertStatus';
 import { WarningTicker } from '../components/warnings/WarningTicker';
 import { WarningFilterBar } from '../components/warnings/WarningFilterBar';
-import { HazardCategoryButtons } from '../components/warnings/HazardCategoryButtons';
 import { NationalWarningMap } from '../components/warnings/NationalWarningMap';
 import { StateWatchlistPanel } from '../components/warnings/StateWatchlistPanel';
-import { WarningStatistics } from '../components/warnings/WarningStatistics';
 import { WarningList } from '../components/warnings/WarningList';
 import { WarningDetailDrawer } from '../components/warnings/WarningDetailDrawer';
 import { SafetyGuidanceSection } from '../components/warnings/SafetyGuidanceSection';
-import { WarningTimelineSection } from '../components/warnings/WarningTimelineSection';
 import { EmergencyResponseSection } from '../components/warnings/EmergencyResponseSection';
 import { NationalClassificationMatrix } from '../components/warnings/NationalClassificationMatrix';
 
@@ -51,7 +47,7 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  // Section reference for quick jumping from "View Regional Warnings" button
+  // Section reference for quick jumping to bulletins grid
   const regionalAlertsRef = useRef<HTMLDivElement>(null);
 
   // Filtered list of warnings based on active user filter
@@ -73,7 +69,6 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
     setTimeout(() => {
-      // Simulate live synoptic poll
       setWarningsList([...NATIONAL_WARNINGS_DATABASE]);
       setIsRefreshing(false);
     }, 600);
@@ -94,23 +89,25 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
   }, []);
 
   // Handle state drawer click from map or watchlist
-  const handleOpenStateSummary = useCallback((summary: StateWarningSummary) => {
-    const matchedWarning = warningsList.find(
-      (w) =>
-        w.state.toLowerCase() === summary.stateName.toLowerCase() ||
-        w.stateCode.toLowerCase() === summary.stateCode.toLowerCase()
-    );
+  const handleOpenStateSummary = useCallback(
+    (summary: StateWarningSummary) => {
+      const matchedWarning = warningsList.find(
+        (w) =>
+          w.state.toLowerCase() === summary.stateName.toLowerCase() ||
+          w.stateCode.toLowerCase() === summary.stateCode.toLowerCase()
+      );
 
-    if (matchedWarning) {
-      handleOpenWarningDetails(matchedWarning);
-    } else {
-      // Set the filter to this state
-      setFilter((prev) => ({
-        ...prev,
-        state: summary.stateName,
-      }));
-    }
-  }, [warningsList, handleOpenWarningDetails]);
+      if (matchedWarning) {
+        handleOpenWarningDetails(matchedWarning);
+      } else {
+        setFilter((prev) => ({
+          ...prev,
+          state: summary.stateName,
+        }));
+      }
+    },
+    [warningsList, handleOpenWarningDetails]
+  );
 
   // Handle focus state on map from a warning card
   const handleViewOnMap = useCallback((warning: WarningRecord) => {
@@ -119,7 +116,6 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
       state: warning.state,
     }));
 
-    // Scroll to map smoothly
     const mapElement = document.getElementById('national-weather-alert-map-card');
     if (mapElement) {
       mapElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -131,7 +127,7 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
     setFilter(INITIAL_FILTER_STATE);
   }, []);
 
-  // Handle quick jump to regional warnings list
+  // Handle quick jump to bulletins list
   const handleScrollToRegionalAlerts = useCallback(() => {
     if (regionalAlertsRef.current) {
       regionalAlertsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -141,7 +137,7 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
   return (
     <div
       id="mausam-national-warning-portal"
-      className="flex flex-col gap-5 pb-12 transition-colors duration-200"
+      className="flex flex-col gap-5 pb-12 w-full max-w-[1520px] mx-auto transition-colors duration-200"
     >
       {/* 1. Official Header with Synoptic Status & Manual Refresh */}
       <WarningHeader
@@ -150,35 +146,27 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
         isLoading={isRefreshing}
       />
 
-      {/* 2. Side-by-Side Operational Status Strip: National Alert Status & Live Warning Ticker */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-        <div className="lg:col-span-7 w-full flex flex-col">
-          <NationalAlertStatus
-            overallStatus={overallStatus}
-            lastUpdated={stats.lastUpdatedIst}
-            onViewRegionalAlerts={handleScrollToRegionalAlerts}
-            severeCount={stats.severeRed}
-          />
-        </div>
-
-        <div className="lg:col-span-5 w-full flex flex-col">
-          <WarningTicker
-            warnings={warningsList}
-            onSelectWarning={handleOpenWarningDetails}
-          />
-        </div>
+      {/* 2. National Alert Status & Live Warning Ticker */}
+      <div className="flex flex-col gap-3">
+        <NationalAlertStatus
+          overallStatus={overallStatus}
+          stats={stats}
+          lastUpdated={stats.lastUpdatedIst}
+          onViewRegionalAlerts={handleScrollToRegionalAlerts}
+        />
+        <WarningTicker
+          warnings={warningsList}
+          onSelectWarning={handleOpenWarningDetails}
+        />
       </div>
 
-      {/* 3. Real-time National Meteorological Telemetry Statistics */}
-      <WarningStatistics stats={stats} />
-
-      {/* 4. Side-by-Side Geographical Intelligence: National Warning Map & State Watchlist Panel */}
+      {/* 3. Geographic Intelligence: National Warning Map & State Watchlist Panel */}
       <div
         id="section-national-warning-map-and-watchlist"
         className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch"
       >
         {/* Left Column (Desktop 7 cols): Interactive All-India Severity Map */}
-        <div className="lg:col-span-7 w-full flex flex-col">
+        <div className="lg:col-span-7 w-full flex flex-col min-w-0">
           <NationalWarningMap
             selectedState={filter.state !== 'all' ? filter.state : null}
             onSelectState={handleSelectStateFromMap}
@@ -187,8 +175,8 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
           />
         </div>
 
-        {/* Right Column (Desktop 5 cols): State Warning Watchlist & Operational Matrix */}
-        <div className="lg:col-span-5 w-full flex flex-col">
+        {/* Right Column (Desktop 5 cols): State Warning Watchlist */}
+        <div className="lg:col-span-5 w-full flex flex-col min-w-0">
           <StateWatchlistPanel
             selectedState={filter.state !== 'all' ? filter.state : null}
             onSelectState={handleSelectStateFromMap}
@@ -197,48 +185,41 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
         </div>
       </div>
 
-      {/* 5. Comprehensive Filter Bar (Region, State, Hazard, Severity, Validity, Search) */}
+      {/* 4. Unified Filter Bar (Search, Severity Tabs, Region, Hazard Chips) */}
       <div ref={regionalAlertsRef} className="flex flex-col gap-3">
         <WarningFilterBar
           filter={filter}
           onFilterChange={setFilter}
           onResetFilters={handleResetFilters}
           activeCount={filteredWarnings.length}
-        />
-
-        {/* Hazard Category Chips Selector */}
-        <HazardCategoryButtons
-          selectedHazard={filter.hazard}
-          onSelectHazard={(hazard: HazardCategory | 'all') =>
-            setFilter((prev) => ({ ...prev, hazard }))
-          }
-          warnings={warningsList}
+          totalCount={warningsList.length}
         />
       </div>
 
-      {/* 6. Active Weather Warning Cards — Full Width Multi-Column Side-by-Side Grid */}
-      <div id="section-national-warning-bulletins" className="flex flex-col gap-3">
-        <div className="flex items-center justify-between px-1">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[20px] text-[#4FA8E0]">
+      {/* 5. Active Warning Bulletins Responsive Grid */}
+      <section id="section-national-warning-bulletins" className="flex flex-col gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1 pb-0.5">
+          <div className="flex items-center gap-2.5">
+            <span className="material-symbols-outlined text-[22px] text-[#4FA8E0] shrink-0">
               campaign
             </span>
-            <h3 className="text-sm sm:text-base font-bold text-white uppercase tracking-tight">
+            <h2 className="text-sm sm:text-base font-bold text-white uppercase tracking-tight">
               Active Meteorological Warning Bulletins
-            </h3>
+            </h2>
           </div>
 
-          <div className="flex items-center gap-3">
-            <span className="text-xs text-[#8A94A6] font-mono">
-              Showing {filteredWarnings.length} of {warningsList.length} active bulletins
+          <div className="flex items-center gap-3 self-start sm:self-auto flex-wrap">
+            <span className="text-xs text-[#AFC4D8] font-mono bg-[#081F33] border border-[#1D5278] px-2.5 py-1 rounded">
+              Showing <strong className="text-white">{filteredWarnings.length}</strong> of{' '}
+              <span className="text-[#AFC4D8]">{warningsList.length}</span> active bulletins
             </span>
             {filter.state !== 'all' && (
               <button
                 type="button"
                 onClick={() => setFilter((prev) => ({ ...prev, state: 'all' }))}
-                className="text-[11px] text-[#4FA8E0] hover:underline flex items-center gap-1"
+                className="text-[11px] text-[#4FA8E0] hover:text-white hover:underline flex items-center gap-1 cursor-pointer bg-[#081F33] border border-[#1D5278] px-2 py-1 rounded transition-colors"
               >
-                <span>Clear state filter ({filter.state})</span>
+                <span>Filtered: {filter.state}</span>
                 <span className="material-symbols-outlined text-[12px]">close</span>
               </button>
             )}
@@ -252,27 +233,18 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
           onResetFilters={handleResetFilters}
           selectedLocation={selectedLocation}
         />
-      </div>
+      </section>
 
-      {/* 7. Side-by-Side Public Safety Guidance & Warning Progression Timeline */}
-      <div
-        id="section-safety-and-timeline-grid"
-        className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch"
-      >
-        <SafetyGuidanceSection activeHazardFilter={filter.hazard} />
-        <WarningTimelineSection activeWarning={selectedDrawerWarning} />
-      </div>
+      {/* 6. Public Safety Guidance & NDMA Protocols */}
+      <SafetyGuidanceSection activeHazardFilter={filter.hazard} />
 
-      {/* 8. Side-by-Side Classification Matrix & Emergency Response Directory */}
-      <div
-        id="section-classification-and-emergency-grid"
-        className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch"
-      >
-        <NationalClassificationMatrix />
-        <EmergencyResponseSection selectedLocation={selectedLocation} />
-      </div>
+      {/* 7. National Meteorological Classification Matrix */}
+      <NationalClassificationMatrix />
 
-      {/* 9. Slide-out Detailed Warning Drawer / Dialog */}
+      {/* 8. Emergency & Disaster Response Directory */}
+      <EmergencyResponseSection selectedLocation={selectedLocation} />
+
+      {/* 9. Slide-out Detailed Warning Bulletin Drawer */}
       <WarningDetailDrawer
         warning={selectedDrawerWarning}
         isOpen={isDrawerOpen}

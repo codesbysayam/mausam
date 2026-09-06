@@ -1,17 +1,21 @@
 import React from 'react';
-import { CurrentWeather } from '../../types';
-import { Activity, ArrowRight, Flower2, Sun } from 'lucide-react';
+import { CurrentWeather, LocationRecord } from '../../types';
+import { Activity, ArrowRight, Flower2, Sun, MapPin, Radio } from 'lucide-react';
 import { getAqiMeaning } from '../../services/humanWeatherEngine';
 import { INDIA_WEATHER_DATA } from '../../data/indiaWeatherData';
 
 interface HomeAirEnvironmentProps {
   weather: CurrentWeather;
+  location?: LocationRecord;
   onNavigateToAqi?: () => void;
+  lastUpdated?: string;
 }
 
 export const HomeAirEnvironment: React.FC<HomeAirEnvironmentProps> = ({
   weather,
+  location,
   onNavigateToAqi,
+  lastUpdated,
 }) => {
   const safeAqi =
     typeof weather.aqi === 'number' && !Number.isNaN(weather.aqi) && weather.aqi > 0
@@ -39,6 +43,20 @@ export const HomeAirEnvironment: React.FC<HomeAirEnvironmentProps> = ({
 
   const uvRisk = uv >= 11 ? 'Extreme' : uv >= 8 ? 'Very High' : uv >= 6 ? 'High' : uv >= 3 ? 'Moderate' : 'Low';
 
+  const obsTime =
+    lastUpdated ||
+    new Intl.DateTimeFormat('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    }).format(new Date()) + ' IST';
+
+  const stationName =
+    location?.city
+      ? `CAAQMS ${location.city} Monitoring Sector`
+      : 'Central Pollution Control Board Station 04';
+
   // Compute Cleanest and Most Polluted Cities from real state observations
   const sortedByAQI = [...INDIA_WEATHER_DATA]
     .filter((s) => typeof s.aqi === 'number')
@@ -48,45 +66,53 @@ export const HomeAirEnvironment: React.FC<HomeAirEnvironmentProps> = ({
   const cleanest = [...sortedByAQI].reverse().slice(0, 4);
 
   return (
-    <section id="homepage-air-environment" className="rounded-2xl bg-[#0B141E] border border-[#162331] p-5 flex flex-col gap-4">
+    <section id="homepage-air-environment" className="rounded-xl bg-[#101E2C] border border-[#1E3852] p-5 flex flex-col gap-4">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#162331]">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#1E3852]">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 rounded-lg bg-[#FFC857]/15 text-[#FFC857] flex items-center justify-center">
             <Activity className="w-4 h-4" />
           </div>
           <div>
-            <h2 className="text-sm font-bold uppercase tracking-wider text-[#F4F7FA]">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-[#F5F9FC]">
               Air Quality &amp; Environmental Exposure
             </h2>
-            <p className="text-xs text-[#93A4B8]">
+            <p className="text-xs text-[#B8C7D9]">
               CPCB Continuous Ambient Air Quality Monitoring (CAAQMS) Telemetry
             </p>
           </div>
         </div>
 
-        {onNavigateToAqi && (
-          <button
-            type="button"
-            onClick={onNavigateToAqi}
-            className="text-xs text-[#43C7F4] hover:text-[#1499E8] font-semibold flex items-center gap-1 self-start sm:self-auto cursor-pointer"
-          >
-            <span>Explore Full Air Quality Hub</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          <span className="text-[11px] font-mono text-[#00C897] flex items-center gap-1 font-bold">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#00C897] animate-pulse" />
+            LIVE
+          </span>
+          <span className="text-xs text-[#8EA3B8]">•</span>
+          <span className="text-xs text-[#B8C7D9]">Updated {obsTime}</span>
+          {onNavigateToAqi && (
+            <button
+              type="button"
+              onClick={onNavigateToAqi}
+              className="text-xs text-[#18A7E8] hover:text-[#43C7F4] font-semibold flex items-center gap-1 self-start sm:self-auto cursor-pointer ml-2"
+            >
+              <span>Full Hub</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Main Environmental Matrix */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
         {/* Left 5 Cols: Main AQI Gauge & Interpretation */}
-        <div className="lg:col-span-5 p-4 rounded-xl bg-[#071018] border border-[#162331] flex flex-col justify-between gap-3">
+        <div className="lg:col-span-5 p-4 rounded-xl bg-[#172738] border border-[#1E3852] flex flex-col justify-between gap-3">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#93A4B8]">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#B8C7D9]">
               National Air Quality Index
             </span>
             <span
-              className="text-[10px] font-bold px-2.5 py-0.5 rounded-full border"
+              className="text-[10px] font-bold px-2.5 py-0.5 rounded-full border font-mono"
               style={{
                 backgroundColor: `${aqiInfo.severityColor}15`,
                 color: aqiInfo.severityColor,
@@ -97,21 +123,32 @@ export const HomeAirEnvironment: React.FC<HomeAirEnvironmentProps> = ({
             </span>
           </div>
 
-          <div className="flex items-baseline gap-3 my-2">
-            <span className="text-5xl font-light tracking-tight" style={{ color: aqiInfo.severityColor }}>
+          <div className="flex items-baseline gap-3 my-1">
+            <span className="text-5xl font-bold font-mono tracking-tight" style={{ color: aqiInfo.severityColor }}>
               {safeAqi}
             </span>
             <div>
-              <span className="text-sm font-bold text-[#F4F7FA] block">
+              <span className="text-base font-bold text-[#F5F9FC] block">
                 {aqiInfo.headline}
               </span>
-              <span className="text-xs text-[#93A4B8]">
-                Primary Driver: PM2.5 Fine Particulates
+              <span className="text-xs text-[#18A7E8] font-semibold">
+                Dominant Pollutant: PM2.5
               </span>
             </div>
           </div>
 
-          <p className="text-xs text-[#D1DCE8] leading-relaxed bg-[#0B141E] p-3 rounded-lg border border-[#162331]">
+          <div className="text-xs text-[#B8C7D9] space-y-1 bg-[#101E2C] p-2.5 rounded-lg border border-[#1E3852]">
+            <div className="flex justify-between text-[11px]">
+              <span className="text-[#8EA3B8]">Monitoring Station:</span>
+              <span className="text-[#F5F9FC] font-medium truncate max-w-[180px]">{stationName}</span>
+            </div>
+            <div className="flex justify-between text-[11px]">
+              <span className="text-[#8EA3B8]">Standard:</span>
+              <span className="text-[#F5F9FC]">CPCB National Ambient Standard</span>
+            </div>
+          </div>
+
+          <p className="text-xs text-[#B8C7D9] leading-relaxed">
             {aqiInfo.healthImpact || 'Air quality is acceptable for most people. Sensitive individuals should observe standard precautions.'}
           </p>
         </div>

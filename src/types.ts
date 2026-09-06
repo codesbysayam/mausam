@@ -118,6 +118,7 @@ export interface CurrentWeather {
   aqiStatus: 'Good' | 'Moderate' | 'Unhealthy for Sensitive' | 'Unhealthy' | 'Hazardous';
   precipitation: number; // mm currently
   precipitationMm?: number;
+  rainfall?: number; // mm
   precipitationProbability: number; // %
   isRainingNow: boolean;
   rainExpectedSummary?: string;
