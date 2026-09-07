@@ -24,7 +24,7 @@ import { AskMausamDrawer } from './components/AskMausamDrawer';
 import { ReportDetailModal } from './components/ReportDetailModal';
 import { OFFICIAL_PUBLICATIONS, MeteorologicalPublication } from './data/reportsAndArticles';
 import { useLanguage } from './i18n/LanguageContext';
-import { useUserLocation } from './hooks/useUserLocation';
+import { useLocation } from './context/LocationContext';
 import { LocationCenterModal } from './components/location/LocationCenterModal';
 import { LocationPrivacyModal } from './components/location/LocationPrivacyModal';
 import { NetworkStatusBanner } from './components/common/NetworkStatusBanner';
@@ -88,23 +88,29 @@ export default function App() {
     getTabFromPathname(window.location.pathname)
   );
 
-  // Hook-driven real geolocation and location switching state
+  // Single source of truth for location & geolocation state via LocationContext
   const {
-    selectedLocation,
+    location: selectedLocation,
     locationSource,
     isLocating,
     locatePhase,
     locateError,
     accuracyMeters,
-    lastDetectedAt,
+    lastUpdatedTime: lastDetectedAt,
     nearestStationInfo,
-    detectLocation,
-    selectLocation: handleSelectLocation,
+    refreshLocation: detectLocation,
+    changeLocation: handleSelectLocation,
     clearSavedLocation,
-  } = useUserLocation();
+    openLocationModal,
+    closeLocationModal,
+    isLocationModalOpen: isLocationCenterOpen,
+    openPrivacyModal,
+    closePrivacyModal,
+    isPrivacyModalOpen,
+  } = useLocation();
 
-  const [isLocationCenterOpen, setIsLocationCenterOpen] = useState(false);
-  const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
+  const setIsLocationCenterOpen = (open: boolean) => (open ? openLocationModal() : closeLocationModal());
+  const setIsPrivacyModalOpen = (open: boolean) => (open ? openPrivacyModal() : closePrivacyModal());
 
   const [weatherBundle, setWeatherBundle] = useState<WeatherDataBundle>({
     current: INITIAL_WEATHER,

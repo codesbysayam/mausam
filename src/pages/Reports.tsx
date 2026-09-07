@@ -20,6 +20,7 @@ import { RecentlyViewedReports } from '../components/reports/RecentlyViewedRepor
 import { ReportPreviewDrawer } from '../components/reports/ReportPreviewDrawer';
 import { ResearchSourcesSection } from '../components/reports/ResearchSourcesSection';
 import { useSavedReports } from '../hooks/useSavedReports';
+import { LocationStatusBar } from '../components/location/LocationStatusBar';
 import { Sparkles, FileText, Search, BookOpen, Layers } from 'lucide-react';
 
 interface ReportsPageProps {
@@ -235,7 +236,10 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
   };
 
   return (
-    <div id="mausam-reports-library-page" className="space-y-8 pb-12">
+    <div id="mausam-reports-library-page" className="space-y-6 pb-12">
+      {/* Unified Compact Location Status Bar */}
+      <LocationStatusBar location={selectedLocation} />
+
       {/* 1. Hero Introduction & Publication Intelligence Stats */}
       <ReportsHero publications={allPublications} />
 

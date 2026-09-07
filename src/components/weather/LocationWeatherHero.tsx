@@ -35,7 +35,7 @@ export const LocationWeatherHero: React.FC<LocationWeatherHeroProps> = ({
     return () => clearInterval(timer);
   }, []);
 
-  const visualConfig = getWeatherVisualConfig(weather.condition);
+  const visualConfig = getWeatherVisualConfig(weather.condition, weather.isDay, weather.conditionKey);
   const ConditionIcon = visualConfig.icon;
 
   const lat = typeof location.lat === 'number' ? location.lat : 20.2961;

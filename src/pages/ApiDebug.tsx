@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ShieldCheck, RefreshCw, Activity, Database, Server, Clock, AlertTriangle, CheckCircle } from 'lucide-react';
 import { imdService } from '../services/imdService';
 import { LiveDataIndicator } from '../components/common/LiveDataIndicator';
+import { WeatherConditionTestBench } from '../components/dev/WeatherConditionTestBench';
 
 export const ApiDebugPage: React.FC = () => {
   const [stats, setStats] = useState<any>(null);
@@ -97,6 +98,9 @@ export const ApiDebugPage: React.FC = () => {
           Refresh Stats
         </button>
       </div>
+
+      {/* Interactive Weather Condition & Animation System Test Bench */}
+      <WeatherConditionTestBench />
 
       {/* Cache & Deduplication Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

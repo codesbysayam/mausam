@@ -1,4 +1,15 @@
 import React, { useEffect, useRef } from 'react';
+import {
+  Home,
+  ThermometerSun,
+  TrendingUp,
+  AlertTriangle,
+  Radio,
+  Activity,
+  Wheat,
+  FileText,
+  LucideIcon,
+} from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { MainNavTab } from './MainNavigation';
 import { FooterView } from './FooterNavigation';
@@ -30,19 +41,20 @@ interface MobileNavItem {
   id: MainNavTab;
   labelKey: string;
   defaultLabel: string;
-  icon: string;
+  icon: LucideIcon;
+  color: string;
   badge?: number;
 }
 
 const MOBILE_NAV_ITEMS: MobileNavItem[] = [
-  { id: 'home', labelKey: 'home', defaultLabel: 'HOME', icon: 'home' },
-  { id: 'weather', labelKey: 'weather', defaultLabel: 'WEATHER', icon: 'thermostat' },
-  { id: 'forecast', labelKey: 'forecast', defaultLabel: 'FORECAST', icon: 'calendar_month' },
-  { id: 'warnings', labelKey: 'warnings', defaultLabel: 'WARNINGS', icon: 'warning' },
-  { id: 'radar', labelKey: 'radar', defaultLabel: 'RADAR & MAPS', icon: 'radar' },
-  { id: 'aqi', labelKey: 'airQuality', defaultLabel: 'AQI & AIR', icon: 'air' },
-  { id: 'agromet', labelKey: 'agromet', defaultLabel: 'AGROMET', icon: 'agriculture' },
-  { id: 'reports', labelKey: 'reports', defaultLabel: 'REPORTS', icon: 'description' },
+  { id: 'home', labelKey: 'home', defaultLabel: 'HOME', icon: Home, color: 'text-[#38BDF8]' },
+  { id: 'weather', labelKey: 'weather', defaultLabel: 'WEATHER', icon: ThermometerSun, color: 'text-[#FB923C]' },
+  { id: 'forecast', labelKey: 'forecast', defaultLabel: 'FORECAST', icon: TrendingUp, color: 'text-[#818CF8]' },
+  { id: 'warnings', labelKey: 'warnings', defaultLabel: 'WARNINGS', icon: AlertTriangle, color: 'text-[#E74C3C]' },
+  { id: 'radar', labelKey: 'radar', defaultLabel: 'RADAR & MAPS', icon: Radio, color: 'text-[#2ECC71]' },
+  { id: 'aqi', labelKey: 'airQuality', defaultLabel: 'AQI & AIR', icon: Activity, color: 'text-[#F1C40F]' },
+  { id: 'agromet', labelKey: 'agromet', defaultLabel: 'AGROMET', icon: Wheat, color: 'text-[#1ABC9C]' },
+  { id: 'reports', labelKey: 'reports', defaultLabel: 'REPORTS', icon: FileText, color: 'text-[#9B59B6]' },
 ];
 
 export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({
@@ -225,6 +237,7 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({
           {/* Navigation Links */}
           <div className="p-2 flex flex-col gap-1">
             {MOBILE_NAV_ITEMS.map((item) => {
+              const Icon = item.icon;
               const isActive = activeTab === item.id;
               const badgeCount = item.id === 'warnings' ? activeAlertCount : item.badge;
               const label = t(item.labelKey as any, item.defaultLabel);
@@ -238,16 +251,18 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({
                     onNavigateTab(item.id);
                     onClose();
                   }}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded text-xs font-semibold transition-colors cursor-pointer min-h-[44px] ${
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-semibold transition-colors cursor-pointer min-h-[44px] ${
                     isActive
                       ? 'bg-[#0B72B9] text-white font-bold'
                       : 'text-[#D7DEE8] hover:bg-[#17212B] hover:text-white'
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <span className="material-symbols-outlined text-[18px]">
-                      {item.icon}
-                    </span>
+                    <Icon
+                      className={`w-4.5 h-4.5 shrink-0 transition-colors ${
+                        isActive ? 'text-white' : item.color
+                      }`}
+                    />
                     <span>{label}</span>
                   </div>
 

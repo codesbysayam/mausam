@@ -8,7 +8,7 @@ import { WeatherDataBundle } from '../services/weatherService';
 import { LocationRecord } from '../types';
 import { LocatingPhase } from '../services/geolocationService';
 import { CropType, PhenologicalStage } from '../services/agronomicEngine';
-import { CurrentLocationBanner } from '../components/location/CurrentLocationBanner';
+import { LocationStatusBar } from '../components/location/LocationStatusBar';
 
 // Import the 14 Command Center components
 import { AgriculturalWeatherStatusPanel } from '../components/agromet/AgriculturalWeatherStatusPanel';
@@ -121,9 +121,9 @@ export const AgrometPage: React.FC<AgrometPageProps> = ({
       id="agromet-command-center-page"
       className="space-y-6 pb-20 max-w-7xl mx-auto px-2 sm:px-4"
     >
-      {/* Real Geolocation & Active Station Banner */}
+      {/* Unified Compact Location Status Bar */}
       {selectedLocation && (
-        <CurrentLocationBanner
+        <LocationStatusBar
           location={selectedLocation}
           source={locationSource}
           isLocating={isLocating}

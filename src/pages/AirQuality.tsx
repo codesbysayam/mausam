@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { WeatherDataBundle } from '../services/weatherService';
 import { LocationRecord } from '../types';
 import { LocatingPhase } from '../services/geolocationService';
-import { CurrentLocationBanner } from '../components/location/CurrentLocationBanner';
+import { LocationStatusBar } from '../components/location/LocationStatusBar';
 import { AQISection } from '../components/environment/AQISection';
 import { PollenSection } from '../components/environment/PollenSection';
 import { IndiaWeatherMap, StateWeatherData } from '../components/map/IndiaWeatherMap';
@@ -475,8 +475,8 @@ export const AirQualityPage: React.FC<AirQualityPageProps> = ({
 
   return (
     <div className="flex flex-col gap-5">
-      {/* Real Geolocation & Active Station Banner */}
-      <CurrentLocationBanner
+      {/* Unified Compact Location Status Bar */}
+      <LocationStatusBar
         location={selectedLocation}
         source={locationSource}
         isLocating={isLocating}

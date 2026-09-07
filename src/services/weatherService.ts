@@ -9,6 +9,7 @@ import {
   WeatherAlert,
 } from '../types';
 import { resolveWeatherCondition } from './weatherResolver';
+import { getWeatherCondition } from './weatherConditions';
 
 export interface WeatherDataBundle {
   current: CurrentWeather;
@@ -321,6 +322,9 @@ class WeatherService {
       high,
       low,
       condition: resolved.conditionLabel,
+      conditionKey: resolved.conditionKey,
+      isDay,
+      wmoCode,
       normalizedCondition: resolved.normalizedCondition,
       weatherType: resolved.weatherType,
       icon: resolved.icon,
@@ -364,6 +368,9 @@ class WeatherService {
       lastUpdated,
       lastUpdatedTimestamp: now.getTime(),
       source: 'Open-Meteo / IMD & CPCB Surface Grid',
+      observationStatus: 'LIVE',
+      observationSource: location.imdStation ? `IMD Station (${location.imdStation}) & Open-Meteo Grid` : 'Open-Meteo Surface Grid (IMD Coordinates Fallback)',
+      observationTimeFormatted: `${this.formatIstDate(now)} • ${this.formatIstTime(now)} IST`,
       isLive: true,
     };
 
@@ -517,16 +524,20 @@ class WeatherService {
     const humidity = isCoastal ? 78 : 68;
     const windSpeed = isCoastal ? 18 : 12;
 
+    const now = new Date();
+    const utcHours = now.getUTCHours() + now.getUTCMinutes() / 60;
+    const istHours = (utcHours + 5.5) % 24;
+    const isDaytime = istHours >= 5.75 && istHours < 18.5;
+
     const resolved = resolveWeatherCondition({
-      wmoCode: 2, // Partly Cloudy
+      wmoCode: isDaytime ? 2 : 0, // Partly Cloudy day, or Clear night
       precipitationMm: 0,
-      precipitationProbability: 20,
-      cloudCover: 35,
+      precipitationProbability: 10,
+      cloudCover: isDaytime ? 30 : 5,
       windSpeedKmH: windSpeed,
-      isDaytime: true,
+      isDaytime,
     });
 
-    const now = new Date();
     const lastUpdated = `${this.formatIstTime(now)} IST (Local Met Model)`;
 
     const current: CurrentWeather = {
@@ -535,6 +546,9 @@ class WeatherService {
       high: temp + 3,
       low: temp - 5,
       condition: resolved.conditionLabel,
+      conditionKey: resolved.conditionKey,
+      isDay: isDaytime,
+      wmoCode: isDaytime ? 2 : 0,
       normalizedCondition: resolved.normalizedCondition,
       weatherType: resolved.weatherType,
       icon: resolved.icon,
@@ -544,7 +558,7 @@ class WeatherService {
       humidity,
       pressure: 1012.4,
       dewPoint: 22.1,
-      uvIndex: 7.2,
+      uvIndex: isDaytime ? 7.2 : 0,
       pollen: 'Low',
       pollenCount: 6,
       grassPollen: 2,
@@ -561,23 +575,26 @@ class WeatherService {
       dust: 14.0,
       aqiStatus: 'Moderate',
       precipitation: 0.0,
-      precipitationProbability: 20,
+      precipitationProbability: 10,
       isRainingNow: false,
-      rainExpectedSummary: '20% chance of rain later in the evening',
-      cloudCover: 35,
+      rainExpectedSummary: 'No rain expected in the immediate window',
+      cloudCover: isDaytime ? 30 : 5,
       sunrise: '05:32 AM',
       sunset: '06:18 PM',
       solarNoon: '12:15 PM',
       daylightDuration: '12h 46m',
       dawnTime: '05:10 AM',
       duskTime: '06:40 PM',
-      solarElevationDeg: 48,
+      solarElevationDeg: isDaytime ? 48 : -10,
       stationName: location.weatherStation || `${location.displayName} Met Node`,
       stationCode: location.imdStation || 'AWS-ODI-01',
       locationId: location.id,
       lastUpdated,
       lastUpdatedTimestamp: now.getTime(),
       source: 'IMD Climatology Offline Grid',
+      observationStatus: 'RECENT',
+      observationSource: 'IMD Historical Surface Grid',
+      observationTimeFormatted: `${this.formatIstDate(now)} • ${this.formatIstTime(now)} IST`,
       isLive: false,
     };
 
@@ -721,12 +738,21 @@ class WeatherService {
         break;
     }
 
+    const conditionKey = getWeatherCondition({
+      rawConditionText: condition,
+      precipitation: precip,
+      isDay: true,
+    });
+
     const current: CurrentWeather = {
       temp: isRainingNow ? 23.4 : 32.0,
       unit: 'C',
       high: 34,
       low: 21,
       condition,
+      conditionKey,
+      isDay: true,
+      wmoCode: isRainingNow ? 63 : 0,
       normalizedCondition: normalized,
       weatherType,
       icon,
@@ -767,6 +793,9 @@ class WeatherService {
       lastUpdated: `${this.formatIstTime(now)} IST (Demo Simulation)`,
       lastUpdatedTimestamp: now.getTime(),
       source: `Demo Mode: ${override}`,
+      observationStatus: 'LIVE',
+      observationSource: `Simulation Bench (${override})`,
+      observationTimeFormatted: `${this.formatIstDate(now)} • ${this.formatIstTime(now)} IST`,
       isLive: false,
     };
 

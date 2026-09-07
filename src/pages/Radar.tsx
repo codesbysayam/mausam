@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { LocationRecord } from '../types';
 import { LocatingPhase } from '../services/geolocationService';
-import { CurrentLocationBanner } from '../components/location/CurrentLocationBanner';
+import { LocationStatusBar } from '../components/location/LocationStatusBar';
 import { WeatherMapMetric } from '../components/map/MapLayerControl';
 import { StateWeatherData } from '../components/map/IndiaWeatherMap';
 import { INDIA_WEATHER_DATA } from '../data/indiaWeatherData';
@@ -313,7 +313,7 @@ export const RadarPage: React.FC<RadarPageProps> = ({
       ================================================== */}
       {selectedLocation && (
         <section>
-          <CurrentLocationBanner
+          <LocationStatusBar
             location={selectedLocation}
             locationSource={locationSource}
             source={locationSource}

@@ -1,4 +1,5 @@
-import { NormalizedWeatherCondition, WeatherConditionType } from '../types';
+import { NormalizedWeatherCondition, WeatherConditionType, CentralWeatherCondition } from '../types';
+import { getWeatherCondition, getConditionLabel } from './weatherConditions';
 
 export interface WeatherInput {
   wmoCode?: number;
@@ -13,6 +14,7 @@ export interface WeatherInput {
 }
 
 export interface ResolvedWeatherCondition {
+  conditionKey: CentralWeatherCondition;
   normalizedCondition: NormalizedWeatherCondition;
   conditionLabel: string;
   weatherType: WeatherConditionType;
@@ -402,7 +404,16 @@ export function resolveWeatherCondition(input: WeatherInput): ResolvedWeatherCon
     atmosphericDescription += ` (${rainProb}% rain probability later today).`;
   }
 
+  const conditionKey = getWeatherCondition({
+    wmoCode: input.wmoCode,
+    precipitation: currentPrecip,
+    cloudCover: input.cloudCover,
+    isDay: input.isDaytime ?? true,
+    rawConditionText: input.rawConditionText,
+  });
+
   return {
+    conditionKey,
     normalizedCondition: baseResolved.normalizedCondition,
     conditionLabel: baseResolved.conditionLabel,
     weatherType: isRainingNow ? baseResolved.weatherType : baseResolved.weatherType === 'rain' ? 'sunny' : baseResolved.weatherType,

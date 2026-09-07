@@ -1,5 +1,5 @@
 import React from 'react';
-import { CloudSun, AlertTriangle, Radio, Activity, Wheat, FileText } from 'lucide-react';
+import { ThermometerSun, AlertTriangle, Radio, Activity, Wheat, FileText } from 'lucide-react';
 
 interface HomeQuickActionBarProps {
   onNavigate: (tab: string) => void;
@@ -7,7 +7,7 @@ interface HomeQuickActionBarProps {
 }
 
 const QUICK_ACTIONS = [
-  { id: 'overview', label: 'WEATHER', icon: CloudSun, color: 'text-[#4FA8E0]', bgHover: 'hover:border-[#4FA8E0]' },
+  { id: 'overview', label: 'WEATHER', icon: ThermometerSun, color: 'text-[#FB923C]', bgHover: 'hover:border-[#FB923C]' },
   { id: 'warnings', label: 'WARNINGS', icon: AlertTriangle, color: 'text-[#E74C3C]', bgHover: 'hover:border-[#E74C3C]' },
   { id: 'radar', label: 'RADAR', icon: Radio, color: 'text-[#2ECC71]', bgHover: 'hover:border-[#2ECC71]' },
   { id: 'air', label: 'AQI', icon: Activity, color: 'text-[#F1C40F]', bgHover: 'hover:border-[#F1C40F]' },

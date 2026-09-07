@@ -8,7 +8,7 @@ import { WeatherMapMetric } from '../components/map/MapLayerControl';
 import { INDIA_WEATHER_DATA } from '../data/indiaWeatherData';
 import { useLanguage } from '../i18n/LanguageContext';
 import { MainNavTab } from '../components/layout/MainNavigation';
-import { CurrentLocationBanner } from '../components/location/CurrentLocationBanner';
+import { LocationStatusBar } from '../components/location/LocationStatusBar';
 
 // Modular Homepage Sections
 import { HomeAtmosphericHero } from '../components/home/HomeAtmosphericHero';
@@ -30,7 +30,6 @@ import { HomeSevereWeatherStrip } from '../components/home/HomeSevereWeatherStri
 import { HomeWhatsHappeningNow } from '../components/home/HomeWhatsHappeningNow';
 import { HomeAtmosphericChangeDetector } from '../components/home/HomeAtmosphericChangeDetector';
 import { HomeLiveTimeline } from '../components/home/HomeLiveTimeline';
-import { HomeQuickActionBar } from '../components/home/HomeQuickActionBar';
 import { MausamDataHealth } from '../components/common/MausamDataHealth';
 import { DataExportActions } from '../components/common/DataExportActions';
 
@@ -157,8 +156,8 @@ export const HomePage: React.FC<HomePageProps> = ({
 
   return (
     <div id="mausam-home-view" className="flex flex-col gap-6 w-full pb-14">
-      {/* Real Geolocation & Active Station Banner */}
-      <CurrentLocationBanner
+      {/* Unified Compact Location Status Bar */}
+      <LocationStatusBar
         location={selectedLocation}
         source={locationSource}
         isLocating={isLocating}
@@ -181,12 +180,6 @@ export const HomePage: React.FC<HomePageProps> = ({
         stationStatus="Operational"
         onRefreshAll={onDetectLocation ? () => onDetectLocation(true) : undefined}
         lastUpdated={current.lastUpdated}
-      />
-
-      {/* QUICK ACTION BAR */}
-      <HomeQuickActionBar
-        onNavigate={handleQuickAction}
-        activeTab="overview"
       />
 
       {/* 1. LIVE NATIONAL WEATHER OVERVIEW (INDIA WEATHER STATUS) */}

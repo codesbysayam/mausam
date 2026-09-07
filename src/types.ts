@@ -20,6 +20,22 @@ export type WeatherConditionType =
   | 'fog'
   | 'duststorm';
 
+export type CentralWeatherCondition =
+  | 'CLEAR_DAY'
+  | 'CLEAR_NIGHT'
+  | 'PARTLY_CLOUDY_DAY'
+  | 'PARTLY_CLOUDY_NIGHT'
+  | 'CLOUDY'
+  | 'FOG'
+  | 'DRIZZLE'
+  | 'RAIN'
+  | 'HEAVY_RAIN'
+  | 'THUNDERSTORM'
+  | 'SNOW'
+  | 'SLEET'
+  | 'FREEZING_RAIN'
+  | 'UNKNOWN';
+
 export type NormalizedWeatherCondition =
   | 'CLEAR'
   | 'PARTLY_CLOUDY'
@@ -88,6 +104,9 @@ export interface CurrentWeather {
   tempMin?: number;
   feelsLike?: number;
   condition: string;
+  conditionKey?: CentralWeatherCondition;
+  isDay?: boolean;
+  wmoCode?: number;
   normalizedCondition: NormalizedWeatherCondition;
   weatherType: WeatherConditionType;
   icon: string;
@@ -140,6 +159,9 @@ export interface CurrentWeather {
   lastUpdated: string;
   lastUpdatedTimestamp?: number;
   source: string;
+  observationStatus?: 'LIVE' | 'RECENT' | 'STALE' | 'UNAVAILABLE';
+  observationSource?: string;
+  observationTimeFormatted?: string;
   isLive?: boolean;
   error?: string | null;
 }

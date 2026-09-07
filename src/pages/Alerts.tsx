@@ -19,6 +19,7 @@ import { WarningDetailDrawer } from '../components/warnings/WarningDetailDrawer'
 import { SafetyGuidanceSection } from '../components/warnings/SafetyGuidanceSection';
 import { EmergencyResponseSection } from '../components/warnings/EmergencyResponseSection';
 import { NationalClassificationMatrix } from '../components/warnings/NationalClassificationMatrix';
+import { LocationStatusBar } from '../components/location/LocationStatusBar';
 
 interface AlertsPageProps {
   weatherBundle?: WeatherDataBundle;
@@ -139,6 +140,9 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
       id="mausam-national-warning-portal"
       className="flex flex-col gap-5 pb-12 w-full max-w-[1520px] mx-auto transition-colors duration-200"
     >
+      {/* Unified Compact Location Status Bar */}
+      <LocationStatusBar location={selectedLocation} />
+
       {/* 1. Official Header with Synoptic Status & Manual Refresh */}
       <WarningHeader
         lastUpdated={stats.lastUpdatedIst}

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { CurrentWeather, LocationRecord, DailyForecastItem, HourlyForecastItem, WeatherAlert } from '../../types';
 import { getWeatherVisualConfig } from '../../utils/weatherIcons';
 import {
@@ -9,14 +9,16 @@ import {
 import {
   Droplets,
   Wind,
-  Compass,
-  Thermometer,
   CloudRain,
   Gauge,
   Sparkles,
   ArrowUpRight,
   ArrowDownRight,
+  ShieldCheck,
+  Radio,
 } from 'lucide-react';
+import { WeatherEffects } from '../weather/WeatherEffects';
+import { isPrecipitationCondition, getConditionLabel } from '../../services/weatherConditions';
 
 interface ForecastAtmosphericHeroProps {
   weather: CurrentWeather;
@@ -33,15 +35,14 @@ export const ForecastAtmosphericHero: React.FC<ForecastAtmosphericHeroProps> = (
   todayForecast,
   location,
   modelName,
-  hourly = [],
-  daily = [],
   alerts = [],
 }) => {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const { greeting, period } = getTimeOfDayGreeting();
   const isNight = period === 'night';
+  const isDaytime = weather.isDay !== undefined ? weather.isDay : !isNight;
+  const effectiveCondition = weather.conditionKey || (isDaytime ? 'CLEAR_DAY' : 'CLEAR_NIGHT');
 
-  const visualConfig = getWeatherVisualConfig(weather.condition);
+  const visualConfig = getWeatherVisualConfig(weather.condition, isDaytime, effectiveCondition);
   const ConditionIcon = visualConfig.icon;
 
   const currentTemp =
@@ -70,149 +71,58 @@ export const ForecastAtmosphericHero: React.FC<ForecastAtmosphericHeroProps> = (
   const rainProb =
     typeof weather.precipitationProbability === 'number'
       ? Math.round(weather.precipitationProbability)
-      : 74;
+      : 0;
   const pressure = typeof weather.pressure === 'number' ? Math.round(weather.pressure) : 1006;
 
   const rainInfo = getRainProbabilityMeaning(rainProb);
   const tempMeaning = getTemperatureMeaning(currentTemp, feelsLike);
 
-  // Dynamic atmospheric human narrative synopsis
+  // Dynamic atmospheric human narrative synopsis strictly driven by actual conditions
   const humanSynopsis = useMemo(() => {
-    const isRaining =
-      weather.condition?.toLowerCase().includes('rain') ||
-      weather.condition?.toLowerCase().includes('drizzle') ||
-      rainProb >= 60;
+    const isRainingNow = isPrecipitationCondition(effectiveCondition);
     const isThunder =
-      weather.condition?.toLowerCase().includes('thunder') ||
-      weather.condition?.toLowerCase().includes('storm');
+      effectiveCondition === 'THUNDERSTORM' ||
+      (weather.condition || '').toLowerCase().includes('thunder');
     const isHot = currentTemp >= 35 || feelsLike >= 38;
 
     if (isThunder) {
-      return `Convective thunderstorm activity active. Rain and electrical discharges expected with gusty boundary layer winds.`;
+      return `Convective thunderstorm cells detected. Electrical discharge activity and sudden gust fronts observed over ${
+        location.city || 'the area'
+      }.`;
     }
-    if (isRaining) {
-      return `Precipitation is likely to continue through ${
-        isNight ? 'the night' : 'the day'
-      }, with high relative humidity and light to moderate winds.`;
+    if (isRainingNow) {
+      return `Active precipitation is falling (${(weather.precipitation || 0.5).toFixed(1)} mm/hr) across ${
+        location.city || 'the district'
+      } with saturated boundary-layer humidity.`;
+    }
+    if (rainProb >= 60) {
+      return `Currently dry under ${getConditionLabel(effectiveCondition).toLowerCase()}. Synoptic models show elevated rain probability (${rainProb}%) later in the forecast window.`;
     }
     if (isHot) {
-      return `High ambient thermal load and intense solar radiation. Apparent temperatures may exceed ${feelsLike}°C during peak hours.`;
+      return `High ambient thermal load. Apparent temperature feels like ${feelsLike}°C during peak solar exposure.`;
     }
-    return `Stable atmospheric envelope with ${weather.condition?.toLowerCase()} skies and comfortable wind circulation across ${
-      location.city || 'the district'
+    return `Stable atmospheric envelope with ${getConditionLabel(effectiveCondition).toLowerCase()} and smooth air circulation across ${
+      location.city || 'the region'
     }.`;
-  }, [weather.condition, rainProb, currentTemp, feelsLike, isNight, location.city]);
-
-  // Subtle lightweight canvas particle / atmosphere animation
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-
-    let animId: number;
-    let width = (canvas.width = canvas.parentElement?.clientWidth || 600);
-    let height = (canvas.height = canvas.parentElement?.clientHeight || 280);
-
-    const handleResize = () => {
-      if (!canvas || !canvas.parentElement) return;
-      width = canvas.width = canvas.parentElement.clientWidth;
-      height = canvas.height = canvas.parentElement.clientHeight;
-    };
-
-    window.addEventListener('resize', handleResize);
-
-    const condLower = (weather.condition || '').toLowerCase();
-    const isRain = condLower.includes('rain') || condLower.includes('drizzle') || rainProb >= 60;
-    const isCloud = condLower.includes('cloud') || condLower.includes('overcast') || condLower.includes('haze');
-
-    const particles: Array<{
-      x: number;
-      y: number;
-      speedY: number;
-      speedX: number;
-      size: number;
-      opacity: number;
-    }> = [];
-
-    const particleCount = isRain ? 45 : isCloud ? 16 : 14;
-
-    for (let i = 0; i < particleCount; i++) {
-      particles.push({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        speedY: isRain ? 2.5 + Math.random() * 3.5 : (Math.random() - 0.5) * 0.4,
-        speedX: isRain ? -0.8 + Math.random() * 0.4 : (Math.random() - 0.5) * 0.4,
-        size: isRain ? 1.5 + Math.random() * 1.5 : 2 + Math.random() * 3,
-        opacity: isRain ? 0.2 + Math.random() * 0.35 : 0.08 + Math.random() * 0.18,
-      });
-    }
-
-    const render = () => {
-      ctx.clearRect(0, 0, width, height);
-
-      particles.forEach((p) => {
-        p.y += p.speedY;
-        p.x += p.speedX;
-
-        if (isRain) {
-          if (p.y > height) {
-            p.y = -10;
-            p.x = Math.random() * width;
-          }
-          if (p.x < 0) p.x = width;
-
-          ctx.beginPath();
-          ctx.moveTo(p.x, p.y);
-          ctx.lineTo(p.x + p.speedX * 3, p.y + p.speedY * 3);
-          ctx.strokeStyle = `rgba(67, 199, 244, ${p.opacity})`;
-          ctx.lineWidth = p.size;
-          ctx.stroke();
-        } else {
-          if (p.x < 0) p.x = width;
-          if (p.x > width) p.x = 0;
-          if (p.y < 0) p.y = height;
-          if (p.y > height) p.y = 0;
-
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-          ctx.fillStyle = isNight
-            ? `rgba(215, 235, 255, ${p.opacity})`
-            : `rgba(255, 200, 87, ${p.opacity})`;
-          ctx.fill();
-        }
-      });
-
-      animId = requestAnimationFrame(render);
-    };
-
-    render();
-
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      cancelAnimationFrame(animId);
-    };
-  }, [weather.condition, rainProb, isNight]);
+  }, [effectiveCondition, weather.condition, weather.precipitation, rainProb, currentTemp, feelsLike, location.city]);
 
   return (
     <div
       id="forecast-atmospheric-hero"
       className="relative rounded-3xl overflow-hidden border border-[#162331] bg-gradient-to-br from-[#0B1722] via-[#0D1D2A] to-[#07111B] p-6 sm:p-8 lg:p-10 shadow-2xl transition-all"
     >
-      {/* Background Subtle Canvas Atmosphere */}
-      <div className="absolute inset-0 pointer-events-none opacity-60 z-0">
-        <canvas ref={canvasRef} className="w-full h-full" />
-      </div>
+      {/* Dynamic Data-Driven Atmospheric Effects Layer */}
+      <WeatherEffects condition={effectiveCondition} isDay={isDaytime} opacity={0.65} />
 
-      {/* Atmospheric Ambient Glow Orbs */}
+      {/* Atmospheric Ambient Glow Orbs - strictly data-driven */}
       <div
         className="absolute -top-20 -right-20 w-96 h-96 rounded-full blur-3xl pointer-events-none opacity-20"
         style={{
-          background: rainProb > 50
+          background: isPrecipitationCondition(effectiveCondition)
             ? 'radial-gradient(circle, #1499E8 0%, transparent 70%)'
-            : isNight
-            ? 'radial-gradient(circle, #3867D6 0%, transparent 70%)'
-            : 'radial-gradient(circle, #FFC857 0%, transparent 70%)',
+            : !isDaytime
+            ? 'radial-gradient(circle, #2C3E50 0%, transparent 70%)'
+            : 'radial-gradient(circle, #F39C12 0%, transparent 70%)',
         }}
       />
 
@@ -226,8 +136,15 @@ export const ForecastAtmosphericHero: React.FC<ForecastAtmosphericHeroProps> = (
             </span>
 
             <span className="text-xs text-[#93A4B8] font-medium">
-              {greeting} • {isNight ? 'Tonight’s Outlook' : 'Day Outlook'}
+              {greeting} • {isDaytime ? 'Day Outlook' : 'Tonight’s Outlook'}
             </span>
+
+            {weather.observationStatus && (
+              <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 flex items-center gap-1">
+                <Radio className="w-2.5 h-2.5 animate-pulse text-emerald-400" />
+                {weather.observationStatus}
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-2 text-xs font-mono text-[#93A4B8] self-start sm:self-auto">
@@ -257,7 +174,7 @@ export const ForecastAtmosphericHero: React.FC<ForecastAtmosphericHeroProps> = (
 
               <div className="flex items-center gap-2.5 mt-1 flex-wrap">
                 <span className="text-lg sm:text-xl font-bold text-[#F4F7FA]">
-                  {weather.condition || 'Partly Cloudy'}
+                  {getConditionLabel(effectiveCondition)}
                 </span>
                 <span className="text-xs text-[#93A4B8] bg-[#071018] px-2.5 py-0.5 rounded-full border border-[#162331]">
                   Feels like <strong className="text-[#FFC857]">{feelsLike}°C</strong>
@@ -281,14 +198,17 @@ export const ForecastAtmosphericHero: React.FC<ForecastAtmosphericHeroProps> = (
               "{humanSynopsis}"
             </p>
 
-            <div className="text-[11px] text-[#93A4B8] flex items-center gap-1.5 pt-2 border-t border-[#162331]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#1499E8]" />
-              <span>{rainInfo.headline} • {rainProb}% probability over horizon</span>
+            <div className="text-[11px] text-[#93A4B8] flex items-center justify-between gap-1.5 pt-2 border-t border-[#162331]">
+              <div className="flex items-center gap-1.5">
+                <span className={`w-1.5 h-1.5 rounded-full ${isPrecipitationCondition(effectiveCondition) ? 'bg-cyan-400' : 'bg-[#1499E8]'}`} />
+                <span>{rainInfo.headline}</span>
+              </div>
+              <span className="font-mono text-cyan-300 font-semibold">{rainProb}% rain chance</span>
             </div>
           </div>
         </div>
 
-        {/* Bottom: Clean Horizontal Information Layout (Not 5 identical boxes!) */}
+        {/* Bottom: Clean Horizontal Information Layout */}
         <div className="pt-5 border-t border-[#162331]/80 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
           {/* HIGH */}
           <div className="flex flex-col gap-0.5 p-3 rounded-xl bg-[#071018]/60 border border-[#162331]">
@@ -323,7 +243,9 @@ export const ForecastAtmosphericHero: React.FC<ForecastAtmosphericHeroProps> = (
             <span className="text-base sm:text-lg font-bold font-mono text-[#43C7F4]">
               {rainProb}%
             </span>
-            <span className="text-[10px] text-[#93A4B8]">Precip Risk</span>
+            <span className="text-[10px] text-[#93A4B8]">
+              {isPrecipitationCondition(effectiveCondition) ? 'Raining now' : 'Forecast risk'}
+            </span>
           </div>
 
           {/* WIND */}

@@ -14,7 +14,7 @@ import { SolarDynamics } from '../components/weather/SolarDynamics';
 import { PersonaWeatherHub } from '../components/weather/personas/PersonaWeatherHub';
 import { buildHumanWeatherStory } from '../services/humanWeatherEngine';
 import { LocatingPhase, GeolocationServiceError, NearestStationResult } from '../services/geolocationService';
-import { CurrentLocationBanner } from '../components/location/CurrentLocationBanner';
+import { LocationStatusBar } from '../components/location/LocationStatusBar';
 import {
   Activity,
   Radio,
@@ -110,8 +110,8 @@ export const WeatherPage: React.FC<WeatherPageProps> = ({
 
   return (
     <div id="weather-comprehensive-view-container" className="flex flex-col gap-6 w-full pb-12">
-      {/* Real Geolocation & Active Station Banner */}
-      <CurrentLocationBanner
+      {/* Unified Compact Location Status Bar */}
+      <LocationStatusBar
         location={selectedLocation}
         source={locationSource}
         isLocating={isLocating}

@@ -2,7 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { WeatherDataBundle } from '../services/weatherService';
 import { LocationRecord } from '../types';
 import { LocatingPhase } from '../services/geolocationService';
-import { CurrentLocationBanner } from '../components/location/CurrentLocationBanner';
+import { LocationStatusBar } from '../components/location/LocationStatusBar';
 import {
   NWPModelType,
   NWP_MODELS,
@@ -190,8 +190,8 @@ export const ForecastPage: React.FC<ForecastPageProps> = ({
 
   return (
     <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto pb-12">
-      {/* Real Geolocation & Active Station Banner */}
-      <CurrentLocationBanner
+      {/* Unified Compact Location Status Bar */}
+      <LocationStatusBar
         location={selectedLocation}
         source={locationSource}
         isLocating={isLocating}

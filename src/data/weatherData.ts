@@ -153,6 +153,9 @@ export const INITIAL_WEATHER: CurrentWeather = {
   high: 34,
   low: 24,
   condition: 'Partly Cloudy & Gentle Breeze',
+  conditionKey: 'PARTLY_CLOUDY_DAY',
+  isDay: true,
+  wmoCode: 2,
   weatherType: 'sunny',
   normalizedCondition: 'PARTLY_CLOUDY',
   icon: 'partly_cloudy_day',
@@ -173,6 +176,9 @@ export const INITIAL_WEATHER: CurrentWeather = {
   isRainingNow: false,
   rainExpectedSummary: 'No precipitation expected in the next 6 hours',
   source: 'IMD Synoptic Surface Station',
+  observationStatus: 'LIVE',
+  observationSource: 'IMD AWS-BBI Surface Station',
+  observationTimeFormatted: 'Today • 16:00 IST',
   isLive: true,
 };
 
