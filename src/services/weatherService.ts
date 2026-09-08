@@ -10,6 +10,7 @@ import {
 } from '../types';
 import { resolveWeatherCondition } from './weatherResolver';
 import { getWeatherCondition } from './weatherConditions';
+import { calculateLunarEphemeris, calculateNightDuration } from '../utils/astronomyCalculator';
 
 export interface WeatherDataBundle {
   current: CurrentWeather;
@@ -100,8 +101,8 @@ class WeatherService {
 
     try {
       // Fetch live forecast telemetry and air-quality/pollen telemetry in parallel
-      const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lng}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,showers,snowfall,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m&hourly=temperature_2m,relative_humidity_2m,dew_point_2m,precipitation_probability,precipitation,rain,weather_code,pressure_msl,wind_speed_10m,uv_index&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,precipitation_sum,precipitation_probability_max,wind_speed_10m_max&timezone=Asia%2FKolkata&forecast_days=7`;
-      const airQualityUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${location.lat}&longitude=${location.lng}&current=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone,european_aqi,us_aqi,dust,alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen&timezone=Asia%2FKolkata`;
+      const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lng}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,showers,snowfall,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m,dew_point_2m,visibility&hourly=temperature_2m,relative_humidity_2m,dew_point_2m,apparent_temperature,precipitation_probability,precipitation,rain,weather_code,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m,uv_index,visibility,cloud_cover,direct_normal_irradiance,soil_moisture_0_to_1cm,soil_temperature_0cm,et0_fao_evapotranspiration&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant&timezone=Asia%2FKolkata&forecast_days=7`;
+      const airQualityUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${location.lat}&longitude=${location.lng}&current=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone,european_aqi,us_aqi,dust,alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen,ammonia&timezone=Asia%2FKolkata`;
 
       const [weatherRes, airRes] = await Promise.allSettled([
         fetch(weatherUrl),
@@ -188,8 +189,17 @@ class WeatherService {
       isDaytime: isDay,
     });
 
-    // Approximate dew point: T - ((100 - RH)/5)
-    const dewPoint = Math.round((temp - (100 - humidity) / 5) * 10) / 10;
+    // Approximate dew point and apparent temperature
+    const feelsLike = Math.round(currentRaw.apparent_temperature ?? temp);
+    const windGusts = currentRaw.wind_gusts_10m !== undefined && currentRaw.wind_gusts_10m !== null
+      ? Math.round(currentRaw.wind_gusts_10m)
+      : Math.round(windSpeed * 1.3);
+    const visibilityKm = currentRaw.visibility !== undefined && currentRaw.visibility !== null
+      ? Math.round(currentRaw.visibility / 100) / 10
+      : 10.0;
+    const dewPoint = currentRaw.dew_point_2m !== undefined && currentRaw.dew_point_2m !== null
+      ? Math.round(currentRaw.dew_point_2m * 10) / 10
+      : Math.round((temp - (100 - humidity) / 5) * 10) / 10;
 
     // Real-time AQI & Pollutant metrics from live CPCB / Open-Meteo Air Quality telemetry
     let basePm25 = location.coastalStatus === 'coastal' ? 38 : 58;
@@ -316,8 +326,70 @@ class WeatherService {
     const now = new Date();
     const lastUpdated = `${this.formatIstTime(now)} IST (Live IMD/WRF/CPCB)`;
 
+    // Find index of current hour first for telemetry referencing
+    let startIdx = 0;
+    const currentHour = now.getHours();
+    const hourlyTimes = hourlyRaw.time || [];
+    for (let i = 0; i < hourlyTimes.length; i++) {
+      const dt = new Date(hourlyTimes[i]);
+      if (dt.getHours() === currentHour) {
+        startIdx = i;
+        break;
+      }
+    }
+
+    // Pressure tendency from hourly telemetry (comparing current to 3 hours ago)
+    let pressureTendency: CurrentWeather['pressureTendency'] = 'Steady';
+    let pressureTendencyHpa = 0.0;
+    if (hourlyRaw.pressure_msl && startIdx >= 3) {
+      const pCurrent = hourlyRaw.pressure_msl[startIdx] ?? pressure;
+      const pPrev = hourlyRaw.pressure_msl[startIdx - 3] ?? pressure;
+      pressureTendencyHpa = Math.round((pCurrent - pPrev) * 10) / 10;
+      if (pressureTendencyHpa > 0.8) pressureTendency = 'Rising';
+      else if (pressureTendencyHpa < -0.8) pressureTendency = 'Falling';
+      else pressureTendency = 'Steady';
+    }
+
+    // Rainfall accumulation over 1h, 3h, 24h
+    const rainfallLast1h = hourlyRaw.precipitation?.[startIdx] !== undefined
+      ? Math.round(hourlyRaw.precipitation[startIdx] * 10) / 10
+      : precip;
+    let rainfallLast3h = rainfallLast1h;
+    if (hourlyRaw.precipitation && startIdx >= 2) {
+      rainfallLast3h = Math.round(
+        ((hourlyRaw.precipitation[startIdx] ?? 0) +
+          (hourlyRaw.precipitation[startIdx - 1] ?? 0) +
+          (hourlyRaw.precipitation[startIdx - 2] ?? 0)) *
+          10
+      ) / 10;
+    }
+    const rainfallLast24h = Math.round((dailyRaw.precipitation_sum?.[0] ?? precip) * 10) / 10;
+
+    // Solar radiation & Astronomy
+    const solarRadiation = hourlyRaw.direct_normal_irradiance?.[startIdx] !== undefined
+      ? Math.round(hourlyRaw.direct_normal_irradiance[startIdx])
+      : isDay ? Math.round(Math.max(0, Math.sin((solarElevationDeg * Math.PI) / 180) * 820)) : 0;
+
+    const lunar = calculateLunarEphemeris(location.lat, location.lng, now);
+    const dayLengthMins = dailyRaw.sunrise?.[0] && dailyRaw.sunset?.[0]
+      ? Math.floor(Math.max(0, new Date(dailyRaw.sunset[0]).getTime() - new Date(dailyRaw.sunrise[0]).getTime()) / 60000)
+      : 720;
+    const nightDurationStr = calculateNightDuration(dayLengthMins);
+
+    // Agricultural metrics
+    const soilMoisture = hourlyRaw.soil_moisture_0_to_1cm?.[startIdx] !== undefined
+      ? Math.round(hourlyRaw.soil_moisture_0_to_1cm[startIdx] * 1000) / 1000
+      : 0.28;
+    const soilTemperature = hourlyRaw.soil_temperature_0cm?.[startIdx] !== undefined
+      ? Math.round(hourlyRaw.soil_temperature_0cm[startIdx] * 10) / 10
+      : temp - 1;
+    const evapotranspiration = hourlyRaw.et0_fao_evapotranspiration?.[startIdx] !== undefined
+      ? Math.round(hourlyRaw.et0_fao_evapotranspiration[startIdx] * 100) / 100
+      : 3.8;
+
     const currentWeather: CurrentWeather = {
       temp,
+      feelsLike,
       unit: 'C',
       high,
       low,
@@ -331,10 +403,25 @@ class WeatherService {
       windSpeed,
       windDirection: `${windDirection} (${windDirDeg}°)`,
       windDirectionDeg: windDirDeg,
+      windGusts,
+      visibilityKm,
       humidity,
       pressure,
+      pressureTendency,
+      pressureTendencyHpa,
       dewPoint,
+      rainfallLast1h,
+      rainfallLast3h,
+      rainfallLast24h,
+      solarRadiation,
       uvIndex: uvIndexMax,
+      moonrise: lunar.moonriseStr,
+      moonset: lunar.moonsetStr,
+      moonPhase: lunar.moonPhaseName,
+      moonIllumination: lunar.illuminationPercent,
+      soilMoisture,
+      soilTemperature,
+      evapotranspiration,
       pollen: pollenStatus,
       pollenCount: pollenCountGrains,
       grassPollen: grassPollen > 0 ? grassPollen : Math.round(pollenCountGrains * 0.4),
@@ -359,8 +446,12 @@ class WeatherService {
       sunset: sunsetStr,
       solarNoon: solarNoonStr,
       daylightDuration: daylightDurationStr,
+      dayLength: daylightDurationStr,
+      nightDuration: nightDurationStr,
       dawnTime: dawnStr,
       duskTime: duskStr,
+      civilDawn: dawnStr,
+      civilDusk: duskStr,
       solarElevationDeg,
       stationName: location.weatherStation || `${location.displayName} Synoptic Station`,
       stationCode: location.imdStation || `AWS-${location.district.substring(0, 3).toUpperCase()}`,
@@ -376,24 +467,18 @@ class WeatherService {
 
     // Transform 24h Hourly Items
     const hourly: HourlyForecastItem[] = [];
-    const currentHour = now.getHours();
-    const hourlyTimes = hourlyRaw.time || [];
     const hourlyTemps = hourlyRaw.temperature_2m || [];
+    const hourlyApparentTemps = hourlyRaw.apparent_temperature || [];
     const hourlyPrecipProb = hourlyRaw.precipitation_probability || [];
+    const hourlyPrecip = hourlyRaw.precipitation || [];
     const hourlyCodes = hourlyRaw.weather_code || [];
     const hourlyWinds = hourlyRaw.wind_speed_10m || [];
+    const hourlyGusts = hourlyRaw.wind_gusts_10m || [];
     const hourlyHumidity = hourlyRaw.relative_humidity_2m || [];
     const hourlyUv = hourlyRaw.uv_index || [];
-
-    // Find index of current hour
-    let startIdx = 0;
-    for (let i = 0; i < hourlyTimes.length; i++) {
-      const dt = new Date(hourlyTimes[i]);
-      if (dt.getHours() === currentHour) {
-        startIdx = i;
-        break;
-      }
-    }
+    const hourlyVis = hourlyRaw.visibility || [];
+    const hourlyRad = hourlyRaw.direct_normal_irradiance || [];
+    const hourlyCloud = hourlyRaw.cloud_cover || [];
 
     for (let i = startIdx; i < Math.min(startIdx + 24, hourlyTimes.length); i++) {
       const dt = new Date(hourlyTimes[i]);
@@ -412,17 +497,31 @@ class WeatherService {
           ? 'Now'
           : `${hour % 12 === 0 ? 12 : hour % 12}:00 ${hour >= 12 ? 'PM' : 'AM'}`;
 
+      const hTemp = Math.round(hourlyTemps[i] ?? temp);
+      const hFeelsLike = hourlyApparentTemps[i] !== undefined ? Math.round(hourlyApparentTemps[i]) : hTemp;
+      const hVisKm = hourlyVis[i] !== undefined ? Math.round(hourlyVis[i] / 100) / 10 : 10.0;
+      const hGust = hourlyGusts[i] !== undefined ? Math.round(hourlyGusts[i]) : Math.round((hourlyWinds[i] ?? windSpeed) * 1.3);
+      const hPrecipMm = hourlyPrecip[i] !== undefined ? Math.round(hourlyPrecip[i] * 10) / 10 : 0;
+      const hSolar = hourlyRad[i] !== undefined ? Math.round(hourlyRad[i]) : (isDayHour ? 400 : 0);
+
       hourly.push({
         time: timeLabel,
         hourNumber: hour,
-        temp: Math.round(hourlyTemps[i] ?? temp),
+        temp: hTemp,
+        feelsLike: hFeelsLike,
         condition: hRes.conditionLabel,
         icon: hRes.icon,
         aqi: Math.max(20, aqiPm25 - (isDayHour ? 5 : -15)),
         rainProb: hProb,
         windSpeed: Math.round(hourlyWinds[i] ?? windSpeed),
+        windGusts: hGust,
         uv: Math.round((hourlyUv[i] ?? 0) * 10) / 10,
         humidity: Math.round(hourlyHumidity[i] ?? humidity),
+        precipitation: hPrecipMm,
+        precipitationProbability: hProb,
+        visibilityKm: hVisKm,
+        solarRadiation: hSolar,
+        cloudCover: hourlyCloud[i] !== undefined ? Math.round(hourlyCloud[i]) : undefined,
       });
     }
 

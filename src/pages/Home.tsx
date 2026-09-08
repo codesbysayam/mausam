@@ -26,6 +26,7 @@ import { WeatherSnapshot } from '../components/weather/WeatherSnapshot';
 
 // New High-Visibility Functional Components
 import { HomeIndiaWeatherStatus } from '../components/home/HomeIndiaWeatherStatus';
+import { NationalAtmosphericOverview } from '../components/home/NationalAtmosphericOverview';
 import { HomeSevereWeatherStrip } from '../components/home/HomeSevereWeatherStrip';
 import { HomeWhatsHappeningNow } from '../components/home/HomeWhatsHappeningNow';
 import { HomeAtmosphericChangeDetector } from '../components/home/HomeAtmosphericChangeDetector';
@@ -394,6 +395,9 @@ export const HomePage: React.FC<HomePageProps> = ({
           </div>
         </div>
       </section>
+
+      {/* 9.5 ALL-INDIA SYNOPTIC METEOROLOGICAL OVERVIEW */}
+      <NationalAtmosphericOverview />
 
       {/* 10. ALL-INDIA INTERACTIVE MAP */}
       <section className="flex flex-col gap-3">

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
-import { CurrentWeather, WeatherStation } from '../types';
+import { CurrentWeather, WeatherStation, LocationRecord } from '../types';
+import { WeatherDataBundle } from '../services/weatherService';
 import {
   FAQ_CATEGORIES,
   FAQ_ITEMS,
@@ -7,20 +8,29 @@ import {
   matchMausamQuery,
   GroundingLink,
   MausamContext,
-} from '../services/mausamAiService';
+} from '../services/mausamAssistantService';
 import {
   SUPPORTED_MAUSAM_AI_LANGUAGES,
   resolveLanguageKey,
-  getLocalizedInitialGreeting,
   getDrawerUiStrings,
-} from '../data/mausamAiLanguages';
+} from '../data/mausamLanguages';
+import {
+  buildMausamContext,
+  solveActionableQuery,
+  extractTargetLocation,
+  StructuredAssistantResponse,
+} from '../services/mausamContextBuilder';
 import { MausamMarkdown } from './MausamMarkdown';
 
 interface AskMausamDrawerProps {
   isOpen: boolean;
   onClose: () => void;
   weather: CurrentWeather;
+  weatherBundle?: WeatherDataBundle;
+  selectedLocation?: LocationRecord;
   currentStation: WeatherStation;
+  onSelectLocation?: (location: LocationRecord) => void;
+  onNavigateTab?: (tabId: string) => void;
 }
 
 interface Message {
@@ -28,94 +38,167 @@ interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: string;
+  structured?: StructuredAssistantResponse;
   source?: string;
   groundingSources?: GroundingLink[];
   suggestedFollowUps?: string[];
   modeUsed?: string;
+  targetLocation?: LocationRecord;
+  actionLinks?: { label: string; tabId?: string; icon: string; location?: LocationRecord }[];
 }
+
+type QuickActionCategory = 'all' | 'safety' | 'rain' | 'health' | 'agriculture';
+
+interface QuickAction {
+  id: string;
+  label: string;
+  icon: string;
+  category: QuickActionCategory;
+  query: string;
+}
+
+const QUICK_ACTIONS: QuickAction[] = [
+  { id: 'rain', label: 'Will it rain?', icon: 'rainy', category: 'rain', query: 'Will it rain today in my location?' },
+  { id: 'run', label: 'Can I go for a run now?', icon: 'directions_run', category: 'safety', query: 'Can I go for an outdoor run right now?' },
+  { id: 'warnings', label: 'Active warnings', icon: 'warning', category: 'safety', query: 'Are there active severe weather warnings for my district?' },
+  { id: 'aqi', label: 'Air quality & health', icon: 'air', category: 'health', query: 'What is the air quality index and health impact right now?' },
+  { id: 'travel', label: 'Is it safe to travel?', icon: 'commute', category: 'safety', query: 'Is it safe to travel and drive on highways right now?' },
+  { id: 'umbrella', label: 'Do I need an umbrella?', icon: 'umbrella', category: 'rain', query: 'Do I need an umbrella today?' },
+  { id: 'crops', label: 'Crop spraying conditions', icon: 'agriculture', category: 'agriculture', query: 'Are weather conditions suitable for crop spraying today?' },
+  { id: 'radar', label: 'What does Doppler radar show?', icon: 'radar', category: 'rain', query: 'What does the Doppler weather radar show for my area?' },
+  { id: 'peak_temp', label: 'When will heat peak?', icon: 'thermostat', category: 'health', query: 'When will the temperature peak today?' },
+  { id: 'forecast_7d', label: '7-day synoptic outlook', icon: 'calendar_month', category: 'rain', query: 'Show me the 7-day weather forecast outlook.' },
+];
 
 export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
   isOpen,
   onClose,
   weather,
+  weatherBundle,
+  selectedLocation,
   currentStation,
+  onSelectLocation,
+  onNavigateTab,
 }) => {
   const [activeTab, setActiveTab] = useState<'chat' | 'faqs' | 'states'>('chat');
-  const [groundingMode] = useState<'auto' | 'search' | 'maps'>('auto');
+  const [quickCategory, setQuickCategory] = useState<QuickActionCategory>('all');
   const [language, setLanguage] = useState<string>('English');
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedFaqCategory, setSelectedFaqCategory] = useState<string>('all');
   const [faqSearchQuery, setFaqSearchQuery] = useState<string>('');
   const [stateSearchQuery, setStateSearchQuery] = useState<string>('');
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null);
+  const [activeConversationLocation, setActiveConversationLocation] = useState<LocationRecord | null>(null);
 
-  // Clean station display string to prevent duplicate state names
+  // Resolved active location context
+  const activeLocation: LocationRecord = useMemo(() => {
+    if (activeConversationLocation) return activeConversationLocation;
+    if (selectedLocation) return selectedLocation;
+    return {
+      id: currentStation?.id || 'loc-obs',
+      state: currentStation?.state || 'Odisha',
+      district: currentStation?.district || currentStation?.name || 'Bhubaneswar',
+      city: currentStation?.district || currentStation?.name || 'Bhubaneswar',
+      lat: currentStation?.lat || 20.29,
+      lng: currentStation?.lng || 85.82,
+      timezone: 'Asia/Kolkata',
+      displayName: `${currentStation?.name || 'Bhubaneswar'}, ${currentStation?.state || 'India'}`,
+    };
+  }, [activeConversationLocation, selectedLocation, currentStation]);
+
   const stationDisplayName = useMemo(() => {
-    const rawName = currentStation?.name || 'Observatory';
-    const stateName = currentStation?.state || 'India';
-    const matchParen = rawName.match(/\(([^)]+)\)/);
-    if (matchParen && matchParen[1]) {
-      const inside = matchParen[1].replace(/\s*-\s*[A-Z]{2}$/i, '').trim();
-      return `${inside} (${stateName})`;
-    }
-    if (rawName.toLowerCase().includes(stateName.toLowerCase())) {
-      return `${rawName}`;
-    }
-    return `${rawName} (${stateName})`;
-  }, [currentStation]);
+    return activeLocation.displayName || `${activeLocation.city}, ${activeLocation.state}`;
+  }, [activeLocation]);
 
   const langKey = useMemo(() => resolveLanguageKey(language), [language]);
   const uiStrings = useMemo(() => getDrawerUiStrings(langKey), [langKey]);
 
-  const createInitialMessage = useCallback((k: string): Message => {
-    const greeting = getLocalizedInitialGreeting(stationDisplayName, currentStation, weather, k);
+  // Initial Welcome Message
+  const createInitialMessage = useCallback((): Message => {
+    const timeStr = new Date().toLocaleTimeString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const structuredGreeting: StructuredAssistantResponse = {
+      title: `Atmospheric Intelligence · ${activeLocation.city || activeLocation.district}`,
+      statusBadge: {
+        label: `${weather.temp}°C — ${weather.condition?.toUpperCase() || 'OBSERVED'}`,
+        type: 'info',
+      },
+      metricsLine: `🌡️ ${weather.temp}°C | 💧 ${weather.humidity}% RH | 💨 ${weather.windSpeed} km/h | 🌧️ ${weather.precipitationProbability ?? 0}% rain | 🫁 AQI ${weather.aqiIndex ?? weather.aqiPm25 ?? 65}`,
+      summary: `Atmospheric intelligence active for ${stationDisplayName}. Real-time surface telemetry synchronized.`,
+      markdownContent: `### Atmospheric Intelligence — ${stationDisplayName}
+Connected to authorized meteorological telemetry.
+
+**Current Surface Observation**:
+• **Air Temperature**: **${weather.temp}°C** (Feels like **${weather.feelsLike ?? weather.temp}°C**)
+• **Atmospheric Condition**: **${weather.condition || 'Clear'}**
+• **Relative Humidity**: **${weather.humidity}%** | **Dew Point**: **${weather.dewPoint ?? 24}°C**
+• **Wind Vector**: **${weather.windSpeed} km/h** from **${weather.windDirection || 'WSW'}**
+• **Air Quality Index**: **${weather.aqiIndex ?? weather.aqiPm25 ?? 65}** (${weather.aqiStatus || 'Satisfactory'})
+• **Solar UV Index**: **${weather.uvIndex ?? 5}/10**
+
+Ask any question below or tap a quick action to analyze rain risk, workout windows, travel safety, or crop advisories.
+
+*Source: connected MAUSAM weather data · Updated ${timeStr} IST*`,
+      source: `connected MAUSAM weather data · Updated ${timeStr} IST`,
+      suggestedFollowUps: [
+        'Will it rain today in my location?',
+        'Can I go for an outdoor run right now?',
+        'Are there active severe weather warnings?',
+        'Is it safe to travel on highways right now?',
+      ],
+    };
+
     return {
       id: 'init-1',
       role: 'assistant',
-      content: greeting.content,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      source: 'India Meteorological Department (IMD) Grounded Core',
-      suggestedFollowUps: greeting.suggestedFollowUps,
+      content: structuredGreeting.markdownContent,
+      structured: structuredGreeting,
+      timestamp: timeStr,
+      source: `connected MAUSAM weather data · Updated ${timeStr} IST`,
+      suggestedFollowUps: structuredGreeting.suggestedFollowUps,
+      targetLocation: activeLocation,
     };
-  }, [stationDisplayName, currentStation, weather]);
+  }, [activeLocation, weather, stationDisplayName]);
 
-  const [messages, setMessages] = useState<Message[]>(() => [createInitialMessage(resolveLanguageKey(language))]);
+  const [messages, setMessages] = useState<Message[]>(() => [createInitialMessage()]);
   const [inputPrompt, setInputPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
-  // When language is changed, update initial message if only initial message is present
-  const handleLanguageChange = (newLanguage: string) => {
-    setLanguage(newLanguage);
-    const newLangKey = resolveLanguageKey(newLanguage);
-    setMessages((prev) => {
-      if (prev.length === 1 && prev[0].id === 'init-1') {
-        return [createInitialMessage(newLangKey)];
-      }
-      return prev;
-    });
-  };
-
-  // Scroll to bottom when new messages arrive
-  useEffect(() => {
-    if (activeTab === 'chat') {
-      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }
-  }, [messages, isLoading, activeTab]);
-
-  // Filtered FAQs based on category and search query
+  // Filtered FAQs by category and search
   const filteredFaqs = useMemo(() => {
     return FAQ_ITEMS.filter((item) => {
-      const matchCategory = selectedCategory === 'all' || item.categoryId === selectedCategory;
+      let matchCategory = selectedFaqCategory === 'all';
+      if (!matchCategory) {
+        // Map category aliases to the 10 standard categories
+        if (selectedFaqCategory === 'basics' && (item.categoryId === 'basics' || item.categoryId === 'current')) matchCategory = true;
+        else if (selectedFaqCategory === 'forecast' && (item.categoryId === 'forecast' || item.categoryId === 'rain_alerts')) matchCategory = true;
+        else if (selectedFaqCategory === 'warnings' && (item.categoryId === 'warnings' || item.categoryId === 'rain_alerts' || item.categoryId === 'disaster_citizen')) matchCategory = true;
+        else if (selectedFaqCategory === 'radar' && (item.categoryId === 'radar' || item.categoryId === 'radar_science')) matchCategory = true;
+        else if (selectedFaqCategory === 'aqi' && (item.categoryId === 'aqi' || item.categoryId === 'health_aqi')) matchCategory = true;
+        else if (selectedFaqCategory === 'agriculture' && (item.categoryId === 'agriculture' || item.categoryId === 'agromet')) matchCategory = true;
+        else if (selectedFaqCategory === 'marine' && (item.categoryId === 'marine' || item.categoryId === 'cyclone_marine' || item.categoryId === 'aviation_marine')) matchCategory = true;
+        else if (selectedFaqCategory === 'safety' && (item.categoryId === 'safety' || item.categoryId === 'disaster_citizen' || item.categoryId === 'current')) matchCategory = true;
+        else if (selectedFaqCategory === 'climate' && (item.categoryId === 'climate' || item.categoryId === 'states_regional')) matchCategory = true;
+        else if (selectedFaqCategory === 'technical' && (item.categoryId === 'technical' || item.categoryId === 'radar_science' || item.categoryId === 'aviation_marine')) matchCategory = true;
+        else if (item.categoryId === selectedFaqCategory) matchCategory = true;
+      }
+
       const matchSearch =
         !faqSearchQuery.trim() ||
         item.question.toLowerCase().includes(faqSearchQuery.toLowerCase()) ||
         item.shortQuestion.toLowerCase().includes(faqSearchQuery.toLowerCase()) ||
         item.keywords.some((k) => k.toLowerCase().includes(faqSearchQuery.toLowerCase()));
+
       return matchCategory && matchSearch;
     });
-  }, [selectedCategory, faqSearchQuery]);
+  }, [selectedFaqCategory, faqSearchQuery]);
 
-  // Filtered States and UTs
+  // Filtered States & UTs
   const filteredStates = useMemo(() => {
     if (!stateSearchQuery.trim()) return ALL_INDIA_STATES_MET_PROFILES;
     const q = stateSearchQuery.toLowerCase();
@@ -129,16 +212,41 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
     );
   }, [stateSearchQuery]);
 
+  // Filtered quick actions
+  const filteredQuickActions = useMemo(() => {
+    if (quickCategory === 'all') return QUICK_ACTIONS;
+    return QUICK_ACTIONS.filter((qa) => qa.category === quickCategory);
+  }, [quickCategory]);
+
+  // Scroll to bottom on message
+  useEffect(() => {
+    if (activeTab === 'chat') {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages, isLoading, activeTab]);
+
+  // Execute query
   const handleSendMessage = async (textToSend?: string) => {
-    const query = textToSend || inputPrompt;
-    if (!query.trim() || isLoading) return;
+    const query = (textToSend || inputPrompt).trim();
+    if (!query || isLoading) return;
+
+    // Abort any in-flight request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
     const userMsgId = `user-${Date.now()}`;
     const userMsg: Message = {
       id: userMsgId,
       role: 'user',
       content: query,
-      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      timestamp: new Date().toLocaleTimeString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
     };
 
     setMessages((prev) => [...prev, userMsg]);
@@ -146,32 +254,80 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
     setIsLoading(true);
     setActiveTab('chat');
 
-    const context: MausamContext = {
+    // Detect if the user targeted a specific location in this query
+    const { location: targetLoc, isExplicit } = extractTargetLocation(
+      query,
+      activeLocation,
+      messages.map((m) => ({ role: m.role, content: m.content }))
+    );
+
+    if (isExplicit) {
+      setActiveConversationLocation(targetLoc);
+    }
+
+    // Build meteorological context
+    const mausamCtx = buildMausamContext(query, targetLoc, weather, {
+      hourly: weatherBundle?.hourly,
+      daily: weatherBundle?.daily,
+      alerts: weatherBundle?.alerts,
       station: currentStation,
-      weather: weather,
       preferredLanguage: language,
-    };
+      conversationHistory: messages.map((m) => ({ role: m.role, content: m.content })),
+    });
+
+    // Solve deterministically first for instantaneous fallback
+    const deterministicStructured = solveActionableQuery(mausamCtx);
+
+    // Prepare action links
+    const actionLinks: Message['actionLinks'] = [];
+    const qLower = query.toLowerCase();
+    if (qLower.includes('radar') || qLower.includes('echo') || qLower.includes('satellite')) {
+      actionLinks.push({ label: 'Open Doppler Radar', tabId: 'radar', icon: 'radar' });
+    }
+    if (qLower.includes('forecast') || qLower.includes('tomorrow') || qLower.includes('7-day') || qLower.includes('rain')) {
+      actionLinks.push({ label: 'View 7-Day Forecast', tabId: 'forecast', icon: 'calendar_month' });
+    }
+    if (qLower.includes('aqi') || qLower.includes('pollution') || qLower.includes('pm2.5')) {
+      actionLinks.push({ label: 'Open AQI & Environment', tabId: 'aqi', icon: 'air' });
+    }
+    if (qLower.includes('warning') || qLower.includes('alert') || qLower.includes('cyclone')) {
+      actionLinks.push({ label: 'Open Warnings Board', tabId: 'warnings', icon: 'warning' });
+    }
+    if (qLower.includes('crop') || qLower.includes('spray') || qLower.includes('farm')) {
+      actionLinks.push({ label: 'Open Agromet Portal', tabId: 'agromet', icon: 'agriculture' });
+    }
+    if (isExplicit && onSelectLocation) {
+      actionLinks.push({
+        label: `Switch App Location to ${targetLoc.city}`,
+        icon: 'location_on',
+        location: targetLoc,
+      });
+    }
 
     try {
-      // 1. First attempt to call the backend API with the preferred language
-      const response = await fetch('/api/ask-mausam', {
+      // Set up a 10s timeout
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+      // Attempt server-side API call
+      const response = await fetch('/api/mausam/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
         body: JSON.stringify({
           prompt: query,
-          station: currentStation,
-          mode: groundingMode,
-          lat: currentStation.lat,
-          lng: currentStation.lng,
+          mode: 'auto',
+          lat: targetLoc.lat,
+          lng: targetLoc.lng,
           preferredLanguage: language,
           location: {
             country: 'India',
-            state: currentStation.state,
-            city: currentStation.district || currentStation.name,
-            station: currentStation.name,
-            stationId: currentStation.code || currentStation.id || '42971',
-            latitude: currentStation.lat,
-            longitude: currentStation.lng,
+            state: targetLoc.state,
+            city: targetLoc.city,
+            district: targetLoc.district,
+            station: currentStation?.name || targetLoc.city,
+            stationId: currentStation?.code || '42971',
+            latitude: targetLoc.lat,
+            longitude: targetLoc.lng,
           },
           observation: {
             temperatureC: weather.temp,
@@ -183,20 +339,20 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
             windDirectionDegrees: weather.windDirectionDeg ?? 247,
             pressureHpa: weather.pressure,
             visibilityKm: weather.visibilityKm ?? 7,
-            dewPointC: weather.dewPoint,
-            rainfall24hMm: weather.precipitation,
-            rainProbability: weather.precipitationProbability,
-            uvIndex: weather.uvIndex,
+            dewPointC: weather.dewPoint ?? 24,
+            rainfall24hMm: weather.precipitation ?? 0,
+            rainProbability: weather.precipitationProbability ?? 0,
+            uvIndex: weather.uvIndex ?? 5,
           },
           airQuality: {
-            aqi: weather.aqiIndex ?? 63,
+            aqi: weather.aqiIndex ?? weather.aqiPm25 ?? 63,
             pm25: weather.aqiPm25,
             pm10: weather.aqiPm10 ?? 58,
-            category: weather.aqiStatus,
+            category: weather.aqiStatus || 'Satisfactory',
           },
           pollen: {
             index: weather.pollenCount ?? 8,
-            category: weather.pollen,
+            category: weather.pollen || 'Low Risk',
           },
           astronomy: {
             sunrise: weather.sunrise ?? '05:29',
@@ -204,83 +360,65 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
           },
           metadata: {
             observedAt: weather.lastUpdated || new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            source: weather.source || 'India Meteorological Department (IMD)',
-            status: weather.isLive ? 'LIVE' : 'OBSERVED',
-          },
-          weatherContext: {
-            temp: weather.temp,
-            high: weather.high,
-            low: weather.low,
-            condition: weather.condition,
-            aqi: weather.aqiPm25,
-            uv: weather.uvIndex,
-            humidity: weather.humidity,
-            pollen: weather.pollen,
+            source: 'connected MAUSAM weather data',
+            status: 'LIVE',
           },
         }),
       });
 
+      clearTimeout(timeoutId);
+
       if (!response.ok) {
-        throw new Error(`Server returned HTTP ${response.status}`);
+        throw new Error(`HTTP ${response.status}`);
       }
 
       const data = await response.json();
 
-      // If backend gave an empty or generic error response, use client-side knowledge matcher
-      if (!data.response || data.response.includes('temporarily unavailable')) {
-        const clientAiMatch = matchMausamQuery(query, context, language);
+      if (data.response && !data.response.includes('temporarily unavailable')) {
         const assistantMsg: Message = {
           id: `asst-${Date.now()}`,
           role: 'assistant',
-          content: clientAiMatch.answer,
-          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-          source: clientAiMatch.source,
-          groundingSources: clientAiMatch.groundingSources,
-          suggestedFollowUps: clientAiMatch.suggestedFollowUps,
-          modeUsed: clientAiMatch.modeUsed,
+          content: data.response,
+          structured: deterministicStructured,
+          timestamp: new Date().toLocaleTimeString('en-IN', {
+            timeZone: 'Asia/Kolkata',
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+          source: data.source || deterministicStructured.source,
+          groundingSources: data.groundingSources || [],
+          suggestedFollowUps: deterministicStructured.suggestedFollowUps,
+          modeUsed: data.modeUsed || 'online-grounded',
+          targetLocation: targetLoc,
+          actionLinks,
         };
         setMessages((prev) => [...prev, assistantMsg]);
         return;
       }
-
-      // Check for follow-up suggestions from client knowledge engine
-      const clientLookup = matchMausamQuery(query, context, language);
-
+      throw new Error('Empty response from backend');
+    } catch {
+      // Deterministic Atmospheric Fallback
       const assistantMsg: Message = {
         id: `asst-${Date.now()}`,
         role: 'assistant',
-        content: data.response,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        source: data.source || 'India Meteorological Department (IMD)',
-        groundingSources:
-          data.groundingSources && data.groundingSources.length > 0
-            ? data.groundingSources
-            : clientLookup.groundingSources,
-        suggestedFollowUps: clientLookup.suggestedFollowUps,
-        modeUsed: data.modeUsed || 'online-grounded',
+        content: deterministicStructured.markdownContent,
+        structured: deterministicStructured,
+        timestamp: new Date().toLocaleTimeString('en-IN', {
+          timeZone: 'Asia/Kolkata',
+          hour: '2-digit',
+          minute: '2-digit',
+        }),
+        source: deterministicStructured.source,
+        groundingSources: [],
+        suggestedFollowUps: deterministicStructured.suggestedFollowUps,
+        modeUsed: 'atmospheric-intelligence-offline',
+        targetLocation: targetLoc,
+        actionLinks,
       };
-
-      setMessages((prev) => [...prev, assistantMsg]);
-    } catch (err) {
-      console.warn('Backend /api/ask-mausam unavailable or offline, activating localized atmospheric engine:', err);
-      // High-precision offline / static deployment fallback
-      const localResult = matchMausamQuery(query, context, language);
-
-      const assistantMsg: Message = {
-        id: `asst-${Date.now()}`,
-        role: 'assistant',
-        content: localResult.answer,
-        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        source: localResult.source,
-        groundingSources: localResult.groundingSources,
-        suggestedFollowUps: localResult.suggestedFollowUps,
-        modeUsed: localResult.modeUsed,
-      };
-
       setMessages((prev) => [...prev, assistantMsg]);
     } finally {
       setIsLoading(false);
+      abortControllerRef.current = null;
     }
   };
 
@@ -291,10 +429,11 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
   };
 
   const handleClearChat = () => {
-    setMessages([createInitialMessage(langKey)]);
+    setActiveConversationLocation(null);
+    setMessages([createInitialMessage()]);
   };
 
-  // Lock body scroll and listen for Escape key
+  // Lock body scroll and listen for Escape
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -315,48 +454,55 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex justify-end bg-black/75 backdrop-blur-xs transition-opacity select-none font-sans"
+      id="ask-mausam-drawer"
+      className="fixed inset-0 z-50 flex justify-end bg-black/80 backdrop-blur-xs transition-opacity select-none font-sans"
       role="dialog"
       aria-modal="true"
-      aria-label="Ask MAUSAM AI Weather & Atmospheric Intelligence Assistant"
+      aria-label="Ask MAUSAM Atmospheric Intelligence Assistant"
     >
       {/* Backdrop */}
       <div className="fixed inset-0" onClick={onClose} aria-hidden="true" />
 
-      <div className="relative z-10 w-full sm:max-w-xl bg-[#0B1017] border-l border-[#202B3B] h-full max-h-[100dvh] flex flex-col shadow-2xl animate-in slide-in-from-right duration-200 text-[#D7DEE8]">
-        {/* Header */}
-        <div className="p-3.5 sm:p-4 border-b border-[#202B3B] flex justify-between items-center bg-[#111923] shrink-0">
-          <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-lg bg-[#0B72B9]/15 border border-[#0B72B9]/40 flex items-center justify-center text-[#4FA8E0] shrink-0 shadow-inner">
-              <span className="material-symbols-outlined text-[22px]">psychology</span>
+      {/* Main Panel */}
+      <div className="relative z-10 w-full sm:max-w-2xl bg-[#090E17] border-l border-[#1F2C3F] h-full max-h-[100dvh] flex flex-col shadow-2xl animate-in slide-in-from-right duration-200 text-[#D7DEE8]">
+        {/* Government Meteorological Header */}
+        <div className="p-3 sm:p-4 border-b border-[#1F2C3F] bg-[#0E1724] flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-[#0B72B9]/20 border border-[#0B72B9]/50 flex items-center justify-center text-[#4FA8E0] shrink-0 shadow-inner">
+              <span className="material-symbols-outlined text-[24px]">air</span>
             </div>
             <div className="truncate">
-              <div className="flex items-center gap-1.5 sm:gap-2">
-                <h3 className="text-sm sm:text-base font-bold text-white tracking-wide truncate">
-                  Ask MAUSAM AI
-                </h3>
-                <span className="px-2 py-0.5 rounded-full bg-[#0B72B9]/20 text-[#4FA8E0] text-[10px] font-bold border border-[#0B72B9]/40 shrink-0">
-                  IMD Telemetry
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm sm:text-base font-extrabold text-white tracking-wider uppercase">
+                  ASK MAUSAM
+                </h2>
+                <span className="px-2 py-0.5 rounded-full bg-[#0B72B9]/25 text-[#4FA8E0] text-[10px] font-bold border border-[#0B72B9]/40 shrink-0">
+                  Meteorological Assistant
                 </span>
               </div>
-              <p className="text-[11px] text-[#8A94A6] truncate mt-0.5">
-                Observatory: <span className="text-[#4FA8E0] font-medium">{stationDisplayName}</span>
-              </p>
+              <div className="flex items-center gap-1.5 text-[11px] text-[#94A3B8] truncate mt-0.5">
+                <span className="material-symbols-outlined text-[12px] text-[#2ECC71]">
+                  location_on
+                </span>
+                <span className="text-white font-medium truncate">{stationDisplayName}</span>
+                <span className="text-[#64748B]">·</span>
+                <span className="text-[#38BDF8] font-mono">{weather.temp}°C {weather.condition}</span>
+              </div>
             </div>
           </div>
 
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1.5 shrink-0">
             <button
               onClick={handleClearChat}
-              title="Clear conversation"
-              className="p-1.5 rounded-lg bg-[#17212B] border border-[#202B3B] text-[#8A94A6] hover:text-white hover:border-[#334155] cursor-pointer transition-colors"
-              aria-label="Clear chat"
+              title="Reset conversation to initial telemetry"
+              className="p-1.5 rounded-lg bg-[#142030] border border-[#1F2C3F] text-[#94A3B8] hover:text-white hover:border-[#38BDF8] cursor-pointer transition-colors"
+              aria-label="Reset conversation"
             >
               <span className="material-symbols-outlined text-[17px]">restart_alt</span>
             </button>
             <button
               onClick={onClose}
-              className="p-1.5 rounded-lg bg-[#17212B] border border-[#202B3B] text-[#8A94A6] hover:text-white hover:border-[#334155] cursor-pointer transition-colors"
+              className="p-1.5 rounded-lg bg-[#142030] border border-[#1F2C3F] text-[#94A3B8] hover:text-white hover:border-[#38BDF8] cursor-pointer transition-colors"
               aria-label="Close assistant"
             >
               <span className="material-symbols-outlined text-[18px]">close</span>
@@ -364,56 +510,56 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
           </div>
         </div>
 
-        {/* Tab Selector & Controls */}
-        <div className="px-3 sm:px-4 py-2 bg-[#0E1520] border-b border-[#202B3B] flex items-center justify-between gap-2 text-xs shrink-0 flex-wrap">
-          {/* Main Tabs */}
-          <div className="flex items-center bg-[#17212B] p-0.5 rounded-lg border border-[#202B3B]">
+        {/* Tab & Language Selector Bar */}
+        <div className="px-3 sm:px-4 py-2 bg-[#0A111C] border-b border-[#1F2C3F] flex items-center justify-between gap-2 text-xs shrink-0 flex-wrap">
+          {/* Main Navigation Tabs */}
+          <div className="flex items-center bg-[#142030] p-0.5 rounded-lg border border-[#1F2C3F]">
             <button
               onClick={() => setActiveTab('chat')}
-              className={`px-2.5 sm:px-3 py-1 rounded-md transition-all text-xs font-semibold flex items-center gap-1.5 cursor-pointer ${
+              className={`px-3 py-1 rounded-md transition-all text-xs font-semibold flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'chat'
                   ? 'bg-[#0B72B9] text-white shadow-sm'
-                  : 'text-[#8A94A6] hover:text-white'
+                  : 'text-[#94A3B8] hover:text-white'
               }`}
             >
               <span className="material-symbols-outlined text-[14px]">chat</span>
-              {uiStrings.chatStream}
+              <span>Assistant</span>
             </button>
             <button
               onClick={() => setActiveTab('faqs')}
-              className={`px-2.5 sm:px-3 py-1 rounded-md transition-all text-xs font-semibold flex items-center gap-1.5 cursor-pointer ${
+              className={`px-3 py-1 rounded-md transition-all text-xs font-semibold flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'faqs'
                   ? 'bg-[#0B72B9] text-white shadow-sm'
-                  : 'text-[#8A94A6] hover:text-white'
+                  : 'text-[#94A3B8] hover:text-white'
               }`}
             >
               <span className="material-symbols-outlined text-[14px]">menu_book</span>
-              {uiStrings.faqLibrary} ({FAQ_ITEMS.length})
+              <span>Knowledge Library</span>
             </button>
             <button
               onClick={() => setActiveTab('states')}
-              className={`px-2.5 sm:px-3 py-1 rounded-md transition-all text-xs font-semibold flex items-center gap-1.5 cursor-pointer ${
+              className={`px-3 py-1 rounded-md transition-all text-xs font-semibold flex items-center gap-1.5 cursor-pointer ${
                 activeTab === 'states'
                   ? 'bg-[#0B72B9] text-white shadow-sm'
-                  : 'text-[#8A94A6] hover:text-white'
+                  : 'text-[#94A3B8] hover:text-white'
               }`}
             >
               <span className="material-symbols-outlined text-[14px]">map</span>
-              {uiStrings.statesDirectory}
+              <span>States & UTs (36)</span>
             </button>
           </div>
 
-          {/* Language Selector */}
+          {/* Multilingual Selector */}
           <div className="flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-[#8A94A6] text-[14px]">translate</span>
+            <span className="material-symbols-outlined text-[#94A3B8] text-[14px]">translate</span>
             <select
               value={language}
-              onChange={(e) => handleLanguageChange(e.target.value)}
-              className="bg-[#17212B] text-[#4FA8E0] text-[11px] font-medium rounded-md border border-[#202B3B] px-2 py-1 focus:outline-none focus:border-[#0B72B9]"
-              aria-label="Select Assistant Language"
+              onChange={(e) => setLanguage(e.target.value)}
+              className="bg-[#142030] text-[#38BDF8] text-[11px] font-medium rounded-md border border-[#1F2C3F] px-2 py-1 focus:outline-none focus:border-[#0B72B9] cursor-pointer"
+              aria-label="Select Language"
             >
               {SUPPORTED_MAUSAM_AI_LANGUAGES.map((lang) => (
-                <option key={lang.key} value={lang.label} className="bg-[#17212B] text-white">
+                <option key={lang.key} value={lang.label} className="bg-[#142030] text-white">
                   {lang.label}
                 </option>
               ))}
@@ -421,153 +567,244 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
           </div>
         </div>
 
-        {/* TAB 1: Chat Stream */}
+        {/* TAB 1: Chat Stream with Contextual Quick Actions */}
         {activeTab === 'chat' && (
-          <div className="flex-1 overflow-y-auto p-3 sm:p-4 flex flex-col gap-3.5 sm:gap-4 scrollbar-thin">
+          <div className="flex-1 overflow-y-auto p-3 sm:p-4 flex flex-col gap-4 scrollbar-thin">
+            {/* Quick Actions Panel at Top */}
+            <div className="p-3 rounded-xl bg-[#0F1928] border border-[#1F2C3F] flex flex-col gap-2.5">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-[#38BDF8] uppercase tracking-wider flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[14px]">bolt</span>
+                  What do you want to know?
+                </span>
+                {/* Category filters */}
+                <div className="flex items-center gap-1 overflow-x-auto scrollbar-none text-[10px]">
+                  {(['all', 'safety', 'rain', 'health', 'agriculture'] as QuickActionCategory[]).map((cat) => (
+                    <button
+                      key={cat}
+                      onClick={() => setQuickCategory(cat)}
+                      className={`px-2 py-0.5 rounded capitalize font-medium transition-colors cursor-pointer ${
+                        quickCategory === cat
+                          ? 'bg-[#0B72B9] text-white'
+                          : 'text-[#94A3B8] hover:text-white bg-[#162438]'
+                      }`}
+                    >
+                      {cat}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Action Buttons Grid */}
+              <div className="flex flex-wrap gap-1.5">
+                {filteredQuickActions.slice(0, 6).map((qa) => (
+                  <button
+                    key={qa.id}
+                    onClick={() => handleSendMessage(qa.query)}
+                    className="text-[11px] px-2.5 py-1.5 rounded-lg bg-[#142236] border border-[#23354E] hover:border-[#38BDF8] hover:bg-[#1A2C46] text-[#E2E8F0] hover:text-white transition-all cursor-pointer flex items-center gap-1.5 shadow-xs"
+                  >
+                    <span className="material-symbols-outlined text-[13px] text-[#38BDF8]">
+                      {qa.icon}
+                    </span>
+                    <span className="font-medium">{qa.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Messages */}
             {messages.map((m) => (
               <div
                 key={m.id}
                 className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}
               >
                 <div
-                  className={`p-3.5 sm:p-4 rounded-xl max-w-[94%] sm:max-w-[92%] text-xs sm:text-[13px] leading-relaxed break-words [overflow-wrap:anywhere] shadow-md ${
+                  className={`p-3.5 sm:p-4 rounded-xl max-w-[96%] sm:max-w-[92%] text-xs sm:text-[13px] leading-relaxed break-words [overflow-wrap:anywhere] shadow-md ${
                     m.role === 'user'
                       ? 'bg-[#0B72B9] text-white font-medium rounded-tr-none'
-                      : 'bg-[#131C28] border border-[#202B3B] text-[#D7DEE8] rounded-tl-none'
+                      : 'bg-[#101B2B] border border-[#1F2C3F] text-[#D7DEE8] rounded-tl-none'
                   }`}
                 >
                   {m.role === 'user' ? (
                     <div className="text-white font-medium whitespace-pre-wrap">{m.content}</div>
                   ) : (
-                    <MausamMarkdown content={m.content} />
-                  )}
-
-                  {/* Grounding Source Citations & Maps links */}
-                  {m.groundingSources && m.groundingSources.length > 0 && (
-                    <div className="mt-3.5 pt-2.5 border-t border-[#202B3B] flex flex-col gap-1.5">
-                      <span className="text-[11px] font-bold text-[#4FA8E0] flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[14px]">verified</span>
-                        {uiStrings.officialReferences}
-                      </span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {m.groundingSources.map((source, sIdx) => (
-                          <a
-                            key={sIdx}
-                            href={source.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-medium bg-[#0B72B9]/15 text-[#4FA8E0] hover:bg-[#0B72B9]/25 border border-[#0B72B9]/30 transition-colors"
+                    <div>
+                      {/* Status Card Header if structured */}
+                      {m.structured?.statusBadge && (
+                        <div className="mb-3 pb-2.5 border-b border-[#1F2C3F] flex items-center justify-between gap-2 flex-wrap">
+                          <span
+                            className={`px-2.5 py-1 rounded-md text-[11px] font-bold tracking-wide flex items-center gap-1.5 ${
+                              m.structured.statusBadge.type === 'danger'
+                                ? 'bg-red-500/20 text-red-300 border border-red-500/40'
+                                : m.structured.statusBadge.type === 'caution'
+                                ? 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                                : m.structured.statusBadge.type === 'success'
+                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                                : 'bg-[#0B72B9]/20 text-[#38BDF8] border border-[#0B72B9]/40'
+                            }`}
                           >
                             <span className="material-symbols-outlined text-[13px]">
-                              {source.type === 'maps' ? 'place' : 'link'}
+                              {m.structured.statusBadge.type === 'danger'
+                                ? 'warning'
+                                : m.structured.statusBadge.type === 'caution'
+                                ? 'report'
+                                : 'check_circle'}
                             </span>
-                            <span className="truncate max-w-[160px] sm:max-w-[220px]">
-                              {source.title}
-                            </span>
-                            <span className="material-symbols-outlined text-[10px] opacity-70">
-                              open_in_new
-                            </span>
-                          </a>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                            {m.structured.statusBadge.label}
+                          </span>
 
-                  {/* Interactive Suggested Follow-Up Chips inside Message */}
-                  {m.suggestedFollowUps && m.suggestedFollowUps.length > 0 && (
-                    <div className="mt-3.5 pt-2.5 border-t border-[#202B3B] flex flex-col gap-1.5">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#8A94A6] flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[13px]">lightbulb</span>
-                        {uiStrings.suggestedInquiries}
-                      </span>
-                      <div className="flex flex-wrap gap-1.5">
-                        {m.suggestedFollowUps.map((chip, cIdx) => (
-                          <button
-                            key={cIdx}
-                            onClick={() => handleSendMessage(chip)}
-                            className="text-[11px] px-2.5 py-1 rounded-md bg-[#1B2737] hover:bg-[#0B72B9]/30 hover:border-[#4FA8E0] border border-[#2B3B50] text-[#CBD5E1] transition-all text-left cursor-pointer flex items-center gap-1"
-                          >
-                            <span className="text-[#4FA8E0]">›</span>
-                            <span>{chip}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                          {m.structured.metricsLine && (
+                            <span className="text-[11px] text-[#94A3B8] font-mono">
+                              {m.structured.metricsLine}
+                            </span>
+                          )}
+                        </div>
+                      )}
 
-                  {/* Footer metadata & copy action */}
-                  {m.role === 'assistant' && (
-                    <div className="mt-2.5 flex items-center justify-between text-[10px] text-[#8A94A6] pt-1.5 border-t border-[#202B3B]/60">
-                      <span className="truncate max-w-[200px] sm:max-w-[260px] flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[12px] text-[#2ECC71]">
-                          check_circle
+                      {/* Markdown text */}
+                      <MausamMarkdown content={m.content} />
+
+                      {/* Action Links & App Navigators */}
+                      {m.actionLinks && m.actionLinks.length > 0 && (
+                        <div className="mt-3 pt-2.5 border-t border-[#1F2C3F] flex flex-wrap gap-2">
+                          {m.actionLinks.map((al, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => {
+                                if (al.tabId && onNavigateTab) {
+                                  onNavigateTab(al.tabId);
+                                  onClose();
+                                } else if (al.location && onSelectLocation) {
+                                  onSelectLocation(al.location);
+                                  setActiveConversationLocation(al.location);
+                                }
+                              }}
+                              className="px-2.5 py-1 rounded-lg bg-[#0B72B9]/20 border border-[#0B72B9]/50 hover:bg-[#0B72B9]/30 text-[#38BDF8] hover:text-white text-[11px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+                            >
+                              <span className="material-symbols-outlined text-[13px]">
+                                {al.icon}
+                              </span>
+                              {al.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Grounding Source Citations */}
+                      {m.groundingSources && m.groundingSources.length > 0 && (
+                        <div className="mt-3 pt-2.5 border-t border-[#1F2C3F] flex flex-col gap-1.5">
+                          <span className="text-[11px] font-bold text-[#38BDF8] flex items-center gap-1">
+                            <span className="material-symbols-outlined text-[13px]">verified</span>
+                            Official References
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {m.groundingSources.map((g, idx) => (
+                              <a
+                                key={idx}
+                                href={g.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-[10px] px-2 py-0.5 rounded bg-[#142030] text-[#38BDF8] hover:underline flex items-center gap-1 border border-[#1F2C3F]"
+                              >
+                                <span>{g.title}</span>
+                                <span className="material-symbols-outlined text-[10px]">open_in_new</span>
+                              </a>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Suggested Follow-Ups */}
+                      {m.suggestedFollowUps && m.suggestedFollowUps.length > 0 && (
+                        <div className="mt-3 pt-2 border-t border-[#1F2C3F]/80 flex flex-wrap gap-1.5">
+                          {m.suggestedFollowUps.slice(0, 3).map((fu, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => handleSendMessage(fu)}
+                              className="text-[10px] px-2 py-1 rounded-md bg-[#162335] text-[#94A3B8] hover:text-white hover:bg-[#1E3048] border border-[#23354E] transition-colors cursor-pointer flex items-center gap-1"
+                            >
+                              <span className="material-symbols-outlined text-[11px] text-[#38BDF8]">
+                                arrow_outward
+                              </span>
+                              {fu}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Footer Attribution */}
+                      <div className="mt-2.5 flex items-center justify-between text-[10px] text-[#64748B] pt-1.5 border-t border-[#1F2C3F]/60">
+                        <span className="truncate max-w-[240px] sm:max-w-[320px] flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[12px] text-[#2ECC71]">
+                            check_circle
+                          </span>
+                          {m.source || 'connected MAUSAM weather data'}
                         </span>
-                        {m.source || 'IMD Grounded Core'}
-                      </span>
-                      <button
-                        onClick={() => handleCopy(m.id, m.content)}
-                        className="hover:text-white flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-[#202B3B] transition-colors cursor-pointer"
-                        title={uiStrings.copy}
-                      >
-                        <span className="material-symbols-outlined text-[12px]">
-                          {copiedMessageId === m.id ? 'done' : 'content_copy'}
-                        </span>
-                        <span>{copiedMessageId === m.id ? uiStrings.copied : uiStrings.copy}</span>
-                      </button>
+                        <button
+                          onClick={() => handleCopy(m.id, m.content)}
+                          className="hover:text-white flex items-center gap-1 px-1.5 py-0.5 rounded hover:bg-[#1F2C3F] transition-colors cursor-pointer"
+                          title="Copy response"
+                        >
+                          <span className="material-symbols-outlined text-[12px]">
+                            {copiedMessageId === m.id ? 'done' : 'content_copy'}
+                          </span>
+                          <span>{copiedMessageId === m.id ? 'Copied' : 'Copy'}</span>
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
-                <span className="text-[10px] text-[#64748B] mt-1 px-1 font-mono">
+                <span className="text-[10px] text-[#475569] mt-1 px-1 font-mono">
                   {m.timestamp}
                 </span>
               </div>
             ))}
 
             {isLoading && (
-              <div className="flex items-center gap-2.5 text-[#4FA8E0] text-xs p-3.5 bg-[#131C28] rounded-xl border border-[#202B3B] w-fit shadow-md animate-pulse">
+              <div className="flex items-center gap-2.5 text-[#38BDF8] text-xs p-3.5 bg-[#101B2B] rounded-xl border border-[#1F2C3F] w-fit shadow-md animate-pulse">
                 <span className="material-symbols-outlined text-[18px] animate-spin">autorenew</span>
-                <span>{uiStrings.loadingText} {stationDisplayName}...</span>
+                <span>Querying meteorological intelligence for {stationDisplayName}...</span>
               </div>
             )}
             <div ref={messagesEndRef} />
           </div>
         )}
 
-        {/* TAB 2: Comprehensive FAQ Library */}
+        {/* TAB 2: 10 Official FAQ Knowledge Categories */}
         {activeTab === 'faqs' && (
           <div className="flex-1 overflow-y-auto p-3 sm:p-4 flex flex-col gap-3 scrollbar-thin">
-            {/* Search within FAQs */}
+            {/* Search */}
             <div className="relative shrink-0">
-              <span className="material-symbols-outlined absolute left-3 top-2.5 text-[#8A94A6] text-[18px]">
+              <span className="material-symbols-outlined absolute left-3 top-2.5 text-[#64748B] text-[18px]">
                 search
               </span>
               <input
                 type="text"
-                placeholder={uiStrings.faqSearchPlaceholder}
+                placeholder="Search atmospheric FAQs, terminology, radar, AQI..."
                 value={faqSearchQuery}
                 onChange={(e) => setFaqSearchQuery(e.target.value)}
-                className="w-full bg-[#131C28] border border-[#202B3B] rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder-[#8A94A6] focus:outline-none focus:border-[#0B72B9]"
+                className="w-full bg-[#101B2B] border border-[#1F2C3F] rounded-lg pl-9 pr-8 py-2 text-xs text-white placeholder-[#64748B] focus:outline-none focus:border-[#0B72B9]"
               />
               {faqSearchQuery && (
                 <button
                   onClick={() => setFaqSearchQuery('')}
-                  className="absolute right-2.5 top-2.5 text-[#8A94A6] hover:text-white"
+                  className="absolute right-2.5 top-2.5 text-[#64748B] hover:text-white"
                 >
                   <span className="material-symbols-outlined text-[16px]">cancel</span>
                 </button>
               )}
             </div>
 
-            {/* Category Filter Chips */}
+            {/* Category Selector with 10 requested categories */}
             <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none shrink-0">
               {FAQ_CATEGORIES.map((cat) => (
                 <button
                   key={cat.id}
-                  onClick={() => setSelectedCategory(cat.id)}
+                  onClick={() => setSelectedFaqCategory(cat.id)}
                   className={`px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap cursor-pointer transition-all flex items-center gap-1 ${
-                    selectedCategory === cat.id
+                    selectedFaqCategory === cat.id
                       ? 'bg-[#0B72B9] text-white shadow-sm'
-                      : 'bg-[#131C28] text-[#8A94A6] hover:text-white border border-[#202B3B]'
+                      : 'bg-[#101B2B] text-[#94A3B8] hover:text-white border border-[#1F2C3F]'
                   }`}
                 >
                   <span className="material-symbols-outlined text-[13px]">{cat.icon}</span>
@@ -579,39 +816,37 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
             {/* FAQ List Cards */}
             <div className="flex flex-col gap-2">
               {filteredFaqs.length === 0 ? (
-                <div className="text-center py-8 text-[#8A94A6] text-xs">
-                  <span className="material-symbols-outlined text-[32px] mb-2 block text-[#4FA8E0]">
+                <div className="text-center py-8 text-[#64748B] text-xs">
+                  <span className="material-symbols-outlined text-[32px] mb-2 block text-[#38BDF8]">
                     quiz
                   </span>
-                  No FAQs matching &quot;{faqSearchQuery}&quot;. Try asking in the chat stream!
+                  No FAQs matching &quot;{faqSearchQuery}&quot;. Ask directly in the assistant stream!
                 </div>
               ) : (
                 filteredFaqs.map((faq) => (
                   <div
                     key={faq.id}
                     onClick={() => handleSendMessage(faq.question)}
-                    className="p-3 rounded-xl bg-[#131C28] border border-[#202B3B] hover:border-[#0B72B9] hover:bg-[#172332] transition-all cursor-pointer group flex items-start justify-between gap-3 shadow-xs"
+                    className="p-3 rounded-xl bg-[#101B2B] border border-[#1F2C3F] hover:border-[#0B72B9] hover:bg-[#142236] transition-all cursor-pointer group flex items-start justify-between gap-3 shadow-xs"
                   >
                     <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-white text-xs sm:text-[13px] group-hover:text-[#4FA8E0] transition-colors">
-                          {faq.question}
-                        </span>
-                      </div>
-                      <p className="text-[11px] text-[#8A94A6] line-clamp-2">
+                      <span className="font-semibold text-white text-xs sm:text-[13px] group-hover:text-[#38BDF8] transition-colors block">
+                        {faq.question}
+                      </span>
+                      <p className="text-[11px] text-[#94A3B8] line-clamp-2">
                         {faq.shortQuestion}
                       </p>
                       <div className="flex items-center gap-2 pt-1">
-                        <span className="text-[10px] px-2 py-0.5 rounded bg-[#0B72B9]/15 text-[#4FA8E0] font-medium">
+                        <span className="text-[10px] px-2 py-0.5 rounded bg-[#0B72B9]/15 text-[#38BDF8] font-medium">
                           {faq.categoryId.toUpperCase()}
                         </span>
-                        <span className="text-[10px] text-[#8A94A6]">
+                        <span className="text-[10px] text-[#64748B]">
                           {faq.keywords.slice(0, 3).join(', ')}
                         </span>
                       </div>
                     </div>
-                    <div className="w-6 h-6 rounded-full bg-[#1B2737] flex items-center justify-center text-[#8A94A6] group-hover:text-white group-hover:bg-[#0B72B9] shrink-0 transition-colors mt-0.5">
-                      <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+                    <div className="w-6 h-6 rounded-full bg-[#182638] flex items-center justify-center text-[#94A3B8] group-hover:text-white group-hover:bg-[#0B72B9] shrink-0 transition-colors mt-0.5">
+                      <span className="material-symbols-outlined text-[15px]">arrow_forward</span>
                     </div>
                   </div>
                 ))
@@ -620,34 +855,34 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
           </div>
         )}
 
-        {/* TAB 3: All 28 States & 8 UTs Meteorological Directory */}
+        {/* TAB 3: All 28 States & 8 UTs Meteorological Profiles */}
         {activeTab === 'states' && (
           <div className="flex-1 overflow-y-auto p-3 sm:p-4 flex flex-col gap-3 scrollbar-thin">
-            {/* Search States & UTs */}
+            {/* Search */}
             <div className="relative shrink-0">
-              <span className="material-symbols-outlined absolute left-3 top-2.5 text-[#8A94A6] text-[18px]">
+              <span className="material-symbols-outlined absolute left-3 top-2.5 text-[#64748B] text-[18px]">
                 search
               </span>
               <input
                 type="text"
-                placeholder={uiStrings.statesSearchPlaceholder}
+                placeholder="Search State, UT, capital, or observatory..."
                 value={stateSearchQuery}
                 onChange={(e) => setStateSearchQuery(e.target.value)}
-                className="w-full bg-[#131C28] border border-[#202B3B] rounded-lg pl-9 pr-3 py-2 text-xs text-white placeholder-[#8A94A6] focus:outline-none focus:border-[#0B72B9]"
+                className="w-full bg-[#101B2B] border border-[#1F2C3F] rounded-lg pl-9 pr-8 py-2 text-xs text-white placeholder-[#64748B] focus:outline-none focus:border-[#0B72B9]"
               />
               {stateSearchQuery && (
                 <button
                   onClick={() => setStateSearchQuery('')}
-                  className="absolute right-2.5 top-2.5 text-[#8A94A6] hover:text-white"
+                  className="absolute right-2.5 top-2.5 text-[#64748B] hover:text-white"
                 >
                   <span className="material-symbols-outlined text-[16px]">cancel</span>
                 </button>
               )}
             </div>
 
-            <div className="text-[11px] text-[#8A94A6] flex items-center justify-between">
-              <span>Showing {filteredStates.length} Indian States & Union Territories</span>
-              <span className="text-[#4FA8E0] font-medium">Click any region to query IMD AI</span>
+            <div className="text-[11px] text-[#94A3B8] flex items-center justify-between">
+              <span>Showing {filteredStates.length} States & Union Territories</span>
+              <span className="text-[#38BDF8] font-medium">Click any region to query assistant</span>
             </div>
 
             {/* State Cards */}
@@ -655,31 +890,31 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
               {filteredStates.map((st) => (
                 <div
                   key={st.id}
-                  onClick={() => handleSendMessage(`What is the meteorological profile and weather forecast for ${st.name}?`)}
-                  className="p-3 rounded-xl bg-[#131C28] border border-[#202B3B] hover:border-[#0B72B9] hover:bg-[#172332] transition-all cursor-pointer group flex items-start justify-between gap-3 shadow-xs"
+                  onClick={() => handleSendMessage(`What is the meteorological profile, current conditions, and forecast for ${st.name}?`)}
+                  className="p-3 rounded-xl bg-[#101B2B] border border-[#1F2C3F] hover:border-[#0B72B9] hover:bg-[#142236] transition-all cursor-pointer group flex items-start justify-between gap-3 shadow-xs"
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-1.5">
-                      <span className="font-bold text-white text-xs sm:text-[13px] group-hover:text-[#4FA8E0] transition-colors">
+                      <span className="font-bold text-white text-xs sm:text-[13px] group-hover:text-[#38BDF8] transition-colors">
                         {st.name}
                       </span>
-                      <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-[#202B3B] text-[#94A3B8]">
+                      <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-[#1F2C3F] text-[#94A3B8]">
                         {st.code}
                       </span>
-                      <span className="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-[#0B72B9]/20 text-[#4FA8E0]">
+                      <span className="px-1.5 py-0.2 rounded text-[9px] font-semibold bg-[#0B72B9]/20 text-[#38BDF8]">
                         {st.type === 'UNION_TERRITORY' ? 'UT' : 'State'}
                       </span>
                     </div>
                     <p className="text-[11px] text-[#CBD5E1]">
-                      Capital / Observatory: <strong className="text-white">{st.capital}</strong> ({st.representativeStation})
+                      Capital: <strong className="text-white">{st.capital}</strong> ({st.representativeStation})
                     </p>
-                    <p className="text-[10px] text-[#8A94A6] line-clamp-1">
+                    <p className="text-[10px] text-[#64748B] line-clamp-1">
                       Radar: {st.primaryRadar} | Zone: {st.agroZone}
                     </p>
                   </div>
 
                   <div className="flex flex-col items-end gap-1 shrink-0">
-                    <span className="text-xs font-bold text-[#4FA8E0]">
+                    <span className="text-xs font-bold text-[#38BDF8]">
                       {st.normalTemp.min}° - {st.normalTemp.max}°C
                     </span>
                     <span className="text-[10px] text-[#2ECC71]">
@@ -692,39 +927,21 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
           </div>
         )}
 
-        {/* Quick Suggestion Chips (Available on Chat Tab) */}
-        {activeTab === 'chat' && (
-          <div className="p-2.5 sm:p-3 border-t border-[#202B3B] bg-[#0E1520] flex flex-wrap gap-1.5 max-h-28 overflow-y-auto shrink-0">
-            {FAQ_ITEMS.slice(0, 8).map((faq) => (
-              <button
-                key={faq.id}
-                onClick={() => handleSendMessage(faq.question)}
-                className="text-[11px] px-2.5 py-1 rounded-lg bg-[#131C28] border border-[#202B3B] text-[#D7DEE8] hover:text-[#4FA8E0] hover:border-[#4FA8E0] transition-all text-left cursor-pointer flex items-center gap-1.5 shadow-xs"
-              >
-                <span className="material-symbols-outlined text-[13px] text-[#4FA8E0]">
-                  contact_support
-                </span>
-                <span className="truncate max-w-[200px]">{faq.shortQuestion}</span>
-              </button>
-            ))}
-          </div>
-        )}
-
         {/* Input Bar */}
-        <div className="p-3 sm:p-3.5 border-t border-[#202B3B] bg-[#111923] flex items-center gap-2 shrink-0">
+        <div className="p-3 sm:p-3.5 border-t border-[#1F2C3F] bg-[#0A111C] flex items-center gap-2 shrink-0">
           <input
             type="text"
-            placeholder={uiStrings.inputPlaceholder}
+            placeholder={uiStrings.inputPlaceholder || 'Ask anything about rain, workout safety, travel, radar, warnings...'}
             value={inputPrompt}
             onChange={(e) => setInputPrompt(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-            className="flex-1 bg-[#0B1017] border border-[#202B3B] rounded-lg px-3.5 py-2.5 text-xs sm:text-[13px] text-white placeholder-[#64748B] focus:outline-none focus:border-[#0B72B9] transition-colors"
+            className="flex-1 bg-[#101B2B] border border-[#1F2C3F] rounded-lg px-3.5 py-2.5 text-xs sm:text-[13px] text-white placeholder-[#64748B] focus:outline-none focus:border-[#0B72B9] transition-colors"
           />
           <button
             onClick={() => handleSendMessage()}
             disabled={isLoading || !inputPrompt.trim()}
             className="px-3.5 py-2.5 rounded-lg bg-[#0B72B9] hover:bg-[#0B72B9]/90 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold text-xs flex items-center justify-center transition-all cursor-pointer shadow-md shrink-0"
-            aria-label="Send message"
+            aria-label="Send query to Ask MAUSAM"
           >
             <span className="material-symbols-outlined text-[18px]">send</span>
           </button>

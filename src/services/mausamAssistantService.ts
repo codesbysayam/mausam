@@ -26,7 +26,7 @@ import {
   translateAqiStatusToLang,
   translatePollenRiskToLang,
   SUPPORTED_MAUSAM_AI_LANGUAGES,
-} from '../data/mausamAiLanguages';
+} from '../data/mausamLanguages';
 
 export type { GroundingLink, MausamContext, FAQCategory, FAQItem, StateMeteorologicalProfile };
 export { FAQ_CATEGORIES, ALL_INDIA_STATES_MET_PROFILES, SUPPORTED_MAUSAM_AI_LANGUAGES };

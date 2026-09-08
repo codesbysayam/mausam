@@ -152,21 +152,35 @@ export const HomeSevereWeatherStrip: React.FC<HomeSevereWeatherStripProps> = ({
             </span>
           </div>
 
-          {/* Alert Content: Affected Locations (primary) + Description (secondary) */}
-          <div className="space-y-0.5">
-            <div className="text-sm sm:text-base font-bold text-white tracking-tight leading-snug">
-              <span className="text-[#FFA07A] font-extrabold">{affectedLocations}</span>
+          {/* Alert Content: Affected Locations (primary) + Hazard Tag + Description (secondary) */}
+          <div className="space-y-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-semibold text-[#94A3B8] uppercase tracking-wider">AFFECTED REGIONS:</span>
+              <span className="text-sm sm:text-base font-bold text-[#FCA5A5] tracking-tight leading-snug">
+                {affectedLocations}
+              </span>
             </div>
-            <p className="text-xs sm:text-sm text-[#D1D5DB] leading-relaxed">
+
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-[#EF4444]/25 text-[#FECACA] border border-[#EF4444]/40">
+                Heavy to Very Heavy Rain & Squall
+              </span>
+              <span className="text-[#94A3B8]">•</span>
+              <span className="text-[#E2E8F0] font-medium">Valid through next 24 Hours</span>
+            </div>
+
+            <p className="text-xs sm:text-sm text-[#CBD5E1] leading-relaxed">
               {alertSummary}
             </p>
           </div>
 
-          {/* Metadata Row */}
-          <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] text-[#94A3B8]">
-            <span className="font-medium text-[#A0AEC0]">Source: IMD Synoptic Division</span>
+          {/* Metadata Row: Source + Active Count + Observation Time */}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[#94A3B8] pt-0.5 border-t border-[#3D1A21]/60">
+            <span className="font-medium text-[#CBD5E1]">Source: IMD Synoptic Division & NDMA SACHET</span>
             <span>•</span>
             <span>{totalAffectedCount} Subdivisions under Alert</span>
+            <span>•</span>
+            <span className="text-[#38BDF8]">Status: LIVE TELEMETRY</span>
           </div>
         </div>
 

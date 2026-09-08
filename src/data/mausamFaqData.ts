@@ -36,16 +36,17 @@ export interface FAQItem {
 }
 
 export const FAQ_CATEGORIES: FAQCategory[] = [
-  { id: 'all', name: 'All Topics', icon: 'apps', description: 'Browse all 60+ weather & atmospheric FAQs' },
-  { id: 'current', name: 'Live Weather', icon: 'thermostat', description: 'Current observations, temp, humidity & telemetry' },
-  { id: 'health_aqi', name: 'AQI & Pollen', icon: 'air', description: 'Air quality, PM2.5, respiratory & bio-allergens' },
-  { id: 'rain_alerts', name: 'Rain & Alerts', icon: 'thunderstorm', description: 'Rainfall forecasts, warnings, lightning & Damini' },
-  { id: 'states_regional', name: 'Synoptic Climate', icon: 'public', description: 'Monsoons, Western Disturbances, Loo & Cold Waves' },
-  { id: 'agromet', name: 'Agromet & Kisan', icon: 'agriculture', description: 'Farming bulletins, crop care & Meghdoot advisories' },
-  { id: 'cyclone_marine', name: 'Cyclones & Marine', icon: 'cyclone', description: 'Depressions, sea state, storm surges & coastal safety' },
-  { id: 'radar_science', name: 'Radar & Physics', icon: 'radar', description: 'Doppler radar, satellite & atmospheric physics' },
-  { id: 'aviation_marine', name: 'Aviation & Sea', icon: 'flight_takeoff', description: 'METAR, TAF, high waves & turbulence' },
-  { id: 'disaster_citizen', name: 'Disaster & Safety', icon: 'shield', description: 'Floods, helplines, emergency kit & urban waterlogging' },
+  { id: 'all', name: 'All Topics', icon: 'apps', description: 'Comprehensive meteorological knowledge library' },
+  { id: 'basics', name: 'Weather Basics', icon: 'thermostat', description: 'Temperature, humidity, dew point, pressure & observations' },
+  { id: 'forecast', name: 'Forecast', icon: 'calendar_month', description: 'Short-range, hourly, synoptic & 7-day outlooks' },
+  { id: 'warnings', name: 'Warnings', icon: 'warning', description: 'Color-coded alerts, thunderstorms, lightning & cyclones' },
+  { id: 'radar', name: 'Radar', icon: 'radar', description: 'Doppler weather radar, reflectivity, sweeps & satellite' },
+  { id: 'aqi', name: 'AQI', icon: 'air', description: 'Air Quality Index, PM2.5, PM10, smog & health impacts' },
+  { id: 'agriculture', name: 'Agriculture', icon: 'agriculture', description: 'Gramin Krishi Mausam, spraying conditions & crop care' },
+  { id: 'marine', name: 'Marine', icon: 'tsunami', description: 'Coastal conditions, sea state, high waves & fishermen advisories' },
+  { id: 'safety', name: 'Safety', icon: 'health_and_safety', description: 'Outdoor activity, running, travel, disaster helplines & precautions' },
+  { id: 'climate', name: 'Climate', icon: 'public', description: 'Monsoons, Western Disturbances, heatwaves, cold waves & seasons' },
+  { id: 'technical', name: 'Technical Meteorology', icon: 'science', description: 'Atmospheric thermodynamics, METAR/TAF & numerical models' },
 ];
 
 export const FAQ_ITEMS: FAQItem[] = [

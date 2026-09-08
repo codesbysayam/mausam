@@ -150,9 +150,25 @@ export interface CurrentWeather {
   solarNoon?: string;
   daylightDuration?: string;
   dayLength?: string;
+  nightDuration?: string;
   dawnTime?: string;
   duskTime?: string;
+  civilDawn?: string;
+  civilDusk?: string;
   solarElevationDeg?: number;
+  solarRadiation?: number; // W/m² direct normal or global solar irradiance
+  pressureTendency?: 'Rising' | 'Steady' | 'Falling';
+  pressureTendencyHpa?: number;
+  rainfallLast1h?: number; // mm
+  rainfallLast3h?: number; // mm
+  rainfallLast24h?: number; // mm
+  moonrise?: string;
+  moonset?: string;
+  moonPhase?: string;
+  moonIllumination?: number; // percentage 0-100
+  soilMoisture?: number; // m³/m³
+  soilTemperature?: number; // °C
+  evapotranspiration?: number; // mm FAO ET0
   stationName: string;
   stationCode: string;
   locationId?: string;
@@ -263,11 +279,14 @@ export interface HourlyForecastItem {
   time: string;
   hourNumber: number;
   temp: number;
+  feelsLike?: number;
   condition: string;
+  rainCondition?: string;
   icon: string;
   aqi: number;
   rainProb: number;
   windSpeed: number;
+  windGusts?: number;
   uv: number;
   humidity: number;
   isNow?: boolean;
@@ -277,6 +296,28 @@ export interface HourlyForecastItem {
   qpf?: number;
   pressure?: number;
   precipitation?: number;
+  visibilityKm?: number;
+  solarRadiation?: number;
+}
+
+export interface MarineObservation {
+  isApplicable: boolean;
+  waveHeightMeters: number | null;
+  swellHeightMeters: number | null;
+  wavePeriodSeconds: number | null;
+  swellPeriodSeconds: number | null;
+  seaSurfaceTempC: number | null;
+  currentVelocityKmh: number | null;
+  currentDirectionDeg: number | null;
+  currentDirectionCompass: string | null;
+  windWaveHeightMeters: number | null;
+  highTideTime: string | null;
+  lowTideTime: string | null;
+  fishingSuitability: 'Favorable' | 'Caution' | 'Advisory - Restrict Navigation' | 'Prohibited' | 'Unavailable';
+  beachSafetyStatus: 'Safe' | 'Caution - Moderate Rip Currents' | 'Hazardous Surf' | 'Unavailable';
+  source: string;
+  timestampFormatted: string;
+  status: 'LIVE' | 'RECENT' | 'STALE' | 'UNAVAILABLE';
 }
 
 export interface DailyForecastItem {

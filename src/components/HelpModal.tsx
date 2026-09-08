@@ -60,10 +60,10 @@ export const HelpModal: React.FC<HelpModalProps> = ({ isOpen, onClose }) => {
 
           <div className="bg-[#0F141A] p-3.5 rounded-lg card-border">
             <h4 className="text-xs text-[#FFFFFF] font-semibold mb-1">
-              AI Meteorologist (Ask MAUSAM)
+              Atmospheric Assistant (Ask MAUSAM)
             </h4>
             <p className="text-[#8A94A6]">
-              Powered by Google Gemini models running server-side, Ask MAUSAM analyzes real-time multi-sensor telemetry to give customized recommendations for training, running, air quality mitigation, and daily commuting.
+              Ask MAUSAM analyzes real-time multi-sensor telemetry, synoptic forecasts, active warnings, and air quality indexes to deliver context-aware meteorological guidance for travel, agriculture, outdoor safety, and daily decision-making.
             </p>
           </div>
         </div>

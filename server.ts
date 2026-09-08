@@ -29,7 +29,7 @@ function getAIClient(): GoogleGenAI | null {
       apiKey: process.env.GEMINI_API_KEY,
       httpOptions: {
         headers: {
-          'User-Agent': 'aistudio-build',
+          'User-Agent': 'mausam-atmospheric-platform',
         },
       },
     });
@@ -280,7 +280,7 @@ ${telemetryContext.metadata?.source || 'India Meteorological Department (IMD)'}`
           if (targetMode === 'maps') {
             try {
               response = await client.models.generateContent({
-                model: 'gemini-3.7-flash',
+                model: 'gemini-3.8-flash',
                 contents: prompt,
                 config: {
                   systemInstruction,
@@ -297,14 +297,14 @@ ${telemetryContext.metadata?.source || 'India Meteorological Department (IMD)'}`
               });
             } catch (mapsErr: any) {
               if (isQuotaError(mapsErr)) {
-                console.warn('Gemini API Quota reached during maps grounding, transitioning to IMD Grounded Telemetry Engine.');
+                console.warn('API Quota reached during maps grounding, transitioning to IMD Grounded Telemetry Engine.');
                 response = null;
               } else {
                 console.warn('Maps grounding tool unavailable, attempting standard generation:', mapsErr?.message || mapsErr);
                 try {
                   usedMode = 'standard';
                   response = await client.models.generateContent({
-                    model: 'gemini-3.7-flash',
+                    model: 'gemini-3.8-flash',
                     contents: prompt,
                     config: {
                       systemInstruction,
@@ -320,7 +320,7 @@ ${telemetryContext.metadata?.source || 'India Meteorological Department (IMD)'}`
           } else if (targetMode === 'search') {
             try {
               response = await client.models.generateContent({
-                model: 'gemini-3.7-flash',
+                model: 'gemini-3.8-flash',
                 contents: prompt,
                 config: {
                   systemInstruction,
@@ -329,14 +329,14 @@ ${telemetryContext.metadata?.source || 'India Meteorological Department (IMD)'}`
               });
             } catch (searchErr: any) {
               if (isQuotaError(searchErr)) {
-                console.warn('Gemini API Quota reached during search grounding, transitioning to IMD Grounded Telemetry Engine.');
+                console.warn('API Quota reached during search grounding, transitioning to IMD Grounded Telemetry Engine.');
                 response = null;
               } else {
                 console.warn('Search grounding tool unavailable, attempting standard generation:', searchErr?.message || searchErr);
                 try {
                   usedMode = 'standard';
                   response = await client.models.generateContent({
-                    model: 'gemini-3.7-flash',
+                    model: 'gemini-3.8-flash',
                     contents: prompt,
                     config: {
                       systemInstruction,
@@ -352,7 +352,7 @@ ${telemetryContext.metadata?.source || 'India Meteorological Department (IMD)'}`
           } else {
             try {
               response = await client.models.generateContent({
-                model: 'gemini-3.7-flash',
+                model: 'gemini-3.8-flash',
                 contents: prompt,
                 config: {
                   systemInstruction,
@@ -361,7 +361,7 @@ ${telemetryContext.metadata?.source || 'India Meteorological Department (IMD)'}`
               });
             } catch (genErr: any) {
               if (isQuotaError(genErr)) {
-                console.warn('error reached, transitioning to IMD Grounded Telemetry Engine.');
+                console.warn('API Quota reached, transitioning to IMD Grounded Telemetry Engine.');
               } else {
                 console.warn('Standard generation unavailable:', genErr?.message || genErr);
               }
@@ -381,7 +381,7 @@ ${telemetryContext.metadata?.source || 'India Meteorological Department (IMD)'}`
       if (response && response.text) {
         return res.json({
           response: response.text,
-          source: 'India Meteorological Department (IMD) / Gemini Atmospheric AI',
+          source: 'India Meteorological Department (IMD) Atmospheric Intelligence',
           groundingSources,
           modeUsed: usedMode,
         });
@@ -421,6 +421,7 @@ Source: India Meteorological Department (IMD)`;
   };
 
   app.post('/api/ask-mausam', handleAskMausam);
+  app.post('/api/mausam/chat', handleAskMausam);
 
   // Dedicated Google Search Grounding endpoint
   app.post('/api/ai/search-grounded-bulletin', async (req, res) => {
@@ -438,7 +439,7 @@ Source: India Meteorological Department (IMD)`;
       const prompt = query || `What is the latest official IMD weather forecast, severe weather warnings, or rain advisory for ${district ? district + ', ' : ''}${state || 'India'} today?`;
 
       const response = await client.models.generateContent({
-        model: 'gemini-3.7-flash',
+        model: 'gemini-3.8-flash',
         contents: prompt,
         config: {
           systemInstruction: 'You are an IMD Meteorological Bulletin generator. Provide precise, up-to-date weather summaries with rainfall alerts and actionable advice.',

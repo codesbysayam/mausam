@@ -65,8 +65,8 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
 
   const localizedDateString = formatDate(now);
 
-  const searchResults = searchQuery.trim()
-    ? locationService.searchLocations(searchQuery)
+  const smartResults = searchQuery.trim()
+    ? locationService.smartSearch(searchQuery)
     : [];
 
   const handleAdjustFontSize = (delta: number) => {
@@ -107,12 +107,12 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
                 <input
                   type="text"
                   id="station-search-input-desktop"
-                  placeholder={t('searchPlaceholder', 'Search city, state or observatory...')}
+                  placeholder={t('searchPlaceholder', "Search city, state, AQI, radar, warnings (e.g. 'Kolkata AQI', 'Mumbai warnings')...")}
                   value={searchQuery}
                   onFocus={() => setIsSearchOpen(true)}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full h-10 bg-[#0B2239] border border-[#1D4E73] hover:border-[#1565C0]/60 focus:border-[#1565C0] rounded-xl text-white text-xs pl-9 pr-8 focus:outline-none transition-colors"
-                  aria-label={t('searchPlaceholder', 'Search city, state or observatory...')}
+                  aria-label={t('searchPlaceholder', "Search city, state, AQI, radar, warnings (e.g. 'Kolkata AQI', 'Mumbai warnings')...")}
                 />
                 {searchQuery && (
                   <button
@@ -186,24 +186,34 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
                       <span>{t('selectStation', 'SELECT LOCATION')}</span>
                       <span className="text-[#E3F2FD] truncate max-w-[150px]">{selectedLocation.city}, {selectedLocation.state}</span>
                     </div>
-                    {searchResults.length > 0 ? (
-                      searchResults.slice(0, 10).map((loc) => (
+                    {smartResults.length > 0 ? (
+                      smartResults.slice(0, 10).map((res, idx) => (
                         <div
-                          key={loc.id}
+                          key={`${res.location.id}-${idx}`}
                           onClick={() => {
-                            onSelectLocation(loc);
+                            onSelectLocation(res.location);
+                            if (onNavigateTab && res.intentTab) {
+                              onNavigateTab(res.intentTab);
+                            }
                             setIsSearchOpen(false);
                             setSearchQuery('');
                           }}
                           className={`p-3 text-xs hover:bg-[#102D47] cursor-pointer flex justify-between items-center border-b border-[#1D4E73]/50 transition-colors ${
-                            selectedLocation.id === loc.id ? 'bg-[#1565C0]/20 text-[#E3F2FD] font-semibold' : 'text-white'
+                            selectedLocation.id === res.location.id ? 'bg-[#1565C0]/20 text-[#E3F2FD] font-semibold' : 'text-white'
                           }`}
                         >
-                          <div>
-                            <div className="font-semibold">{loc.city}</div>
-                            <div className="text-[10px] text-[#B8C7D9]">{loc.district || loc.state}</div>
+                          <div className="flex-1 pr-2">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-semibold text-white">{res.displayTitle}</span>
+                              {res.matchedParameter && (
+                                <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#1499E8]/25 text-[#4FA8E0] border border-[#1499E8]/40 font-bold uppercase">
+                                  {res.matchedParameter}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[10px] text-[#B8C7D9]">{res.displaySubtitle}</div>
                           </div>
-                          <div className="text-[11px] text-[#B8C7D9]">{loc.state}</div>
+                          <div className="text-[11px] text-[#B8C7D9] shrink-0 font-medium">{res.location.state}</div>
                         </div>
                       ))
                     ) : searchQuery ? (
@@ -384,12 +394,12 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
                 <input
                   type="text"
                   id="station-search-input-mobile"
-                  placeholder={t('searchPlaceholder', 'Search city, state or station...')}
+                  placeholder={t('searchPlaceholder', "Search city, state, AQI, radar, warnings...")}
                   value={searchQuery}
                   onFocus={() => setIsSearchOpen(true)}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full h-10 bg-[#0B2239] border border-[#1D4E73] rounded-xl text-white text-xs pl-9 pr-8 focus:outline-none focus:border-[#1565C0]"
-                  aria-label={t('searchPlaceholder', 'Search city, state or station...')}
+                  aria-label={t('searchPlaceholder', "Search city, state, AQI, radar, warnings...")}
                 />
                 {searchQuery && (
                   <button
@@ -442,21 +452,34 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
                     <span>{t('selectStation', 'SELECT LOCATION')}</span>
                     <span className="text-[#E3F2FD] truncate max-w-[140px]">{selectedLocation.city}</span>
                   </div>
-                  {searchResults.length > 0 ? (
-                    searchResults.map((loc) => (
+                  {smartResults.length > 0 ? (
+                    smartResults.map((res, idx) => (
                       <div
-                        key={loc.id}
+                        key={`${res.location.id}-${idx}`}
                         onClick={() => {
-                          onSelectLocation(loc);
+                          onSelectLocation(res.location);
+                          if (onNavigateTab && res.intentTab) {
+                            onNavigateTab(res.intentTab);
+                          }
                           setIsSearchOpen(false);
                           setSearchQuery('');
                         }}
                         className={`p-3 text-xs hover:bg-[#102D47] cursor-pointer flex justify-between items-center border-b border-[#1D4E73]/40 min-h-[44px] ${
-                          selectedLocation.id === loc.id ? 'bg-[#1565C0]/20 text-[#E3F2FD] font-bold' : 'text-white'
+                          selectedLocation.id === res.location.id ? 'bg-[#1565C0]/20 text-[#E3F2FD] font-bold' : 'text-white'
                         }`}
                       >
-                        <div className="font-semibold">{loc.city}</div>
-                        <div className="text-[11px] text-[#B8C7D9]">{loc.state}</div>
+                        <div className="flex-1 pr-2">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-semibold text-white">{res.displayTitle}</span>
+                            {res.matchedParameter && (
+                              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[#1499E8]/25 text-[#4FA8E0] border border-[#1499E8]/40 font-bold uppercase">
+                                {res.matchedParameter}
+                              </span>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-[#B8C7D9]">{res.displaySubtitle}</div>
+                        </div>
+                        <div className="text-[11px] text-[#B8C7D9] shrink-0 font-medium">{res.location.state}</div>
                       </div>
                     ))
                   ) : searchQuery ? (

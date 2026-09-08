@@ -606,12 +606,16 @@ export default function App() {
         <span className="w-2 h-2 rounded-full bg-[#2ECC71] animate-ping" />
       </button>
 
-      {/* AI Advisory Drawer */}
+      {/* Ask MAUSAM Atmospheric Intelligence Drawer */}
       <AskMausamDrawer
         isOpen={isAskMausamOpen}
         onClose={() => setIsAskMausamOpen(false)}
         weather={weatherBundle.current}
+        weatherBundle={weatherBundle}
+        selectedLocation={selectedLocation}
         currentStation={currentStationForAi}
+        onSelectLocation={handleSelectLocation}
+        onNavigateTab={navigateToTab}
       />
     </div>
   );

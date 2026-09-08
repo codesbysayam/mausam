@@ -2,6 +2,15 @@ import { LocationRecord, WeatherStation } from '../types';
 import { ALL_INDIA_LOCATIONS } from '../data/allIndiaLocations';
 import { PRIMARY_ODISHA_LOCATION } from '../data/odishaLocations';
 
+export interface SmartSearchResult {
+  location: LocationRecord;
+  intentTab: 'home' | 'weather' | 'forecast' | 'warnings' | 'radar' | 'aqi' | 'agromet' | 'reports';
+  intentLabel: string;
+  matchedParameter?: string;
+  displayTitle: string;
+  displaySubtitle: string;
+}
+
 class LocationService {
   private locations: LocationRecord[] = ALL_INDIA_LOCATIONS;
   private selectedLocationId: string = PRIMARY_ODISHA_LOCATION.id;
@@ -157,6 +166,89 @@ class LocationService {
 
       return 0;
     });
+  }
+
+  /**
+   * Intent-based smart search.
+   * Recognizes location + parameter queries (e.g., "Kolkata AQI", "Mumbai warnings", "Delhi temperature", "Odisha rainfall", "Jaipur radar")
+   * and directs user directly to the relevant view.
+   */
+  smartSearch(query: string): SmartSearchResult[] {
+    if (!query || !query.trim()) return [];
+    const raw = query.toLowerCase().trim();
+
+    type TabType = 'home' | 'weather' | 'forecast' | 'warnings' | 'radar' | 'aqi' | 'agromet' | 'reports';
+
+    let intentTab: TabType = 'weather';
+    let intentLabel = 'Live Weather';
+    let matchedParameter: string | undefined = undefined;
+
+    const keywords: { patterns: string[]; tab: TabType; label: string; param: string }[] = [
+      { patterns: ['aqi', 'air quality', 'air', 'pollution', 'pm2.5', 'pm10'], tab: 'aqi', label: 'Air Quality (NAQI)', param: 'AQI' },
+      { patterns: ['warning', 'warnings', 'alert', 'alerts', 'cyclone', 'danger', 'hazard'], tab: 'warnings', label: 'Severe Weather Warnings', param: 'Warnings' },
+      { patterns: ['radar', 'doppler', 'dwr', 'satellite', 'echo', 'reflectivity'], tab: 'radar', label: 'Doppler Radar & Maps', param: 'Radar' },
+      { patterns: ['forecast', '7-day', 'weekly', 'tomorrow', 'extended'], tab: 'forecast', label: '7-Day Forecast', param: 'Forecast' },
+      { patterns: ['agriculture', 'agromet', 'crop', 'farming', 'soil', 'irrigation', 'kisan'], tab: 'agromet', label: 'Agromet & Crop Advisories', param: 'Agromet' },
+      { patterns: ['report', 'bulletin', 'pdf', 'export', 'download'], tab: 'reports', label: 'Meteorological Reports', param: 'Reports' },
+      { patterns: ['temp', 'temperature', 'heat', 'cold'], tab: 'weather', label: 'Temperature & Thermal Telemetry', param: 'Temperature' },
+      { patterns: ['rain', 'rainfall', 'precipitation', 'monsoon'], tab: 'weather', label: 'Rainfall & Precipitation', param: 'Rainfall' },
+      { patterns: ['wind', 'gust', 'breeze'], tab: 'weather', label: 'Wind Velocity & Vector', param: 'Wind' },
+      { patterns: ['humidity', 'dew point', 'dewpoint', 'moisture'], tab: 'weather', label: 'Humidity & Dew Point', param: 'Humidity' },
+      { patterns: ['uv', 'sun', 'solar', 'radiation'], tab: 'weather', label: 'Solar & UV Exposure', param: 'Solar/UV' },
+      { patterns: ['marine', 'sea', 'wave', 'tide', 'coastal'], tab: 'weather', label: 'Marine & Ocean State', param: 'Marine' },
+      { patterns: ['weather', 'nowcast', 'observation', 'climate'], tab: 'weather', label: 'Current Weather Telemetry', param: 'Weather' },
+    ];
+
+    // Check if query contains any of the patterns
+    let locationPart = raw;
+    for (const kw of keywords) {
+      for (const pat of kw.patterns) {
+        const regex = new RegExp(`\\b${pat}\\b`, 'i');
+        if (regex.test(raw)) {
+          intentTab = kw.tab;
+          intentLabel = kw.label;
+          matchedParameter = kw.param;
+          locationPart = raw.replace(regex, ' ').replace(/\s+/g, ' ').trim();
+          break;
+        }
+      }
+      if (matchedParameter) break;
+    }
+
+    // Search locations with the stripped locationPart, or raw if stripped is empty
+    const searchTerm = locationPart || raw;
+    let locations = this.searchLocations(searchTerm);
+
+    // If no locations matched stripped term, try matching raw query
+    if (locations.length === 0 && locationPart !== raw) {
+      locations = this.searchLocations(raw);
+    }
+
+    // If still no locations and user just typed an intent word (e.g. "AQI" or "Radar"), return current location with that intent
+    if (locations.length === 0 && matchedParameter) {
+      const currentLoc = this.getSelectedLocation();
+      return [
+        {
+          location: currentLoc,
+          intentTab,
+          intentLabel,
+          matchedParameter,
+          displayTitle: `${currentLoc.city} — ${intentLabel}`,
+          displaySubtitle: `View live ${matchedParameter} data for ${currentLoc.city}, ${currentLoc.state}`,
+        },
+      ];
+    }
+
+    return locations.map((loc) => ({
+      location: loc,
+      intentTab,
+      intentLabel,
+      matchedParameter,
+      displayTitle: matchedParameter ? `${loc.city} — ${intentLabel}` : `${loc.city}, ${loc.state}`,
+      displaySubtitle: matchedParameter
+        ? `Open ${matchedParameter} in ${intentLabel} for ${loc.city}`
+        : `${loc.district || loc.state} • ${loc.elevation || 'AWS Station'}`,
+    }));
   }
 
   getSelectedLocation(): LocationRecord {

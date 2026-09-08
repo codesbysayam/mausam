@@ -12,6 +12,10 @@ import { SevenDaySynopticForecast } from '../components/weather/SevenDaySynoptic
 import { SolarCycleCard } from '../components/weather/SolarCycleCard';
 import { SolarDynamics } from '../components/weather/SolarDynamics';
 import { PersonaWeatherHub } from '../components/weather/personas/PersonaWeatherHub';
+import { WeatherDecisionCenter } from '../components/weather/WeatherDecisionCenter';
+import { CoastalMarineSection } from '../components/weather/CoastalMarineSection';
+import { LightningThunderstormSection } from '../components/weather/LightningThunderstormSection';
+import { WeatherDataExplainer } from '../components/weather/WeatherDataExplainer';
 import { buildHumanWeatherStory } from '../services/humanWeatherEngine';
 import { LocatingPhase, GeolocationServiceError, NearestStationResult } from '../services/geolocationService';
 import { LocationStatusBar } from '../components/location/LocationStatusBar';
@@ -170,9 +174,10 @@ export const WeatherPage: React.FC<WeatherPageProps> = ({
       </div>
 
       {/* =========================================================================
-          4. REAL-TIME SYNOPTIC OPERATIONAL STATUS STRIP
+          4. REAL-TIME SYNOPTIC OPERATIONAL STATUS STRIP & LIGHTNING NOWCAST
       ========================================================================= */}
       <WeatherStatusStrip weather={current} alerts={alerts} />
+      <LightningThunderstormSection location={selectedLocation} weather={current} alerts={alerts} />
 
       {/* =========================================================================
           5. 12-PARAMETER CALIBRATED METEOROLOGICAL TELEMETRY GRID
@@ -183,6 +188,11 @@ export const WeatherPage: React.FC<WeatherPageProps> = ({
           6. TODAY'S HOURLY WEATHER TIMELINE (NOWCAST WITH VISUAL CURVE)
       ========================================================================= */}
       <HourlyWeatherTimeline hourly={hourly} />
+
+      {/* =========================================================================
+          6B. OPERATIONAL WEATHER DECISION CENTER & PRACTICAL ADVISORIES
+      ========================================================================= */}
+      <WeatherDecisionCenter weather={current} hourly={hourly} alerts={alerts} />
 
       {/* =========================================================================
           7. 7-DAY EXTENDED SYNOPTIC FORECAST & ASTRONOMICAL EPHEMERIS CYCLE
@@ -281,6 +291,13 @@ export const WeatherPage: React.FC<WeatherPageProps> = ({
       ========================================================================= */}
       <div className="w-full">
         <SolarDynamics location={selectedLocation} weather={current} />
+      </div>
+
+      {/* =========================================================================
+          8C. COASTAL & MARINE METEOROLOGY (OCEANOGRAPHIC TELEMETRY)
+      ========================================================================= */}
+      <div className="w-full">
+        <CoastalMarineSection location={selectedLocation} />
       </div>
 
       {/* =========================================================================
@@ -401,6 +418,11 @@ export const WeatherPage: React.FC<WeatherPageProps> = ({
           10. 8 SPECIALIZED WEATHER INTELLIGENCE PERSONAS
       ========================================================================= */}
       <PersonaWeatherHub selectedLocation={selectedLocation} weatherBundle={weatherBundle} />
+
+      {/* =========================================================================
+          11. METEOROLOGICAL DATA EXPLAINER & TECHNICAL GUIDE
+      ========================================================================= */}
+      <WeatherDataExplainer />
     </div>
   );
 };
