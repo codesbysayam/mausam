@@ -12,7 +12,6 @@ import { LocationStatusBar } from '../components/location/LocationStatusBar';
 
 // Modular Homepage Sections
 import { HomeAtmosphericHero } from '../components/home/HomeAtmosphericHero';
-import { HomeSevereAlertBanner } from '../components/home/HomeSevereAlertBanner';
 import { HomeTodayAtAGlance } from '../components/home/HomeTodayAtAGlance';
 import { HomeHourlyTimeline } from '../components/home/HomeHourlyTimeline';
 import { HomeSevenDayForecast } from '../components/home/HomeSevenDayForecast';
@@ -166,9 +165,11 @@ export const HomePage: React.FC<HomePageProps> = ({
         onChangeLocationClick={onOpenLocationCenter}
       />
 
-      {/* SEVERE WEATHER ALERT STRIP */}
+      {/* SEVERE WEATHER ALERT CENTER */}
       <HomeSevereWeatherStrip
         alerts={alerts}
+        selectedLocation={selectedLocation}
+        lastUpdated={current.lastUpdated}
         onNavigateToWarnings={() => onNavigateToTab('warnings')}
       />
 
@@ -217,12 +218,6 @@ export const HomePage: React.FC<HomePageProps> = ({
       <HomeLiveTimeline
         hourly={hourly}
         locationName={selectedLocation.displayName || `${selectedLocation.city}, ${selectedLocation.state}`}
-      />
-
-      {/* 2. DYNAMIC SEVERE WEATHER WARNING BANNER */}
-      <HomeSevereAlertBanner
-        alerts={alerts}
-        onNavigateToWarnings={() => onNavigateToTab('warnings')}
       />
 
       {/* 2.5 ACTIVE OBSERVATORY TELEMETRY SNAPSHOT & GPS CONTROLLER */}
