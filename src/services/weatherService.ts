@@ -462,6 +462,15 @@ class WeatherService {
       observationStatus: 'LIVE',
       observationSource: location.imdStation ? `IMD Station (${location.imdStation}) & Open-Meteo Grid` : 'Open-Meteo Surface Grid (IMD Coordinates Fallback)',
       observationTimeFormatted: `${this.formatIstDate(now)} • ${this.formatIstTime(now)} IST`,
+      previousHourTelemetry: startIdx > 0 ? {
+        temp: hourlyRaw.temperature_2m?.[startIdx - 1] !== undefined ? Math.round(hourlyRaw.temperature_2m[startIdx - 1] * 10) / 10 : undefined,
+        humidity: hourlyRaw.relative_humidity_2m?.[startIdx - 1] !== undefined ? Math.round(hourlyRaw.relative_humidity_2m[startIdx - 1]) : undefined,
+        windSpeed: hourlyRaw.wind_speed_10m?.[startIdx - 1] !== undefined ? Math.round(hourlyRaw.wind_speed_10m[startIdx - 1] * 10) / 10 : undefined,
+        pressure: hourlyRaw.surface_pressure?.[startIdx - 1] !== undefined ? Math.round(hourlyRaw.surface_pressure[startIdx - 1] * 10) / 10 : undefined,
+        precipitation: hourlyRaw.precipitation?.[startIdx - 1] !== undefined ? Math.round(hourlyRaw.precipitation[startIdx - 1] * 10) / 10 : 0,
+        timestamp: hourlyTimes[startIdx - 1] ? new Date(hourlyTimes[startIdx - 1]).getTime() : now.getTime() - 3600000,
+        timeString: hourlyTimes[startIdx - 1] ? this.formatIstTime(new Date(hourlyTimes[startIdx - 1])) : 'Prior Cycle',
+      } : undefined,
       isLive: true,
     };
 

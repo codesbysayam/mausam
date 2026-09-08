@@ -204,17 +204,19 @@ export const HomePage: React.FC<HomePageProps> = ({
           weatherBundle={weatherBundle}
           selectedLocation={selectedLocation}
           lastUpdated={current.lastUpdated}
+          onNavigateToTab={onNavigateToTab}
         />
         <HomeAtmosphericChangeDetector
           current={current}
-          locationKey={selectedLocation.id || selectedLocation.name}
+          selectedLocation={selectedLocation}
+          lastUpdated={current.lastUpdated}
         />
       </div>
 
       {/* LIVE WEATHER TIMELINE */}
       <HomeLiveTimeline
         hourly={hourly}
-        locationName={selectedLocation.name}
+        locationName={selectedLocation.displayName || `${selectedLocation.city}, ${selectedLocation.state}`}
       />
 
       {/* 2. DYNAMIC SEVERE WEATHER WARNING BANNER */}

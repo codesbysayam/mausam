@@ -169,13 +169,14 @@ class LocationService {
   }
 
   /**
-   * Intent-based smart search.
-   * Recognizes location + parameter queries (e.g., "Kolkata AQI", "Mumbai warnings", "Delhi temperature", "Odisha rainfall", "Jaipur radar")
-   * and directs user directly to the relevant view.
+   * Natural language & Intent-based smart search.
+   * Recognizes natural queries like "Weather in Bhubaneswar", "Cyclone warnings Delhi",
+   * "AQI of Kolkata", "Rain in Mumbai", "Radar for Jaipur", "Agromet in Punjab", etc.
+   * and routes user directly to the relevant view for that location.
    */
   smartSearch(query: string): SmartSearchResult[] {
     if (!query || !query.trim()) return [];
-    const raw = query.toLowerCase().trim();
+    let raw = query.toLowerCase().trim();
 
     type TabType = 'home' | 'weather' | 'forecast' | 'warnings' | 'radar' | 'aqi' | 'agromet' | 'reports';
 
@@ -184,19 +185,19 @@ class LocationService {
     let matchedParameter: string | undefined = undefined;
 
     const keywords: { patterns: string[]; tab: TabType; label: string; param: string }[] = [
-      { patterns: ['aqi', 'air quality', 'air', 'pollution', 'pm2.5', 'pm10'], tab: 'aqi', label: 'Air Quality (NAQI)', param: 'AQI' },
-      { patterns: ['warning', 'warnings', 'alert', 'alerts', 'cyclone', 'danger', 'hazard'], tab: 'warnings', label: 'Severe Weather Warnings', param: 'Warnings' },
-      { patterns: ['radar', 'doppler', 'dwr', 'satellite', 'echo', 'reflectivity'], tab: 'radar', label: 'Doppler Radar & Maps', param: 'Radar' },
-      { patterns: ['forecast', '7-day', 'weekly', 'tomorrow', 'extended'], tab: 'forecast', label: '7-Day Forecast', param: 'Forecast' },
-      { patterns: ['agriculture', 'agromet', 'crop', 'farming', 'soil', 'irrigation', 'kisan'], tab: 'agromet', label: 'Agromet & Crop Advisories', param: 'Agromet' },
-      { patterns: ['report', 'bulletin', 'pdf', 'export', 'download'], tab: 'reports', label: 'Meteorological Reports', param: 'Reports' },
-      { patterns: ['temp', 'temperature', 'heat', 'cold'], tab: 'weather', label: 'Temperature & Thermal Telemetry', param: 'Temperature' },
-      { patterns: ['rain', 'rainfall', 'precipitation', 'monsoon'], tab: 'weather', label: 'Rainfall & Precipitation', param: 'Rainfall' },
-      { patterns: ['wind', 'gust', 'breeze'], tab: 'weather', label: 'Wind Velocity & Vector', param: 'Wind' },
-      { patterns: ['humidity', 'dew point', 'dewpoint', 'moisture'], tab: 'weather', label: 'Humidity & Dew Point', param: 'Humidity' },
-      { patterns: ['uv', 'sun', 'solar', 'radiation'], tab: 'weather', label: 'Solar & UV Exposure', param: 'Solar/UV' },
-      { patterns: ['marine', 'sea', 'wave', 'tide', 'coastal'], tab: 'weather', label: 'Marine & Ocean State', param: 'Marine' },
-      { patterns: ['weather', 'nowcast', 'observation', 'climate'], tab: 'weather', label: 'Current Weather Telemetry', param: 'Weather' },
+      { patterns: ['cyclone', 'cyclones', 'warning', 'warnings', 'alert', 'alerts', 'hazard', 'danger', 'storm warning'], tab: 'warnings', label: 'Severe Weather Warnings', param: 'Warnings' },
+      { patterns: ['aqi', 'air quality', 'air', 'pollution', 'pm2.5', 'pm10', 'smog', 'clean air'], tab: 'aqi', label: 'Air Quality (NAQI)', param: 'AQI' },
+      { patterns: ['radar', 'doppler', 'dwr', 'satellite', 'echo', 'reflectivity', 'nowcast map'], tab: 'radar', label: 'Doppler Radar & Maps', param: 'Radar' },
+      { patterns: ['forecast', '7-day', 'weekly', 'tomorrow', 'extended', 'outlook', 'rain forecast'], tab: 'forecast', label: '7-Day Forecast', param: 'Forecast' },
+      { patterns: ['agriculture', 'agromet', 'crop', 'crops', 'farming', 'farmer', 'soil', 'irrigation', 'kisan', 'meghdoot'], tab: 'agromet', label: 'Agromet & Crop Advisories', param: 'Agromet' },
+      { patterns: ['report', 'reports', 'bulletin', 'bulletins', 'pdf', 'export', 'download', 'monograph'], tab: 'reports', label: 'Meteorological Reports', param: 'Reports' },
+      { patterns: ['temp', 'temperature', 'heat', 'cold', 'heatwave', 'coldwave', 'thermal'], tab: 'weather', label: 'Temperature & Thermal Telemetry', param: 'Temperature' },
+      { patterns: ['rain', 'rainfall', 'precipitation', 'monsoon', 'drizzle', 'downpour'], tab: 'weather', label: 'Rainfall & Precipitation', param: 'Rainfall' },
+      { patterns: ['wind', 'gust', 'breeze', 'squall', 'wind speed'], tab: 'weather', label: 'Wind Velocity & Vector', param: 'Wind' },
+      { patterns: ['humidity', 'dew point', 'dewpoint', 'moisture', 'rh'], tab: 'weather', label: 'Humidity & Dew Point', param: 'Humidity' },
+      { patterns: ['uv', 'sun', 'solar', 'radiation', 'uv index'], tab: 'weather', label: 'Solar & UV Exposure', param: 'Solar/UV' },
+      { patterns: ['marine', 'sea', 'wave', 'tide', 'coastal', 'fishermen'], tab: 'weather', label: 'Marine & Ocean State', param: 'Marine' },
+      { patterns: ['weather', 'nowcast', 'observation', 'climate', 'atmospheric condition', 'conditions'], tab: 'weather', label: 'Live Weather Telemetry', param: 'Weather' },
     ];
 
     // Check if query contains any of the patterns
@@ -215,16 +216,36 @@ class LocationService {
       if (matchedParameter) break;
     }
 
-    // Search locations with the stripped locationPart, or raw if stripped is empty
-    const searchTerm = locationPart || raw;
-    let locations = this.searchLocations(searchTerm);
+    // Strip common natural language filler words (prepositions, questions, greetings)
+    // e.g. "weather in bhubaneswar" -> "in bhubaneswar" -> "bhubaneswar"
+    // e.g. "what is the aqi of kolkata" -> "kolkata"
+    const naturalStopwords = [
+      'in', 'of', 'at', 'for', 'to', 'the', 'near', 'around', 'about',
+      'show', 'me', 'check', 'what', 'is', 'how', 'are', 'tell', 'get',
+      'find', 'current', 'live', 'today', 'now', 'please', 'details',
+      'status', 'information', 'info', 'data', 'city', 'state', 'district'
+    ];
+    const words = locationPart.split(/\s+/).filter(w => w && !naturalStopwords.includes(w));
+    const cleanedLocationTerm = words.join(' ').trim();
 
-    // If no locations matched stripped term, try matching raw query
-    if (locations.length === 0 && locationPart !== raw) {
+    // 1. Try search with cleaned location string
+    let locations: LocationRecord[] = [];
+    if (cleanedLocationTerm) {
+      locations = this.searchLocations(cleanedLocationTerm);
+    }
+
+    // 2. If no locations matched cleaned term, try matching locationPart
+    if (locations.length === 0 && locationPart && locationPart !== cleanedLocationTerm) {
+      locations = this.searchLocations(locationPart);
+    }
+
+    // 3. If still no locations, try matching the full raw query
+    if (locations.length === 0 && raw !== locationPart) {
       locations = this.searchLocations(raw);
     }
 
-    // If still no locations and user just typed an intent word (e.g. "AQI" or "Radar"), return current location with that intent
+    // 4. If query was purely an intent word without a location (e.g. "Radar", "AQI", "Cyclone warnings"),
+    // direct user to that intent using the currently selected location
     if (locations.length === 0 && matchedParameter) {
       const currentLoc = this.getSelectedLocation();
       return [
@@ -234,7 +255,7 @@ class LocationService {
           intentLabel,
           matchedParameter,
           displayTitle: `${currentLoc.city} — ${intentLabel}`,
-          displaySubtitle: `View live ${matchedParameter} data for ${currentLoc.city}, ${currentLoc.state}`,
+          displaySubtitle: `View live ${matchedParameter} section for ${currentLoc.city}, ${currentLoc.state}`,
         },
       ];
     }

@@ -87,6 +87,19 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
     }
   };
 
+  // Search submit handler (on Enter key or explicit search execution)
+  const handleSearchSubmit = () => {
+    if (smartResults.length > 0) {
+      const top = smartResults[0];
+      onSelectLocation(top.location);
+      if (onNavigateTab && top.intentTab) {
+        onNavigateTab(top.intentTab);
+      }
+      setIsSearchOpen(false);
+      setSearchQuery('');
+    }
+  };
+
   return (
     <>
       <header className="w-full bg-[#071A2D] border-b border-[#1D4E73] sticky top-0 z-40 select-none">
@@ -107,12 +120,18 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
                 <input
                   type="text"
                   id="station-search-input-desktop"
-                  placeholder={t('searchPlaceholder', "Search city, state, AQI, radar, warnings (e.g. 'Kolkata AQI', 'Mumbai warnings')...")}
+                  placeholder={t('searchPlaceholder', "Search 'Weather in Bhubaneswar', 'Cyclone warnings Delhi', 'Kolkata AQI'...")}
                   value={searchQuery}
                   onFocus={() => setIsSearchOpen(true)}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSearchSubmit();
+                    }
+                  }}
                   className="w-full h-10 bg-[#0B2239] border border-[#1D4E73] hover:border-[#1565C0]/60 focus:border-[#1565C0] rounded-xl text-white text-xs pl-9 pr-8 focus:outline-none transition-colors"
-                  aria-label={t('searchPlaceholder', "Search city, state, AQI, radar, warnings (e.g. 'Kolkata AQI', 'Mumbai warnings')...")}
+                  aria-label={t('searchPlaceholder', "Search 'Weather in Bhubaneswar', 'Cyclone warnings Delhi', 'Kolkata AQI'...")}
                 />
                 {searchQuery && (
                   <button
@@ -394,12 +413,18 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
                 <input
                   type="text"
                   id="station-search-input-mobile"
-                  placeholder={t('searchPlaceholder', "Search city, state, AQI, radar, warnings...")}
+                  placeholder={t('searchPlaceholder', "Search 'Weather in Bhubaneswar', 'Cyclone warnings Delhi'...")}
                   value={searchQuery}
                   onFocus={() => setIsSearchOpen(true)}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleSearchSubmit();
+                    }
+                  }}
                   className="w-full h-10 bg-[#0B2239] border border-[#1D4E73] rounded-xl text-white text-xs pl-9 pr-8 focus:outline-none focus:border-[#1565C0]"
-                  aria-label={t('searchPlaceholder', "Search city, state, AQI, radar, warnings...")}
+                  aria-label={t('searchPlaceholder', "Search 'Weather in Bhubaneswar', 'Cyclone warnings Delhi'...")}
                 />
                 {searchQuery && (
                   <button

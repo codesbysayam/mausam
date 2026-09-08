@@ -178,6 +178,15 @@ export interface CurrentWeather {
   observationStatus?: 'LIVE' | 'RECENT' | 'STALE' | 'UNAVAILABLE';
   observationSource?: string;
   observationTimeFormatted?: string;
+  previousHourTelemetry?: {
+    temp?: number;
+    humidity?: number;
+    windSpeed?: number;
+    pressure?: number;
+    precipitation?: number;
+    timestamp?: number;
+    timeString?: string;
+  };
   isLive?: boolean;
   error?: string | null;
 }
