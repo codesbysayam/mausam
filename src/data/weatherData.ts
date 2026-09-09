@@ -182,32 +182,9 @@ export const INITIAL_WEATHER: CurrentWeather = {
   isLive: true,
 };
 
-export const INITIAL_ALERTS: WeatherAlert[] = [
-  {
-    id: 'alert-imd-01',
-    agency: 'IMD SEVERE WEATHER ADVISORY',
-    title: 'Monsoon Squall & Elevated PM2.5',
-    severity: 'severe',
-    description: 'Active squall line moving across Delhi-NCR with localized particulate surge. Agromet advisories active for Punjab & Haryana paddy farmers.',
-    affectedDistricts: ['North West Delhi', 'Gurugram', 'Faridabad', 'Noida'],
-    issuedAt: '14:30 IST',
-    validUntil: '18:00 IST',
-    actionItem: 'Postpone pesticide spraying in open fields; exercise caution during outdoor commute.',
-    color: '#ffb4ab',
-  },
-  {
-    id: 'alert-agromet-02',
-    agency: 'MEGHDOOT AGROMET BULLETIN',
-    title: 'Bi-Weekly Tuesday Crop Advisory Issued',
-    severity: 'warning',
-    description: 'AMFU Field Units have published weekly rainfall forecasts and crop management guidelines for Rice, Cotton, and Vegetables.',
-    affectedDistricts: ['Ludhiana', 'Nashik', 'Thanjavur', 'Hooghly', 'Varanasi'],
-    issuedAt: '10:00 IST',
-    validUntil: '28 Aug 2026',
-    actionItem: 'Check Agromet tab for crop-specific sowing, irrigation, and pest control actions.',
-    color: '#2ECC71',
-  },
-];
+// Real-time verified alerts are populated dynamically via /api/warnings.
+// Static / demo / mock alerts removed for strict official data accuracy.
+export const INITIAL_ALERTS: WeatherAlert[] = [];
 
 export const PAST_24H_TRENDS: HistoricalTrendPoint[] = [
   { time: '17:00 (Yest)', hour: 17, temp: 31.8, humidity: 54, pressure: 1011.2, windSpeed: 14, rain: 0 },

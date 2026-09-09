@@ -1,14 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import { WarningRecord } from '../../types/warningTypes';
-import { NATIONAL_WARNINGS_DATABASE } from '../../data/nationalWarningsData';
 import { Clock, AlertTriangle, ChevronRight, Calendar, ShieldAlert } from 'lucide-react';
 
 interface WarningTimelineSectionProps {
+  warnings?: WarningRecord[];
   activeWarning?: WarningRecord | null;
   onSelectWarning?: (warning: WarningRecord) => void;
 }
 
 export const WarningTimelineSection: React.FC<WarningTimelineSectionProps> = ({
+  warnings = [],
   activeWarning,
   onSelectWarning,
 }) => {
@@ -16,10 +17,10 @@ export const WarningTimelineSection: React.FC<WarningTimelineSectionProps> = ({
 
   // Chronologically sort all warnings by validity
   const sortedWarnings = useMemo(() => {
-    return [...NATIONAL_WARNINGS_DATABASE].sort((a, b) => {
+    return [...warnings].sort((a, b) => {
       return (a.validityTimestamp || 0) - (b.validityTimestamp || 0);
     });
-  }, []);
+  }, [warnings]);
 
   const nowMs = Date.now();
 
@@ -31,9 +32,9 @@ export const WarningTimelineSection: React.FC<WarningTimelineSectionProps> = ({
     const next = sortedWarnings.filter((w) => (w.validityTimestamp || 0) > nowMs + 24 * 3600 * 1000);
 
     return {
-      PAST: past.length > 0 ? past : sortedWarnings.slice(0, 3),
-      NOW: current.length > 0 ? current : sortedWarnings.slice(0, 5),
-      NEXT: next.length > 0 ? next : sortedWarnings.slice(2, 6),
+      PAST: past,
+      NOW: current,
+      NEXT: next,
     };
   }, [sortedWarnings, nowMs]);
 
@@ -99,7 +100,12 @@ export const WarningTimelineSection: React.FC<WarningTimelineSectionProps> = ({
 
       {/* Warnings Timeline Cards */}
       <div className="space-y-2.5">
-        {displayedList.map((warn, idx) => {
+        {displayedList.length === 0 ? (
+          <div className="p-6 rounded-xl bg-[#0B1E32] border border-[#1B3A5A] text-center text-xs text-[#8A94A6]">
+            No active severe weather warnings reported for this synoptic window. Atmospheric conditions are within seasonal routine limits.
+          </div>
+        ) : (
+          displayedList.map((warn, idx) => {
           const isSelected = activeWarning?.id === warn.id;
 
           return (
@@ -151,7 +157,7 @@ export const WarningTimelineSection: React.FC<WarningTimelineSectionProps> = ({
               </div>
             </div>
           );
-        })}
+        }))}
       </div>
     </section>
   );

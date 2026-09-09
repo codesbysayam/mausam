@@ -6,6 +6,8 @@ import { GoogleGenAI } from '@google/genai';
 import { imdRouter } from './server/routes/imdRoutes';
 import { authoritativeRouter } from './server/routes/authoritativeRoutes';
 import { realMausamRouter } from './server/routes/realMausamRoutes';
+import { warningsRouter } from './server/routes/warningsRoute';
+import { multiSourceRouter } from './server/routes/multiSourceRoutes';
 import {
   buildMausamSystemInstruction,
   generateMausamGroundedFallback,
@@ -105,6 +107,12 @@ async function startServer() {
 
   // Official IMD Data Connector Routes
   app.use('/api/imd', imdRouter);
+
+  // Severe Weather Government Warning Pipeline Route
+  app.use('/api/warnings', warningsRouter);
+
+  // Multi-Source Weather & Ingestion Engine (IMD, CPCB, INCOIS, NDMA, AccuWeather, Google Weather, Open-Meteo)
+  app.use('/api/v2', multiSourceRouter);
 
   // Real Location-Aware Endpoints (Solar, AQI, Doppler Radar, Station Telemetry, Hourly, Daily, Unified Bundle)
   app.use('/api', realMausamRouter);

@@ -136,6 +136,29 @@ export const NationalWarningMap: React.FC<NationalWarningMapProps> = ({
       const sName = profile.name.toLowerCase();
       const sCode = profile.code.toLowerCase();
 
+      // Check if there is an active warning for this state from verified API
+      const live = warnings.find(
+        (w) =>
+          w.state.toLowerCase() === sName ||
+          w.stateCode.toLowerCase() === sCode ||
+          w.state.toLowerCase().includes(sName) ||
+          sName.includes(w.state.toLowerCase())
+      );
+      if (live) {
+        return {
+          stateCode: `in-${profile.code.toLowerCase()}`,
+          stateName: profile.name,
+          capital: profile.capital,
+          highestSeverity: live.severity,
+          activeCount: 1,
+          primaryHazard: live.hazardCategory,
+          primaryHazardLabel: live.hazardLabel,
+          representativeStation: profile.representativeStation,
+          bulletinHeadline: live.title,
+          validityRange: live.validUntil,
+        };
+      }
+
       if (stateSummaryMap.has(`in-${sCode}`)) return stateSummaryMap.get(`in-${sCode}`)!;
       if (stateSummaryMap.has(sName)) return stateSummaryMap.get(sName)!;
       if (stateSummaryMap.has(sId)) return stateSummaryMap.get(sId)!;

@@ -56,10 +56,12 @@ export interface LocationRecord {
   state: string;
   district: string;
   city: string;
+  country?: string;
   name?: string;
   stationId?: string;
   lat: number;
   lng: number;
+  coordinates?: { lat: number; lng: number };
   pincode?: string;
   timezone: string;
   displayName: string;

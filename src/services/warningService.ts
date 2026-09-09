@@ -310,6 +310,85 @@ class WarningService {
         };
     }
   }
+
+  /**
+   * Fetch verified real-time warning data for a specific location from /api/warnings
+   */
+  async fetchLocationWarning(
+    location?: LocationRecord,
+    forceRefresh = false
+  ): Promise<StandardizedWarningResponse> {
+    try {
+      const query = new URLSearchParams();
+      if (location?.city) query.set('city', location.city);
+      if (location?.district) query.set('district', location.district);
+      if (location?.state) query.set('state', location.state);
+      if (location?.country) query.set('country', location.country);
+      if (location?.coordinates?.lat) query.set('lat', String(location.coordinates.lat));
+      if (location?.coordinates?.lng) query.set('lng', String(location.coordinates.lng));
+      if (forceRefresh) query.set('refresh', 'true');
+
+      const res = await fetch(`/api/warnings?${query.toString()}`);
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+      return await res.json();
+    } catch (err: any) {
+      return {
+        state: 'DATA_UNAVAILABLE',
+        severity: 'neutral',
+        severityLabel: 'DATA UNAVAILABLE',
+        hazardHeadline: 'WARNING DATA TEMPORARILY UNAVAILABLE',
+        affectedAreasHeadline: location?.city || location?.district || 'Selected Location',
+        affectedDistricts: [],
+        description: 'Official real-time warning feed is currently unreachable.',
+        validUntil: 'N/A',
+        issuedAt: new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }),
+        source: 'IMD',
+        updatedAt: new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }),
+        status: 'UNAVAILABLE',
+        isLocal: false,
+      };
+    }
+  }
+}
+
+export interface StandardizedWarningResponse {
+  state:
+    | 'NO_ACTIVE_WARNING'
+    | 'WATCH_ADVISORY'
+    | 'ORANGE_ALERT'
+    | 'RED_ALERT'
+    | 'DATA_UNAVAILABLE'
+    | 'NOT_APPLICABLE';
+  severity: 'green' | 'yellow' | 'orange' | 'red' | 'neutral';
+  severityLabel: string;
+  hazardHeadline: string;
+  hazardCode?: number;
+  hazardLabel?: string;
+  affectedAreasHeadline: string;
+  affectedDistricts: string[];
+  description: string;
+  validUntil: string;
+  issuedAt: string;
+  source: 'IMD' | 'NDMA/SACHET' | 'None';
+  updatedAt: string;
+  status: 'LIVE' | 'RECENT' | 'STALE' | 'UNAVAILABLE' | 'Routine';
+  isLocal: boolean;
+  recommendedActions?: string[];
+  emergencyContact?: {
+    title: string;
+    number: string;
+  };
+  additionalActiveCount?: number;
+  metadata?: {
+    lat?: number;
+    lng?: number;
+    resolvedDistrict?: string;
+    resolvedState?: string;
+    subdivision?: string;
+    isInternational?: boolean;
+  };
 }
 
 export const warningService = new WarningService();

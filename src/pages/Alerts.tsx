@@ -1,12 +1,12 @@
-import React, { useState, useMemo, useRef, useCallback } from 'react';
+import React, { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { WeatherDataBundle } from '../services/weatherService';
 import { LocationRecord } from '../types';
 import {
   WarningRecord,
   WarningFilterState,
   StateWarningSummary,
+  AlertSeverity,
 } from '../types/warningTypes';
-import { NATIONAL_WARNINGS_DATABASE } from '../data/nationalWarningsData';
 import { warningService } from '../services/warningService';
 import { WarningHeader } from '../components/warnings/WarningHeader';
 import { NationalAlertStatus } from '../components/warnings/NationalAlertStatus';
@@ -39,14 +39,71 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
   weatherBundle,
   selectedLocation,
 }) => {
-  // All warning records from national database
-  const [warningsList, setWarningsList] = useState<WarningRecord[]>(
-    NATIONAL_WARNINGS_DATABASE
-  );
+  // Real warning records fetched from verified IMD API
+  const [warningsList, setWarningsList] = useState<WarningRecord[]>([]);
   const [filter, setFilter] = useState<WarningFilterState>(INITIAL_FILTER_STATE);
   const [selectedDrawerWarning, setSelectedDrawerWarning] = useState<WarningRecord | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Fetch verified warnings for the current location
+  const loadWarnings = useCallback(async (force = false) => {
+    setIsRefreshing(true);
+    try {
+      const res = await warningService.fetchLocationWarning(selectedLocation, force);
+      if (
+        res.state === 'WATCH_ADVISORY' ||
+        res.state === 'ORANGE_ALERT' ||
+        res.state === 'RED_ALERT'
+      ) {
+        const liveRecord: WarningRecord = {
+          id: 'imd-live-' + (res.metadata?.resolvedDistrict || 'warning').toLowerCase().replace(/\s+/g, '-'),
+          bulletinNo: `IMD/HQ/WRN/${new Date().getFullYear()}/LIVE`,
+          title: res.hazardHeadline,
+          severity: res.severity as AlertSeverity,
+          severityLabel: res.severityLabel || 'ACTIVE WARNING',
+          hazardCategory: 'heavy_rain',
+          hazardLabel: res.hazardLabel || res.hazardHeadline,
+          hazardIcon: 'warning',
+          region: 'east',
+          state: res.metadata?.resolvedState || selectedLocation?.state || 'India',
+          stateCode: (res.metadata?.resolvedState || selectedLocation?.state || 'IN').slice(0, 2).toUpperCase(),
+          subdivision: res.metadata?.subdivision || res.affectedAreasHeadline,
+          affectedDistricts: res.affectedDistricts.length > 0 ? res.affectedDistricts : [selectedLocation?.city || 'Local Sector'],
+          affectedAreaText: res.affectedAreasHeadline,
+          description: res.description,
+          impacts: ['Potential localized waterlogging', 'Traffic disruption during peak spell periods'],
+          recommendedActions: res.recommendedActions || [],
+          expectedConditions: {},
+          timeline: [],
+          issuedAt: res.issuedAt,
+          validFrom: res.issuedAt,
+          validUntil: res.validUntil,
+          validityTimestamp: Date.now() + 24 * 3600 * 1000,
+          authorityAgency: res.source === 'None' ? 'IMD Warning Service' : res.source,
+          source: res.source === 'None' ? 'IMD Warning Service' : res.source,
+          isRedAlert: res.severity === 'red',
+          emergencyContact: {
+            title: res.emergencyContact?.title || 'National Disaster Response Force',
+            number: res.emergencyContact?.number || '112',
+            description: 'Toll-free 24/7 disaster emergency line',
+          },
+        };
+        setWarningsList([liveRecord]);
+      } else {
+        // No active warning, international, or data unavailable -> empty warning list
+        setWarningsList([]);
+      }
+    } catch {
+      setWarningsList([]);
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, [selectedLocation]);
+
+  useEffect(() => {
+    loadWarnings(false);
+  }, [loadWarnings]);
 
   // Section reference for quick jumping to bulletins grid
   const regionalAlertsRef = useRef<HTMLDivElement>(null);
@@ -68,12 +125,8 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
 
   // Handle manual refresh
   const handleRefresh = useCallback(() => {
-    setIsRefreshing(true);
-    setTimeout(() => {
-      setWarningsList([...NATIONAL_WARNINGS_DATABASE]);
-      setIsRefreshing(false);
-    }, 600);
-  }, []);
+    loadWarnings(true);
+  }, [loadWarnings]);
 
   // Handle drawer open
   const handleOpenWarningDetails = useCallback((warning: WarningRecord) => {
@@ -185,6 +238,7 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
             selectedState={filter.state !== 'all' ? filter.state : null}
             onSelectState={handleSelectStateFromMap}
             onOpenStateDrawer={handleOpenStateSummary}
+            warnings={warningsList}
           />
         </div>
       </div>

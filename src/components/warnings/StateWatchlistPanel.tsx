@@ -1,24 +1,47 @@
 import React, { useState, useMemo } from 'react';
-import { StateWarningSummary, AlertSeverity } from '../../types/warningTypes';
+import { StateWarningSummary, AlertSeverity, WarningRecord } from '../../types/warningTypes';
 import { STATE_ALERT_SEVERITIES } from '../../data/nationalWarningsData';
 
 interface StateWatchlistPanelProps {
   selectedState: string | null;
   onSelectState: (stateName: string, stateCode: string) => void;
   onOpenStateDrawer?: (summary: StateWarningSummary) => void;
+  warnings?: WarningRecord[];
 }
 
 export const StateWatchlistPanel: React.FC<StateWatchlistPanelProps> = ({
   selectedState,
   onSelectState,
   onOpenStateDrawer,
+  warnings = [],
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [severityFilter, setSeverityFilter] = useState<AlertSeverity | 'all'>('all');
 
-  // Sort states strictly by severity: Red -> Orange -> Yellow -> Purple -> Green, then alphabetical
+  // Dynamic state list with overlay of active warnings
   const statesList = useMemo(() => {
-    return Object.values(STATE_ALERT_SEVERITIES).sort((a, b) => {
+    const baseList = Object.values(STATE_ALERT_SEVERITIES).map((s) => {
+      const live = warnings.find(
+        (w) =>
+          w.state.toLowerCase() === s.stateName.toLowerCase() ||
+          w.stateCode.toLowerCase() === s.stateCode.replace('in-', '').toLowerCase()
+      );
+      if (live) {
+        return {
+          ...s,
+          highestSeverity: live.severity,
+          activeCount: 1,
+          primaryHazard: live.hazardCategory,
+          primaryHazardLabel: live.hazardLabel,
+          bulletinHeadline: live.title,
+          validityRange: live.validUntil,
+        };
+      }
+      return s;
+    });
+
+    // Sort states strictly by severity: Red -> Orange -> Yellow -> Purple -> Green, then alphabetical
+    return baseList.sort((a, b) => {
       const order: Record<AlertSeverity, number> = {
         red: 4,
         orange: 3,
@@ -30,7 +53,7 @@ export const StateWatchlistPanel: React.FC<StateWatchlistPanelProps> = ({
       if (diff !== 0) return diff;
       return a.stateName.localeCompare(b.stateName);
     });
-  }, []);
+  }, [warnings]);
 
   const filteredStates = useMemo(() => {
     return statesList.filter((s) => {
