@@ -1,6 +1,7 @@
 // ====================================================================
 // MAUSAM - Atmospheric Intelligence Platform
 // Air Quality & Environmental Exposure Service
+// Indian National AQI Breakpoints, Database Caching & Standard Response
 // ====================================================================
 
 import { NormalizedAQI, StandardApiResponse, GeoLocation } from '../normalization/types';
@@ -25,52 +26,69 @@ export class AqiService {
       lon: loc.longitude.toFixed(3),
     });
 
+    const nowStr = new Date().toISOString();
     const cached = await cacheService.get<NormalizedAQI>(cacheKey);
+
     if (cached.data && !cached.isStale) {
-      systemHealthService.recordRequest(true);
+      systemHealthService.recordRequest(true, 'CPCB');
       return {
         status: 'success',
         source: cached.data.source,
+        provider: 'CPCB',
         dataStatus: cached.data.dataStatus,
         observedAt: cached.data.observedAt,
-        fetchedAt: cached.data.fetchedAt,
+        receivedAt: cached.data.fetchedAt || nowStr,
+        fetchedAt: cached.data.fetchedAt || nowStr,
+        cached: true,
         ageSeconds: cached.ageSeconds,
         primarySource: cached.data.source,
         data: cached.data,
+        error: null,
       };
     }
 
+    const start = Date.now();
     const aqi = await CPCBProvider.fetchAQI(loc);
+    const latency = Date.now() - start;
+
     if (!aqi) {
-      systemHealthService.recordRequest(false);
+      systemHealthService.recordRequest(false, 'CPCB', latency, 'Air quality unavailable');
       if (cached.data) {
         return {
           status: 'success',
           source: cached.data.source,
+          provider: 'CPCB',
           dataStatus: 'STALE',
           observedAt: cached.data.observedAt,
-          fetchedAt: cached.data.fetchedAt,
+          receivedAt: cached.data.fetchedAt || nowStr,
+          fetchedAt: cached.data.fetchedAt || nowStr,
+          cached: true,
           ageSeconds: cached.ageSeconds,
           primarySource: cached.data.source,
           data: cached.data,
+          error: null,
         };
       }
       throw new Error(`Air quality observations unavailable for ${loc.name}`);
     }
 
-    systemHealthService.recordRequest(true);
+    systemHealthService.recordRequest(true, 'CPCB', latency);
     await cacheService.set(cacheKey, aqi, 'AQI', aqi.source);
     dbService.saveAQI(aqi).catch(() => {});
 
     return {
       status: 'success',
       source: aqi.source,
+      provider: 'CPCB',
       dataStatus: aqi.dataStatus,
       observedAt: aqi.observedAt,
-      fetchedAt: aqi.fetchedAt,
+      receivedAt: aqi.fetchedAt || nowStr,
+      fetchedAt: aqi.fetchedAt || nowStr,
+      cached: false,
       ageSeconds: 0,
       primarySource: aqi.source,
       data: aqi,
+      error: null,
     };
   }
 }

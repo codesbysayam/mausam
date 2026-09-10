@@ -1,11 +1,13 @@
 // ====================================================================
 // MAUSAM - Atmospheric Intelligence Platform
 // Marine & Coastal Telemetry Service (INCOIS & Ocean State)
+// Coastal Boundary Filtering, Database Logging & Standard Response
 // ====================================================================
 
 import { NormalizedMarine, StandardApiResponse, GeoLocation } from '../normalization/types';
 import { INCOISProvider } from '../providers/incois';
 import { cacheService } from '../cache/cacheService';
+import { dbService } from '../database/db';
 import { systemHealthService } from './systemHealthService';
 
 export class MarineService {
@@ -25,24 +27,30 @@ export class MarineService {
       `${loc.name} ${loc.city || ''} ${loc.district || ''}`
     );
 
+    const nowStr = new Date().toISOString();
+
     if (!isCoastal) {
       return {
         status: 'success',
         source: 'INCOIS',
+        provider: 'INCOIS',
         dataStatus: 'UNAVAILABLE',
-        observedAt: new Date().toISOString(),
-        fetchedAt: new Date().toISOString(),
+        observedAt: nowStr,
+        receivedAt: nowStr,
+        fetchedAt: nowStr,
+        cached: false,
         ageSeconds: 0,
         primarySource: 'INCOIS',
         data: {
           location: loc,
           isCoastal: false,
-          observedAt: new Date().toISOString(),
-          fetchedAt: new Date().toISOString(),
+          observedAt: nowStr,
+          fetchedAt: nowStr,
           dataStatus: 'UNAVAILABLE',
           source: 'INCOIS',
           message: 'Marine telemetry not applicable for inland location.',
         },
+        error: null,
       };
     }
 
@@ -53,32 +61,44 @@ export class MarineService {
 
     const cached = await cacheService.get<NormalizedMarine>(cacheKey);
     if (cached.data && !cached.isStale) {
-      systemHealthService.recordRequest(true);
+      systemHealthService.recordRequest(true, 'INCOIS');
       return {
         status: 'success',
         source: cached.data.source,
+        provider: 'INCOIS',
         dataStatus: cached.data.dataStatus,
         observedAt: cached.data.observedAt,
-        fetchedAt: cached.data.fetchedAt,
+        receivedAt: cached.data.fetchedAt || nowStr,
+        fetchedAt: cached.data.fetchedAt || nowStr,
+        cached: true,
         ageSeconds: cached.ageSeconds,
         primarySource: cached.data.source,
         data: cached.data,
+        error: null,
       };
     }
 
+    const start = Date.now();
     const marine = await INCOISProvider.fetchMarineData(loc);
-    systemHealthService.recordRequest(true);
+    const latency = Date.now() - start;
+
+    systemHealthService.recordRequest(true, 'INCOIS', latency);
     await cacheService.set(cacheKey, marine, 'MARINE', marine.source);
+    dbService.saveMarine(marine).catch(() => {});
 
     return {
       status: 'success',
       source: marine.source,
+      provider: 'INCOIS',
       dataStatus: marine.dataStatus,
       observedAt: marine.observedAt,
-      fetchedAt: marine.fetchedAt,
+      receivedAt: marine.fetchedAt || nowStr,
+      fetchedAt: marine.fetchedAt || nowStr,
+      cached: false,
       ageSeconds: 0,
       primarySource: marine.source,
       data: marine,
+      error: null,
     };
   }
 }

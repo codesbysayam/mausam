@@ -100,7 +100,9 @@ export class INCOISProvider {
       const swellPeriod = cur.swell_wave_period !== undefined ? Math.round(cur.swell_wave_period) : null;
       const sst = cur.sea_surface_temperature !== undefined ? Math.round(cur.sea_surface_temperature * 10) / 10 : null;
 
-      const observedAt = cur.time ? new Date(cur.time * 1000).toISOString() : new Date().toISOString();
+      const observedAt = cur.time
+        ? (typeof cur.time === 'number' ? new Date(cur.time * 1000).toISOString() : new Date(cur.time).toISOString())
+        : new Date().toISOString();
       const { status: dataStatus } = WeatherNormalizer.computeDataStatus(observedAt);
 
       return {

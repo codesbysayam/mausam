@@ -21,15 +21,18 @@ export interface GeoLocation {
 export interface StandardApiResponse<T> {
   status: 'success' | 'error';
   source: string;
+  provider: string;
   dataStatus: DataStatus;
   observedAt: string;
+  receivedAt: string;
   fetchedAt: string;
+  cached: boolean;
   ageSeconds: number;
   primarySource: string;
   fallbackSource?: string;
   attribution?: string;
   data: T;
-  error?: string;
+  error?: string | null;
 }
 
 export interface NormalizedWeather {

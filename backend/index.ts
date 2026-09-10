@@ -8,6 +8,7 @@ export * from './normalization/weatherNormalizer';
 export * from './normalization/warningNormalizer';
 export * from './normalization/aqiNormalizer';
 
+export * from './database/schema';
 export * from './database/db';
 export * from './cache/cacheService';
 
@@ -27,3 +28,4 @@ export * from './services/aqiService';
 export * from './services/marineService';
 export * from './services/radarService';
 export * from './services/stationService';
+export * from './services/locationService';

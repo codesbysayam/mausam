@@ -106,6 +106,9 @@ async function startServer() {
     res.json({ status: 'ok', time: new Date().toISOString() });
   });
 
+  // Unified Production Weather API Router (Open-Meteo, IMD, CPCB, SACHET, INCOIS, Radar, Health, Cache, PostgreSQL)
+  app.use('/api', unifiedApiRouter);
+
   // Official IMD Data Connector Routes
   app.use('/api/imd', imdRouter);
 
@@ -114,9 +117,6 @@ async function startServer() {
 
   // Multi-Source Weather & Ingestion Engine (IMD, CPCB, INCOIS, NDMA, AccuWeather, Google Weather, Open-Meteo)
   app.use('/api/v2', multiSourceRouter);
-
-  // Unified Production Weather API Router (Open-Meteo, IMD, CPCB, SACHET, INCOIS, Radar, Health, Cache, PostgreSQL)
-  app.use('/api', unifiedApiRouter);
 
   // Real Location-Aware Endpoints (Solar, AQI, Doppler Radar, Station Telemetry, Hourly, Daily, Unified Bundle)
   app.use('/api', realMausamRouter);

@@ -1,11 +1,13 @@
 // ====================================================================
 // MAUSAM - Atmospheric Intelligence Platform
 // Doppler Radar Service (Radar Frames & Station Metadata)
+// Strictly Verified RainViewer Metadata, Database Logging & Standard Response
 // ====================================================================
 
 import { RadarFrameInfo, StandardApiResponse, GeoLocation } from '../normalization/types';
 import { RadarProvider } from '../providers/radar';
 import { cacheService } from '../cache/cacheService';
+import { dbService } from '../database/db';
 import { systemHealthService } from './systemHealthService';
 import { findNearestRadarStation } from '../../src/data/radarStations';
 
@@ -44,23 +46,32 @@ export class RadarService {
       lon: loc.longitude.toFixed(2),
     });
 
+    const nowStr = new Date().toISOString();
     const cached = await cacheService.get<UnifiedRadarResponse>(cacheKey);
+
     if (cached.data && !cached.isStale) {
-      systemHealthService.recordRequest(true);
+      systemHealthService.recordRequest(true, 'RADAR');
       return {
         status: 'success',
         source: cached.data.source,
+        provider: 'RADAR',
         dataStatus: cached.data.latestFrame?.status || 'LIVE',
-        observedAt: cached.data.latestFrame?.observedTime || new Date().toISOString(),
-        fetchedAt: new Date().toISOString(),
+        observedAt: cached.data.latestFrame?.observedTime || nowStr,
+        receivedAt: nowStr,
+        fetchedAt: nowStr,
+        cached: true,
         ageSeconds: cached.ageSeconds,
         primarySource: cached.data.source,
         data: cached.data,
+        error: null,
       };
     }
 
+    const start = Date.now();
     const frame = await RadarProvider.fetchLatestFrame();
-    systemHealthService.recordRequest(frame !== null);
+    const latency = Date.now() - start;
+
+    systemHealthService.recordRequest(frame !== null, 'RADAR', latency);
 
     const nearest = findNearestRadarStation(loc.latitude, loc.longitude);
     const stationData = nearest ? {
@@ -77,24 +88,32 @@ export class RadarService {
       isWithinCoverage: nearest.isWithinCoverage,
     } : null;
 
+    const sourceLabel = 'Radar Source: RainViewer (Open Weather Maps API)';
     const result: UnifiedRadarResponse = {
       latestFrame: frame,
       nearestStation: stationData,
       status: frame ? 'OPERATIONAL' : 'DEGRADED',
-      source: frame ? frame.source : 'IMD Doppler Weather Radar Network',
+      source: sourceLabel,
     };
 
-    await cacheService.set(cacheKey, result, 'RADAR', result.source);
+    await cacheService.set(cacheKey, result, 'RADAR', sourceLabel);
+    if (frame) {
+      dbService.saveRadarFrame(frame).catch(() => {});
+    }
 
     return {
       status: 'success',
-      source: result.source,
+      source: sourceLabel,
+      provider: 'RADAR',
       dataStatus: frame?.status || 'UNAVAILABLE',
-      observedAt: frame?.observedTime || new Date().toISOString(),
-      fetchedAt: new Date().toISOString(),
+      observedAt: frame?.observedTime || nowStr,
+      receivedAt: nowStr,
+      fetchedAt: nowStr,
+      cached: false,
       ageSeconds: 0,
-      primarySource: result.source,
+      primarySource: sourceLabel,
       data: result,
+      error: null,
     };
   }
 }

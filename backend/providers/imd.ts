@@ -1,16 +1,19 @@
 // ====================================================================
 // MAUSAM - Atmospheric Intelligence Platform
 // IMD Provider Adapter (Official India Meteorological Department Connector)
+// Authorized Gateway Integration with Strict Zero-Fabrication Enforcement
 // ====================================================================
 
-import { NormalizedWeather, GeoLocation } from '../normalization/types';
+import { NormalizedWeather, NormalizedForecast, NormalizedWarningItem, GeoLocation } from '../normalization/types';
 import { WeatherNormalizer } from '../normalization/weatherNormalizer';
 
 export class IMDProvider {
   private static baseUrl = process.env.IMD_API_BASE_URL || 'https://api.imd.gov.in/api/v1';
 
   public static isConfigured(): boolean {
-    return !!(process.env.IMD_API_KEY || process.env.IMD_API_TOKEN);
+    const isEnabled = process.env.IMD_ENABLED !== 'false';
+    const hasKey = !!(process.env.IMD_API_KEY || process.env.IMD_API_TOKEN);
+    return isEnabled && hasKey;
   }
 
   public static async checkHealth(): Promise<{
@@ -24,7 +27,7 @@ export class IMDProvider {
         configured: false,
         operational: false,
         latencyMs: null,
-        error: 'IMD API credentials (IMD_API_KEY) not configured',
+        error: 'Official IMD credentials/access not configured',
       };
     }
 
@@ -121,6 +124,52 @@ export class IMDProvider {
       };
     } catch {
       return null;
+    }
+  }
+
+  public static async fetchCityForecast(loc: GeoLocation): Promise<NormalizedForecast | null> {
+    if (!this.isConfigured()) return null;
+    try {
+      const apiKey = process.env.IMD_API_KEY;
+      const headers: Record<string, string> = {
+        Accept: 'application/json',
+        'User-Agent': 'MAUSAM-Atmospheric-Platform/3.0',
+      };
+      if (apiKey) headers['X-API-KEY'] = apiKey;
+
+      const res = await fetch(`${this.baseUrl}/forecast/city?lat=${loc.latitude}&lon=${loc.longitude}`, {
+        headers,
+        signal: AbortSignal.timeout(6000),
+      });
+
+      if (!res.ok) return null;
+      const json = await res.json();
+      return json as NormalizedForecast;
+    } catch {
+      return null;
+    }
+  }
+
+  public static async fetchDistrictWarnings(district: string, state?: string): Promise<NormalizedWarningItem[]> {
+    if (!this.isConfigured()) return [];
+    try {
+      const apiKey = process.env.IMD_API_KEY;
+      const headers: Record<string, string> = {
+        Accept: 'application/json',
+        'User-Agent': 'MAUSAM-Atmospheric-Platform/3.0',
+      };
+      if (apiKey) headers['X-API-KEY'] = apiKey;
+
+      const res = await fetch(`${this.baseUrl}/warnings/district?district=${encodeURIComponent(district)}&state=${encodeURIComponent(state || '')}`, {
+        headers,
+        signal: AbortSignal.timeout(5000),
+      });
+
+      if (!res.ok) return [];
+      const json = await res.json();
+      return Array.isArray(json) ? json : [];
+    } catch {
+      return [];
     }
   }
 }

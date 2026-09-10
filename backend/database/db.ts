@@ -1,14 +1,22 @@
 // ====================================================================
 // MAUSAM - Atmospheric Intelligence Platform
 // PostgreSQL Database Layer & Connection Pool
+// Compatible with Neon, Supabase, Vercel Postgres & Standard PostgreSQL
 // ====================================================================
 
 import pg from 'pg';
+import {
+  POSTGRES_MIGRATION_DDL,
+  SQL_QUERIES,
+  ProviderHealthRecord,
+} from './schema';
 import {
   NormalizedWeather,
   NormalizedForecast,
   NormalizedAQI,
   NormalizedWarningItem,
+  NormalizedMarine,
+  RadarFrameInfo,
   GeoLocation,
 } from '../normalization/types';
 
@@ -18,6 +26,7 @@ export interface DatabaseStatus {
   configured: boolean;
   connected: boolean;
   provider: 'POSTGRESQL' | 'NOT_CONFIGURED';
+  latencyMs?: number | null;
   poolSize?: number;
   lastChecked: string;
   error?: string;
@@ -28,6 +37,7 @@ export class DatabaseService {
   private pool: pg.Pool | null = null;
   private isConfigured = false;
   private isConnected = false;
+  private lastLatencyMs: number | null = null;
   private lastError: string | null = null;
   private migrationRan = false;
 
@@ -79,117 +89,27 @@ export class DatabaseService {
 
   private async testAndMigrate(): Promise<void> {
     if (!this.pool) return;
+    const start = Date.now();
     try {
       const client = await this.pool.connect();
       await client.query('SELECT 1');
+      this.lastLatencyMs = Date.now() - start;
       this.isConnected = true;
       this.lastError = null;
 
       if (!this.migrationRan) {
-        await this.runMigrations(client);
+        await client.query(POSTGRES_MIGRATION_DDL);
         this.migrationRan = true;
       }
 
       client.release();
-      console.log('[Mausam DB] PostgreSQL connected successfully and schemas verified.');
+      console.log(`[Mausam DB] PostgreSQL connected successfully (${this.lastLatencyMs}ms) and schemas verified.`);
     } catch (err: any) {
+      this.lastLatencyMs = null;
       this.isConnected = false;
       this.lastError = err.message;
       console.warn('[Mausam DB] PostgreSQL connection test failed:', err.message);
     }
-  }
-
-  private async runMigrations(client: pg.PoolClient): Promise<void> {
-    const ddl = `
-      CREATE TABLE IF NOT EXISTS locations (
-        id VARCHAR(64) PRIMARY KEY,
-        name VARCHAR(128) NOT NULL,
-        city VARCHAR(128),
-        district VARCHAR(128),
-        state VARCHAR(128),
-        country VARCHAR(64) DEFAULT 'India',
-        latitude DOUBLE PRECISION NOT NULL,
-        longitude DOUBLE PRECISION NOT NULL,
-        elevation DOUBLE PRECISION,
-        timezone VARCHAR(64) DEFAULT 'Asia/Kolkata',
-        updated_at TIMESTAMPTZ DEFAULT NOW()
-      );
-      CREATE INDEX IF NOT EXISTS idx_locations_lat_lon ON locations(latitude, longitude);
-
-      CREATE TABLE IF NOT EXISTS weather_observations (
-        id SERIAL PRIMARY KEY,
-        location_id VARCHAR(64) REFERENCES locations(id) ON DELETE CASCADE,
-        source VARCHAR(64) NOT NULL,
-        observed_at TIMESTAMPTZ NOT NULL,
-        fetched_at TIMESTAMPTZ DEFAULT NOW(),
-        temperature DOUBLE PRECISION,
-        feels_like DOUBLE PRECISION,
-        humidity DOUBLE PRECISION,
-        dew_point DOUBLE PRECISION,
-        pressure DOUBLE PRECISION,
-        wind_speed DOUBLE PRECISION,
-        wind_direction VARCHAR(32),
-        wind_gust DOUBLE PRECISION,
-        precipitation DOUBLE PRECISION,
-        rain DOUBLE PRECISION,
-        snowfall DOUBLE PRECISION,
-        cloud_cover DOUBLE PRECISION,
-        visibility DOUBLE PRECISION,
-        uv_index DOUBLE PRECISION,
-        weather_code INTEGER
-      );
-      CREATE INDEX IF NOT EXISTS idx_weather_obs_loc ON weather_observations(location_id);
-      CREATE INDEX IF NOT EXISTS idx_weather_obs_observed ON weather_observations(observed_at);
-      CREATE INDEX IF NOT EXISTS idx_weather_obs_fetched ON weather_observations(fetched_at);
-
-      CREATE TABLE IF NOT EXISTS weather_forecasts (
-        id SERIAL PRIMARY KEY,
-        location_id VARCHAR(64) REFERENCES locations(id) ON DELETE CASCADE,
-        source VARCHAR(64) NOT NULL,
-        generated_at TIMESTAMPTZ NOT NULL,
-        fetched_at TIMESTAMPTZ DEFAULT NOW(),
-        forecast_json JSONB NOT NULL
-      );
-      CREATE INDEX IF NOT EXISTS idx_forecasts_loc ON weather_forecasts(location_id);
-
-      CREATE TABLE IF NOT EXISTS aqi_observations (
-        id SERIAL PRIMARY KEY,
-        location_id VARCHAR(64) REFERENCES locations(id) ON DELETE CASCADE,
-        source VARCHAR(64) NOT NULL,
-        station_id VARCHAR(64),
-        observed_at TIMESTAMPTZ NOT NULL,
-        fetched_at TIMESTAMPTZ DEFAULT NOW(),
-        aqi INTEGER NOT NULL,
-        category VARCHAR(32) NOT NULL,
-        dominant_pollutant VARCHAR(32),
-        pm25 DOUBLE PRECISION,
-        pm10 DOUBLE PRECISION,
-        no2 DOUBLE PRECISION,
-        so2 DOUBLE PRECISION,
-        co DOUBLE PRECISION,
-        o3 DOUBLE PRECISION
-      );
-      CREATE INDEX IF NOT EXISTS idx_aqi_loc ON aqi_observations(location_id);
-
-      CREATE TABLE IF NOT EXISTS warnings (
-        id VARCHAR(128) PRIMARY KEY,
-        source VARCHAR(64) NOT NULL,
-        hazard VARCHAR(128) NOT NULL,
-        severity VARCHAR(32) NOT NULL,
-        state VARCHAR(128),
-        district VARCHAR(128),
-        headline TEXT,
-        description TEXT,
-        instruction TEXT,
-        issued_at TIMESTAMPTZ NOT NULL,
-        valid_from TIMESTAMPTZ,
-        valid_until TIMESTAMPTZ,
-        is_active BOOLEAN DEFAULT TRUE,
-        fetched_at TIMESTAMPTZ DEFAULT NOW()
-      );
-      CREATE INDEX IF NOT EXISTS idx_warnings_active ON warnings(is_active);
-    `;
-    await client.query(ddl);
   }
 
   public async getStatus(): Promise<DatabaseStatus> {
@@ -205,16 +125,19 @@ export class DatabaseService {
       };
     }
 
+    const start = Date.now();
     try {
       const client = await this.pool.connect();
       await client.query('SELECT 1');
       client.release();
+      this.lastLatencyMs = Date.now() - start;
       this.isConnected = true;
 
       return {
         configured: true,
         connected: true,
         provider: 'POSTGRESQL',
+        latencyMs: this.lastLatencyMs,
         poolSize: this.pool.totalCount,
         lastChecked: now,
       };
@@ -225,6 +148,7 @@ export class DatabaseService {
         configured: true,
         connected: false,
         provider: 'POSTGRESQL',
+        latencyMs: null,
         error: err.message,
         lastChecked: now,
       };
@@ -235,21 +159,7 @@ export class DatabaseService {
     if (!this.isConnected || !this.pool) return;
     try {
       const id = loc.id || `${loc.latitude.toFixed(3)}_${loc.longitude.toFixed(3)}`;
-      const query = `
-        INSERT INTO locations (id, name, city, district, state, country, latitude, longitude, elevation, timezone, updated_at)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW())
-        ON CONFLICT (id) DO UPDATE SET
-          name = EXCLUDED.name,
-          city = EXCLUDED.city,
-          district = EXCLUDED.district,
-          state = EXCLUDED.state,
-          country = EXCLUDED.country,
-          latitude = EXCLUDED.latitude,
-          longitude = EXCLUDED.longitude,
-          elevation = EXCLUDED.elevation,
-          updated_at = NOW()
-      `;
-      await this.pool.query(query, [
+      await this.pool.query(SQL_QUERIES.UPSERT_LOCATION, [
         id,
         loc.name,
         loc.city || null,
@@ -271,33 +181,41 @@ export class DatabaseService {
     try {
       await this.upsertLocation(obs.location);
       const locId = obs.location.id || `${obs.location.latitude.toFixed(3)}_${obs.location.longitude.toFixed(3)}`;
-      const query = `
-        INSERT INTO weather_observations (
-          location_id, source, observed_at, fetched_at, temperature, feels_like,
-          humidity, dew_point, pressure, wind_speed, wind_direction, wind_gust,
-          precipitation, rain, snowfall, cloud_cover, visibility, uv_index, weather_code
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
-      `;
-      await this.pool.query(query, [
+
+      await this.pool.query(SQL_QUERIES.INSERT_WEATHER_OBSERVATION, [
         locId,
         obs.source,
+        obs.location.name,
+        obs.location.latitude,
+        obs.location.longitude,
         obs.observedAt,
-        obs.fetchedAt,
+        obs.dataStatus,
         obs.temperature,
         obs.feelsLike,
         obs.humidity,
         obs.dewPoint,
         obs.pressure,
+        obs.pressureTrend || 'steady',
         obs.windSpeed,
         obs.windDirection,
+        obs.windDirectionDegrees,
         obs.windGust,
         obs.precipitation,
         obs.rain ?? null,
+        obs.showers ?? null,
         obs.snowfall ?? null,
         obs.cloudCover,
         obs.visibility,
         obs.uvIndex,
         obs.weatherCode,
+        obs.condition,
+        obs.isDay,
+        obs.sunrise ? new Date(obs.sunrise) : null,
+        obs.sunset ? new Date(obs.sunset) : null,
+        obs.rawSourceAttribution || null,
+        300,
+        JSON.stringify(obs),
+        null,
       ]);
     } catch (err: any) {
       console.warn('[Mausam DB] saveWeatherObservation failed:', err.message);
@@ -309,15 +227,20 @@ export class DatabaseService {
     try {
       await this.upsertLocation(forecast.location);
       const locId = forecast.location.id || `${forecast.location.latitude.toFixed(3)}_${forecast.location.longitude.toFixed(3)}`;
-      const query = `
-        INSERT INTO weather_forecasts (location_id, source, generated_at, fetched_at, forecast_json)
-        VALUES ($1, $2, $3, NOW(), $4)
-      `;
-      await this.pool.query(query, [
+
+      await this.pool.query(SQL_QUERIES.INSERT_FORECAST, [
         locId,
         forecast.source,
+        forecast.location.name,
+        forecast.location.latitude,
+        forecast.location.longitude,
+        'HOURLY',
         forecast.generatedAt,
+        'LIVE',
         JSON.stringify(forecast),
+        forecast.sourceAttribution || null,
+        1800,
+        null,
       ]);
     } catch (err: any) {
       console.warn('[Mausam DB] saveForecast failed:', err.message);
@@ -329,18 +252,17 @@ export class DatabaseService {
     try {
       await this.upsertLocation(aqi.location);
       const locId = aqi.location.id || `${aqi.location.latitude.toFixed(3)}_${aqi.location.longitude.toFixed(3)}`;
-      const query = `
-        INSERT INTO aqi_observations (
-          location_id, source, station_id, observed_at, fetched_at, aqi,
-          category, dominant_pollutant, pm25, pm10, no2, so2, co, o3
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
-      `;
-      await this.pool.query(query, [
+
+      await this.pool.query(SQL_QUERIES.INSERT_AQI_OBSERVATION, [
         locId,
         aqi.source,
         aqi.stationId,
+        aqi.stationName,
+        aqi.location.name,
+        aqi.location.latitude,
+        aqi.location.longitude,
         aqi.observedAt,
-        aqi.fetchedAt,
+        aqi.dataStatus,
         aqi.aqi,
         aqi.category,
         aqi.dominantPollutant,
@@ -350,9 +272,149 @@ export class DatabaseService {
         aqi.pollutants.so2?.concentration ?? null,
         aqi.pollutants.co?.concentration ?? null,
         aqi.pollutants.o3?.concentration ?? null,
+        JSON.stringify(aqi),
+        null,
+        900,
+        null,
       ]);
     } catch (err: any) {
       console.warn('[Mausam DB] saveAQI failed:', err.message);
+    }
+  }
+
+  public async saveWarning(warning: NormalizedWarningItem): Promise<void> {
+    if (!this.isConnected || !this.pool) return;
+    try {
+      await this.pool.query(SQL_QUERIES.UPSERT_WARNING_ALERT, [
+        warning.id,
+        warning.source,
+        warning.hazard,
+        warning.severity,
+        warning.severityLabel,
+        warning.state || null,
+        warning.district || null,
+        warning.coordinates?.lat || null,
+        warning.coordinates?.lon || null,
+        warning.headline || null,
+        warning.description,
+        warning.instruction || null,
+        warning.issuedAt,
+        warning.validFrom ? new Date(warning.validFrom) : null,
+        warning.validUntil ? new Date(warning.validUntil) : null,
+        warning.isActive,
+        warning.affectedArea,
+        null,
+        180,
+        JSON.stringify(warning),
+        null,
+      ]);
+    } catch (err: any) {
+      console.warn('[Mausam DB] saveWarning failed:', err.message);
+    }
+  }
+
+  public async saveMarine(marine: NormalizedMarine): Promise<void> {
+    if (!this.isConnected || !this.pool) return;
+    try {
+      await this.upsertLocation(marine.location);
+      const locId = marine.location.id || `${marine.location.latitude.toFixed(3)}_${marine.location.longitude.toFixed(3)}`;
+
+      await this.pool.query(SQL_QUERIES.INSERT_MARINE_OBSERVATION, [
+        locId,
+        marine.source,
+        marine.location.name,
+        marine.location.latitude,
+        marine.location.longitude,
+        marine.observedAt,
+        marine.dataStatus,
+        marine.significantWaveHeightMeters ?? null,
+        marine.swellHeightMeters ?? null,
+        marine.wavePeriodSeconds ?? null,
+        marine.seaSurfaceTemperatureCelsius ?? null,
+        marine.surfaceCurrentSpeedKnots ?? null,
+        marine.surfaceCurrentDirectionDeg ?? null,
+        marine.coastalAdvisory || null,
+        JSON.stringify(marine),
+        null,
+        2700,
+        marine.message || null,
+      ]);
+    } catch (err: any) {
+      console.warn('[Mausam DB] saveMarine failed:', err.message);
+    }
+  }
+
+  public async saveRadarFrame(radar: RadarFrameInfo): Promise<void> {
+    if (!this.isConnected || !this.pool) return;
+    try {
+      await this.pool.query(SQL_QUERIES.INSERT_RADAR_FRAME, [
+        radar.source,
+        radar.frameEpoch,
+        radar.observedTime,
+        radar.status,
+        radar.path,
+        radar.tileUrl,
+        radar.radarHost,
+        null,
+        300,
+        null,
+      ]);
+    } catch (err: any) {
+      console.warn('[Mausam DB] saveRadarFrame failed:', err.message);
+    }
+  }
+
+  public async updateProviderHealth(record: Partial<ProviderHealthRecord> & { provider_code: string; provider_name: string }): Promise<void> {
+    if (!this.isConnected || !this.pool) return;
+    try {
+      await this.pool.query(SQL_QUERIES.UPSERT_PROVIDER_HEALTH, [
+        record.provider_code,
+        record.provider_name,
+        record.category || 'OPEN_DATA',
+        record.status || 'NOT_CONFIGURED',
+        record.is_configured ?? false,
+        record.latency_ms ?? null,
+        record.last_success ? new Date(record.last_success) : null,
+        record.last_failure ? new Date(record.last_failure) : null,
+        record.requests_count ?? 1,
+        record.successful_requests ?? (record.status === 'OPERATIONAL' ? 1 : 0),
+        record.failed_requests ?? (record.status === 'UNAVAILABLE' ? 1 : 0),
+        record.cache_hits ?? 0,
+        record.cache_misses ?? 1,
+        record.last_error ?? null,
+        record.source_url ?? null,
+        record.attribution_text ?? null,
+        record.attribution_url ?? null,
+      ]);
+    } catch (err: any) {
+      console.warn('[Mausam DB] updateProviderHealth failed:', err.message);
+    }
+  }
+
+  public async logApiRequest(
+    provider: string,
+    endpoint: string,
+    latencyMs: number,
+    isSuccess: boolean,
+    httpStatus?: number,
+    fromCache = false,
+    errorMessage?: string
+  ): Promise<void> {
+    if (!this.isConnected || !this.pool) return;
+    try {
+      await this.pool.query(SQL_QUERIES.INSERT_API_REQUEST_LOG, [
+        provider,
+        endpoint,
+        'GET',
+        httpStatus || (isSuccess ? 200 : 500),
+        latencyMs,
+        isSuccess,
+        1,
+        fromCache,
+        errorMessage || null,
+      ]);
+    } catch {
+      // Non-blocking log
     }
   }
 }

@@ -1,11 +1,13 @@
 // ====================================================================
 // MAUSAM - Atmospheric Intelligence Platform
 // Disaster & Severe Weather Warning Service (SACHET / NDMA / IMD CAP)
+// Integrated Database Persistence, ETag Cache & Normalized Response
 // ====================================================================
 
 import { NormalizedWarningItem, StandardApiResponse, GeoLocation } from '../normalization/types';
 import { SachetProvider } from '../providers/sachet';
 import { cacheService } from '../cache/cacheService';
+import { dbService } from '../database/db';
 import { systemHealthService } from './systemHealthService';
 
 export interface WarningsResponseData {
@@ -31,25 +33,33 @@ export class WarningService {
       state: (loc.state || '').toLowerCase(),
     });
 
+    const nowStr = new Date().toISOString();
     const cached = await cacheService.get<WarningsResponseData>(cacheKey);
+
     if (cached.data && !cached.isStale) {
-      systemHealthService.recordRequest(true);
+      systemHealthService.recordRequest(true, 'SACHET');
       return {
         status: 'success',
-        source: 'NDMA / SACHET / IMD',
+        source: 'NDMA / SACHET',
+        provider: 'SACHET',
         dataStatus: 'LIVE',
-        observedAt: new Date().toISOString(),
-        fetchedAt: new Date().toISOString(),
+        observedAt: nowStr,
+        receivedAt: nowStr,
+        fetchedAt: nowStr,
+        cached: true,
         ageSeconds: cached.ageSeconds,
         primarySource: 'NDMA / SACHET',
         attribution: 'National Disaster Management Authority (NDMA) & SACHET Common Alerting Protocol (CAP)',
         data: cached.data,
+        error: null,
       };
     }
 
+    const start = Date.now();
     try {
       const activeWarnings = await SachetProvider.getActiveWarningsForLocation(loc);
-      systemHealthService.recordRequest(true);
+      const latency = Date.now() - start;
+      systemHealthService.recordRequest(true, 'SACHET', latency);
 
       const hasActive = activeWarnings.length > 0;
       const responseData: WarningsResponseData = {
@@ -58,30 +68,44 @@ export class WarningService {
         warnings: activeWarnings,
         message: hasActive
           ? undefined
-          : `No active severe weather or disaster warnings reported for ${loc.district || loc.name}, ${loc.state || 'India'}. Atmospheric parameters remain within normal seasonal limits.`,
+          : `ALL CLEAR: No active severe weather or disaster warnings reported for ${loc.district || loc.name}, ${loc.state || 'India'}. Atmospheric parameters remain within normal seasonal limits.`,
       };
 
       await cacheService.set(cacheKey, responseData, 'WARNINGS', 'NDMA / SACHET');
 
+      // Persist active warnings in DB
+      for (const w of activeWarnings) {
+        dbService.saveWarning(w).catch(() => {});
+      }
+
       return {
         status: 'success',
-        source: 'NDMA / SACHET / IMD',
+        source: 'NDMA / SACHET',
+        provider: 'SACHET',
         dataStatus: 'LIVE',
-        observedAt: new Date().toISOString(),
-        fetchedAt: new Date().toISOString(),
+        observedAt: nowStr,
+        receivedAt: nowStr,
+        fetchedAt: nowStr,
+        cached: false,
         ageSeconds: 0,
         primarySource: 'NDMA / SACHET',
         attribution: 'National Disaster Management Authority (NDMA) & SACHET Common Alerting Protocol (CAP)',
         data: responseData,
+        error: null,
       };
     } catch (err: any) {
-      systemHealthService.recordRequest(false);
+      const latency = Date.now() - start;
+      systemHealthService.recordRequest(false, 'SACHET', latency, err.message);
+
       return {
         status: 'error',
-        source: 'NDMA / SACHET / IMD',
+        source: 'NDMA / SACHET',
+        provider: 'SACHET',
         dataStatus: 'UNAVAILABLE',
-        observedAt: new Date().toISOString(),
-        fetchedAt: new Date().toISOString(),
+        observedAt: nowStr,
+        receivedAt: nowStr,
+        fetchedAt: nowStr,
+        cached: false,
         ageSeconds: 0,
         primarySource: 'NDMA / SACHET',
         error: err.message,
