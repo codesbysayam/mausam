@@ -8,6 +8,7 @@ import { authoritativeRouter } from './server/routes/authoritativeRoutes';
 import { realMausamRouter } from './server/routes/realMausamRoutes';
 import { warningsRouter } from './server/routes/warningsRoute';
 import { multiSourceRouter } from './server/routes/multiSourceRoutes';
+import { unifiedApiRouter } from './server/routes/unifiedApiRoutes';
 import {
   buildMausamSystemInstruction,
   generateMausamGroundedFallback,
@@ -114,42 +115,11 @@ async function startServer() {
   // Multi-Source Weather & Ingestion Engine (IMD, CPCB, INCOIS, NDMA, AccuWeather, Google Weather, Open-Meteo)
   app.use('/api/v2', multiSourceRouter);
 
+  // Unified Production Weather API Router (Open-Meteo, IMD, CPCB, SACHET, INCOIS, Radar, Health, Cache, PostgreSQL)
+  app.use('/api', unifiedApiRouter);
+
   // Real Location-Aware Endpoints (Solar, AQI, Doppler Radar, Station Telemetry, Hourly, Daily, Unified Bundle)
   app.use('/api', realMausamRouter);
-
-  // Open Data API endpoints (Alias routes matching OpenAPI specification)
-  app.get('/api/weather/current', async (req, res) => {
-    const stationId = (req.query.stationId as string) || (req.query.id as string) || '42971';
-    try {
-      const { imdConnector } = await import('./server/imd/imdConnector');
-      const result = await imdConnector.getCurrentWeather(stationId);
-      res.json(result);
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
-    }
-  });
-
-  app.get('/api/weather/forecast', async (req, res) => {
-    const stationId = (req.query.stationId as string) || (req.query.id as string) || '42971';
-    try {
-      const { imdConnector } = await import('./server/imd/imdConnector');
-      const result = await imdConnector.getCityForecast(stationId);
-      res.json(result);
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
-    }
-  });
-
-  app.get('/api/weather/warnings', async (req, res) => {
-    const stationId = (req.query.stationId as string) || (req.query.id as string) || '42971';
-    try {
-      const { imdConnector } = await import('./server/imd/imdConnector');
-      const result = await imdConnector.getDistrictWarnings(stationId);
-      res.json(result);
-    } catch (err: any) {
-      res.status(500).json({ error: err.message });
-    }
-  });
 
   // Authoritative Multi-Persona & External Data Services (CPCB, Tides, Marine, Azure Alerts)
   app.use('/api/authoritative', authoritativeRouter);

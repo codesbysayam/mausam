@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MAUSAM — OpenAPI & WMO Data Exchange Specification</title>
+  <link rel="stylesheet" href="/css/api_docs.css">
+</head>
+<body>
+  <nav class="docs-sidebar">
+    <h2>MAUSAM API Docs</h2>
+    
+    <div class="docs-nav-group">
+      <div class="docs-nav-header">Overview</div>
+      <a href="#introduction" class="docs-nav-link">Introduction</a>
+      <a href="#authentication" class="docs-nav-link">Authentication & Limits</a>
+      <a href="#architecture" class="docs-nav-link">Multi-Engine Architecture</a>
+    </div>
+
+    <div class="docs-nav-group">
+      <div class="docs-nav-header">Surface Observations</div>
+      <a href="#endpoint-observations" class="docs-nav-link">GET /api/weather/observations</a>
+      <a href="#endpoint-stations" class="docs-nav-link">GET /api/stations</a>
+    </div>
+
+    <div class="docs-nav-group">
+      <div class="docs-nav-header">NWP Forecasts</div>
+      <a href="#endpoint-forecasts" class="docs-nav-link">GET /api/weather/forecast</a>
+      <a href="#endpoint-verification" class="docs-nav-link">POST /api/weather/verify</a>
+    </div>
+
+    <div class="docs-nav-group">
+      <div class="docs-nav-header">Environment & Hazards</div>
+      <a href="#endpoint-aqi" class="docs-nav-link">GET /api/air-quality</a>
+      <a href="#endpoint-alerts" class="docs-nav-link">GET /api/alerts</a>
+    </div>
+
+    <div style="margin-top: 32px;">
+      <a href="/" style="display: inline-block; font-size: 13px; color: var(--accent-cyan); text-decoration: none;">
+        ← Back to Live Dashboard
+      </a>
+    </div>
+  </nav>
+
+  <main class="docs-main">
+    <h1 class="docs-title" id="introduction">Atmospheric Intelligence REST API</h1>
+    <p class="docs-subtitle">
+      Comprehensive WMO-No. 8 & IMD GTS compliant data interchange endpoints with C-accelerated psychrometrics and Python ETL pipeline integration.
+    </p>
+
+    <!-- Authentication Section -->
+    <section id="authentication" style="margin-bottom: 48px;">
+      <h2 style="font-size: 20px; margin-bottom: 12px; color: var(--accent-cyan);">Authentication &amp; Rate Limits</h2>
+      <p style="color: var(--text-muted); margin-bottom: 16px;">
+        During the current development and public evaluation tier, meteorological endpoints are accessible via standard HTTPS headers. Future production pipelines enforce HMAC authentication and WMO GTS subscriber tokens.
+      </p>
+      <div class="api-endpoint-card">
+        <div style="font-size: 13px; font-weight: 600; margin-bottom: 8px;">Standard Request Headers:</div>
+        <div class="code-block">Accept: application/json
+X-Mausam-Client: Web-Dashboard/v2.4
+X-Data-Precision: WMO-Standard</div>
+        <div style="font-size: 13px; font-weight: 600; margin-top: 16px; margin-bottom: 8px;">Rate Limiting Policy:</div>
+        <p style="font-size: 13px; color: var(--text-muted);">
+          Unauthenticated requests are rate-limited to <strong>120 requests/minute</strong> per IP. Rate limit status is transmitted via standard response headers:
+        </p>
+        <div class="code-block">X-RateLimit-Limit: 120
+X-RateLimit-Remaining: 118
+X-RateLimit-Reset: 1725876000</div>
+      </div>
+    </section>
+
+    <!-- Architecture Section -->
+    <section id="architecture" style="margin-bottom: 48px;">
+      <h2 style="font-size: 20px; margin-bottom: 12px; color: var(--accent-cyan);">Multi-Tier Computational Architecture</h2>
+      <p style="color: var(--text-muted); margin-bottom: 16px;">
+        MAUSAM does not dump unverified external APIs. All observations flow through the C Numerical Core (Welford statistics, IDW spatial interpolation, Stull psychrometrics), validated against Indian climatological extremes, and served via typed Express API endpoints.
+      </p>
+      <div class="code-block">
+        [IMD AWS / GTS + Open-Meteo + CPCB CAAQMS]
+                       │
+                       ▼
+           [Python Ingestion & Models]
+                       │
+                       ▼
+         [C Numerical Core (libmausam_numerical.so)]
+          - Stull Tw (°C) & Steadman HI (°C)
+          - Welford Running Variance & Outlier Detection
+          - 2D Spatial IDW Grid Interpolation
+                       │
+                       ▼
+          [Express API / React Application Layer]
+      </div>
+    </section>
+
+    <!-- Endpoints -->
+    <section id="endpoint-observations">
+      <div class="api-endpoint-card">
+        <div class="endpoint-badge-row">
+          <span class="http-method get">GET</span>
+          <span class="endpoint-path">/api/weather/observations</span>
+        </div>
+        <p style="color: var(--text-muted); margin-bottom: 12px;">
+          Retrieves high-precision meteorological observations from automatic weather stations, normalized across IMD and Open-Meteo sources with derived thermodynamic parameters.
+        </p>
+        <div style="font-size: 13px; font-weight: 600; margin-bottom: 4px;">Query Parameters:</div>
+        <ul style="font-size: 13px; color: var(--text-muted); margin-left: 20px; margin-bottom: 16px;">
+          <li><code>station_id</code> (string, optional) - WMO 5-digit index (e.g. <code>42182</code>)</li>
+          <li><code>latitude</code> &amp; <code>longitude</code> (float) - Center coordinates for nearest-station search</li>
+        </ul>
+        <div style="font-size: 13px; font-weight: 600; margin-bottom: 4px;">Sample JSON Response:</div>
+        <div class="code-block">{
+  "status": "success",
+  "data": {
+    "station_id": "42182",
+    "name": "New Delhi (Safdarjung)",
+    "timestamp": "2026-09-09T07:00:00Z",
+    "temperature_c": 34.2,
+    "dew_point_c": 25.8,
+    "wet_bulb_c": 27.9,
+    "heat_index_c": 44.5,
+    "relative_humidity": 62,
+    "pressure_hpa": 1004.8,
+    "wind_speed_kmh": 14.8,
+    "wind_direction_deg": 110,
+    "qc_status": "VERIFIED_ACCURATE"
+  }
+}</div>
+      </div>
+    </section>
+
+    <section id="endpoint-stations">
+      <div class="api-endpoint-card">
+        <div class="endpoint-badge-row">
+          <span class="http-method get">GET</span>
+          <span class="endpoint-path">/api/stations</span>
+        </div>
+        <p style="color: var(--text-muted); margin-bottom: 12px;">
+          Returns the active registry of IMD and state automatic meteorological stations, complete with geographical coordinates, elevation, Doppler radar coverage status, and sensor operational integrity.
+        </p>
+        <div style="font-size: 13px; font-weight: 600; margin-bottom: 4px;">Query Parameters:</div>
+        <ul style="font-size: 13px; color: var(--text-muted); margin-left: 20px; margin-bottom: 16px;">
+          <li><code>state</code> (string, optional) - Filter by Indian State / UT (e.g. <code>Odisha</code>, <code>Delhi</code>)</li>
+          <li><code>type</code> (string, optional) - Station class: <code>AWS</code>, <code>ARG</code>, <code>AERODROME</code>, <code>RADAR</code></li>
+        </ul>
+        <div style="font-size: 13px; font-weight: 600; margin-bottom: 4px;">Sample JSON Response:</div>
+        <div class="code-block">{
+  "status": "success",
+  "count": 2,
+  "data": [
+    {
+      "id": "42971",
+      "wmo_index": "42971",
+      "name": "Bhubaneswar Observatory",
+      "district": "Khordha",
+      "state": "Odisha",
+      "latitude": 20.2444,
+      "longitude": 85.8178,
+      "elevation_m": 45,
+      "radar_station": "Paradip S-Band DWR",
+      "status": "OPERATIONAL"
+    },
+    {
+      "id": "42182",
+      "wmo_index": "42182",
+      "name": "New Delhi (Safdarjung)",
+      "district": "New Delhi",
+      "state": "Delhi",
+      "latitude": 28.5847,
+      "longitude": 77.2066,
+      "elevation_m": 216,
+      "radar_station": "Mausam Bhavan Palam C-Band",
+      "status": "OPERATIONAL"
+    }
+  ]
+}</div>
+      </div>
+    </section>
+
+    <section id="endpoint-forecasts">
+      <div class="api-endpoint-card">
+        <div class="endpoint-badge-row">
+          <span class="http-method get">GET</span>
+          <span class="endpoint-path">/api/weather/forecast</span>
+        </div>
+        <p style="color: var(--text-muted); margin-bottom: 12px;">
+          Returns multi-model NWP forecast time series (ECMWF IFS, GFS, NCMRWF Unified Model, and WRF-ARW) including rainfall accumulation probabilities, diurnal temperature curves, and synoptic convective spread.
+        </p>
+        <div style="font-size: 13px; font-weight: 600; margin-bottom: 4px;">Query Parameters:</div>
+        <ul style="font-size: 13px; color: var(--text-muted); margin-left: 20px; margin-bottom: 16px;">
+          <li><code>stationId</code> or <code>id</code> (string) - WMO station code (e.g. <code>42971</code>)</li>
+          <li><code>days</code> (integer, optional, default: <code>7</code>) - Forecast horizon (1 to 10 days)</li>
+        </ul>
+        <div style="font-size: 13px; font-weight: 600; margin-bottom: 4px;">Sample JSON Response:</div>
+        <div class="code-block">{
+  "status": "success",
+  "stationId": "42971",
+  "location": "Bhubaneswar, Odisha",
+  "issued_utc": "2026-09-09T06:00:00Z",
+  "daily": [
+    {
+      "date": "2026-09-09",
+      "temp_max_c": 33.5,
+      "temp_min_c": 25.4,
+      "condition": "Thundershowers likely",
+      "precipitation_mm": 28.4,
+      "rain_probability": 85,
+      "models": {
+        "ecmwf": { "temp_max": 33.2, "rain_mm": 31.0 },
+        "gfs": { "temp_max": 34.0, "rain_mm": 25.2 },
+        "ncmrwf": { "temp_max": 33.4, "rain_mm": 29.1 }
+      }
+    }
+  ]
+}</div>
+      </div>
+    </section>
+
+    <section id="endpoint-verification">
+      <div class="api-endpoint-card">
+        <div class="endpoint-badge-row">
+          <span class="http-method post">POST</span>
+          <span class="endpoint-path">/api/weather/verify</span>
+        </div>
+        <p style="color: var(--text-muted); margin-bottom: 12px;">
+          Runs C-accelerated WMO verification metrics on user-provided arrays of forecasts and observations.
+        </p>
+        <div class="code-block">// Request Payload
+{
+  "forecasts": [34.5, 30.1, 31.8],
+  "observations": [34.2, 29.8, 31.5]
+}
+
+// Response
+{
+  "status": "success",
+  "metrics": {
+    "sample_size": 3,
+    "mae": 0.3,
+    "rmse": 0.3,
+    "mean_bias": 0.3,
+    "pearson_r": 0.999
+  }
+}</div>
+      </div>
+    </section>
+
+    <section id="endpoint-aqi">
+      <div class="api-endpoint-card">
+        <div class="endpoint-badge-row">
+          <span class="http-method get">GET</span>
+          <span class="endpoint-path">/api/air-quality</span>
+        </div>
+        <p style="color: var(--text-muted); margin-bottom: 12px;">
+          Streams Central Pollution Control Board (CPCB) continuous ambient air quality monitoring station (CAAQMS) telemetry, parsed through Indian National Air Quality Index (NAQI) break-point equations.
+        </p>
+        <div style="font-size: 13px; font-weight: 600; margin-bottom: 4px;">Sample JSON Response:</div>
+        <div class="code-block">{
+  "status": "success",
+  "city": "Bhubaneswar",
+  "station": "Patia CAAQMS",
+  "aqi": 72,
+  "category": "Satisfactory",
+  "prominent_pollutant": "PM2.5",
+  "pollutants": {
+    "pm25": { "value": 44.2, "unit": "µg/m³", "sub_index": 72 },
+    "pm10": { "value": 68.1, "unit": "µg/m³", "sub_index": 68 },
+    "no2": { "value": 18.4, "unit": "µg/m³", "sub_index": 23 },
+    "so2": { "value": 9.2, "unit": "µg/m³", "sub_index": 12 },
+    "co": { "value": 0.6, "unit": "mg/m³", "sub_index": 30 },
+    "o3": { "value": 24.0, "unit": "µg/m³", "sub_index": 24 }
+  },
+  "health_advisory": "Minor breathing discomfort to sensitive people."
+}</div>
+      </div>
+    </section>
+
+    <section id="endpoint-alerts">
+      <div class="api-endpoint-card">
+        <div class="endpoint-badge-row">
+          <span class="http-method get">GET</span>
+          <span class="endpoint-path">/api/warnings</span>
+        </div>
+        <p style="color: var(--text-muted); margin-bottom: 12px;">
+          Disseminates standardized meteorological warnings aligned with National Disaster Management Authority (NDMA) Common Alerting Protocol (CAP) standards and IMD 4-tier color coding.
+        </p>
+        <div style="font-size: 13px; font-weight: 600; margin-bottom: 4px;">Sample JSON Response:</div>
+        <div class="code-block">{
+  "status": "success",
+  "count": 1,
+  "warnings": [
+    {
+      "id": "WARN-2026-OD-0914",
+      "severity": "ORANGE",
+      "level_text": "Be Prepared",
+      "phenomenon": "Heavy to Very Heavy Rainfall & Squally Winds",
+      "headline": "Isolated heavy to very heavy rainfall forecast over Coastal Odisha",
+      "affected_districts": ["Khordha", "Cuttack", "Puri", "Jagatsinghpur"],
+      "valid_from": "2026-09-09T03:00:00Z",
+      "valid_until": "2026-09-11T03:00:00Z",
+      "actions": [
+        "Avoid water-logged low lying areas",
+        "Fishermen advised not to venture into deep sea along and off Odisha coast"
+      ]
+    }
+  ]
+}</div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

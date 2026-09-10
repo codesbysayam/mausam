@@ -19,10 +19,44 @@ export interface SourceHealthItem {
   attributionText: string;
 }
 
+export interface ProviderHealthDetail {
+  code: string;
+  name: string;
+  category: 'GOVERNMENT' | 'COMMERCIAL' | 'OPEN_DATA';
+  status: 'OPERATIONAL' | 'DEGRADED' | 'UNAVAILABLE' | 'NOT_CONFIGURED';
+  isConfigured: boolean;
+  requiredKey: string | null;
+  lastSuccess: string | null;
+  lastFailure: string | null;
+  lastLatencyMs: number | null;
+  error?: string | null;
+  attributionText: string;
+  attributionUrl?: string;
+}
+
 export interface SystemHealthResponse {
-  status: string;
+  timestamp: string;
+  database: {
+    configured: boolean;
+    connected: boolean;
+    provider: 'POSTGRESQL' | 'NOT_CONFIGURED' | 'IN_MEMORY_STRUCTURED';
+    poolSize?: number;
+    lastChecked: string;
+    error?: string;
+  };
+  cache: {
+    configured?: boolean;
+    connected?: boolean;
+    provider: 'VERCEL_KV' | 'IN_MEMORY_DEGRADED' | string;
+    totalEntries: number;
+    hits: number;
+    misses: number;
+    hitRatio: string;
+    hitRatioNumeric?: number;
+    lastPurge?: string;
+    totalRequests?: number;
+  };
   summary: {
-    timestamp: string;
     totalSources: number;
     operational: number;
     degraded: number;
@@ -30,18 +64,12 @@ export interface SystemHealthResponse {
     unavailable: number;
     overallStatus: 'HEALTHY' | 'DEGRADED' | 'CRITICAL';
   };
-  sources: SourceHealthItem[];
-  database: {
-    connected: boolean;
-    provider: 'POSTGRESQL' | 'IN_MEMORY_STRUCTURED';
-    poolSize?: number;
-    lastChecked: string;
-  };
-  cache: {
-    totalEntries: number;
-    hits: number;
-    misses: number;
-    hitRatio: string;
+  providers?: Record<string, ProviderHealthDetail>;
+  sources?: SourceHealthItem[];
+  metrics?: {
+    totalRequests: number;
+    failedRequests: number;
+    lastSyncTime: string;
   };
 }
 
@@ -93,9 +121,11 @@ export interface CurrentWeatherResponse {
 export class MultiSourceService {
   public static async fetchSystemHealth(): Promise<SystemHealthResponse | null> {
     try {
-      const res = await fetch('/api/v2/health/sources');
-      if (!res.ok) return null;
-      return await res.json();
+      const res = await fetch('/api/system/health');
+      if (res.ok) return await res.json();
+      const fallback = await fetch('/api/v2/health/sources');
+      if (fallback.ok) return await fallback.json();
+      return null;
     } catch {
       return null;
     }

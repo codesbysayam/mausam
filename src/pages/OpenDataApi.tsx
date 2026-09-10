@@ -60,9 +60,21 @@ export const OpenDataApi: React.FC<OpenDataApiProps> = ({ onNavigateHome }) => {
             Open Data API
           </h1>
 
-          <p className="text-sm text-[#8A94A6]">
-            MAUSAM Weather &amp; Environmental Data Interface
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-4 mt-2">
+            <p className="text-sm text-[#8A94A6]">
+              MAUSAM Weather &amp; Environmental Data Interface
+            </p>
+            <a
+              href="/docs/api_specification.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-[#0B72B9]/30 hover:bg-[#0B72B9]/50 border border-[#0B72B9]/60 hover:border-[#38BDF8] text-[#38BDF8] hover:text-white px-3.5 py-1.5 rounded text-xs font-mono font-bold transition-all shadow-sm"
+              title="Open full interactive OpenAPI & WMO data interchange specification in a new tab"
+            >
+              <span className="material-symbols-outlined text-[16px]">menu_book</span>
+              <span>Open WMO &amp; OpenAPI Spec HTML ↗</span>
+            </a>
+          </div>
         </div>
 
         <div className="mt-4 pt-4 border-t border-[#334155] text-xs text-[#D7DEE8] leading-relaxed">

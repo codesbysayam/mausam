@@ -1,0 +1,231 @@
+/**
+ * ====================================================================
+ * MAUSAM - Atmospheric Intelligence Platform
+ * National Weather Bulletin & Cyclone Advisory Official Print Stylesheet
+ * Strictly conforms to IMD / MoES Official Publication Layout (A4 Print)
+ * ====================================================================
+ */
+
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=JetBrains+Mono:wght@400;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+  --primary-navy: #0F172A;
+  --secondary-slate: #334155;
+  --accent-gold: #B45309;
+  --imd-saffron: #EA580C;
+  --imd-green: #15803D;
+  --imd-red: #B91C1C;
+  --imd-orange: #C2410C;
+  --imd-yellow: #A16207;
+  --paper-bg: #FFFFFF;
+  --paper-border: #CBD5E1;
+  --text-main: #0F172A;
+  --text-muted: #64748B;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: #F1F5F9;
+  color: var(--text-main);
+  line-height: 1.5;
+  padding: 24px;
+}
+
+.bulletin-sheet {
+  max-width: 960px;
+  margin: 0 auto;
+  background-color: var(--paper-bg);
+  border: 1px solid var(--paper-border);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01);
+  padding: 48px;
+}
+
+/* Header */
+.bulletin-header {
+  border-bottom: 2px solid var(--primary-navy);
+  padding-bottom: 20px;
+  margin-bottom: 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.bulletin-title-group h1 {
+  font-family: 'Cinzel', serif;
+  font-size: 22px;
+  letter-spacing: 0.5px;
+  color: var(--primary-navy);
+  text-transform: uppercase;
+}
+
+.bulletin-title-group h2 {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--imd-saffron);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-top: 4px;
+}
+
+.bulletin-meta {
+  text-align: right;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.bulletin-meta .bold-id {
+  font-weight: 600;
+  color: var(--primary-navy);
+}
+
+/* Warning Banner */
+.warning-banner {
+  padding: 16px 20px;
+  border-radius: 4px;
+  margin-bottom: 28px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.warning-banner.red-alert {
+  background-color: #FEF2F2;
+  border-left: 6px solid var(--imd-red);
+  color: #991B1B;
+}
+
+.warning-banner.orange-alert {
+  background-color: #FFF7ED;
+  border-left: 6px solid var(--imd-orange);
+  color: #9A3412;
+}
+
+.warning-banner.yellow-alert {
+  background-color: #FEFCE8;
+  border-left: 6px solid var(--imd-yellow);
+  color: #854D0E;
+}
+
+.warning-badge {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 3px;
+  color: #FFF;
+  letter-spacing: 0.5px;
+}
+
+.red-alert .warning-badge { background-color: var(--imd-red); }
+.orange-alert .warning-badge { background-color: var(--imd-orange); }
+.yellow-alert .warning-badge { background-color: var(--imd-yellow); }
+
+/* Data Tables */
+.bulletin-section-title {
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--primary-navy);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bulletin-section-title::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background-color: var(--paper-border);
+}
+
+.obs-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 28px;
+  font-size: 12.5px;
+}
+
+.obs-table th {
+  background-color: #F8FAFC;
+  color: var(--secondary-slate);
+  font-weight: 600;
+  text-align: left;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--paper-border);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.obs-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.obs-table tr:hover {
+  background-color: #F8FAFC;
+}
+
+.obs-table .num {
+  font-family: 'JetBrains Mono', monospace;
+  text-align: right;
+}
+
+/* Synoptic Narrative */
+.narrative-block {
+  font-size: 13.5px;
+  line-height: 1.7;
+  color: var(--secondary-slate);
+  background-color: #F8FAFC;
+  padding: 18px 20px;
+  border-left: 3px solid var(--primary-navy);
+  margin-bottom: 28px;
+}
+
+/* Footer & Signatures */
+.bulletin-footer {
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid var(--paper-border);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.signature-box {
+  text-align: right;
+  font-weight: 500;
+}
+
+.signature-box .officer-name {
+  font-weight: 700;
+  color: var(--primary-navy);
+}
+
+/* Print Rules */
+@media print {
+  body {
+    background-color: #FFF;
+    padding: 0;
+  }
+  .bulletin-sheet {
+    border: none;
+    box-shadow: none;
+    padding: 0;
+    max-width: 100%;
+  }
+  .no-print {
+    display: none;
+  }
+}

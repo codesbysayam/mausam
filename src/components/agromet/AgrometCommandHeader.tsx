@@ -10,6 +10,7 @@ import {
   Calendar as CalendarIcon,
   ChevronDown,
   X,
+  FileText,
 } from 'lucide-react';
 import { CropType, PhenologicalStage, ALL_CROPS, CROP_STAGES } from '../../services/agronomicEngine';
 import { INDIAN_STATES_AND_DISTRICTS } from '../../services/agrometService';
@@ -119,7 +120,7 @@ export const AgrometCommandHeader: React.FC<AgrometCommandHeaderProps> = ({
             </div>
           </div>
 
-          {/* Timestamp & Crop Age bar */}
+          {/* Timestamp, Crop Age bar & GKMS Bulletin */}
           <div className="flex items-center gap-3 text-xs font-mono text-[#94A3B8] flex-wrap">
             <div className="flex items-center gap-2 bg-[#090D16]/70 border border-[#1E293B] rounded-lg px-3 py-2">
               <Clock className="w-3.5 h-3.5 text-[#38BDF8]" />
@@ -132,6 +133,17 @@ export const AgrometCommandHeader: React.FC<AgrometCommandHeaderProps> = ({
               <span>Crop Age:</span>
               <span className="text-[#10B981] font-bold font-mono">{cropAgeDays} Days (DAS)</span>
             </div>
+
+            <a
+              href="/agromet_bulletin.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-[#10B981]/15 hover:bg-[#10B981]/25 border border-[#10B981]/30 hover:border-[#10B981]/60 text-[#10B981] hover:text-white rounded-lg px-3 py-2 transition-colors shadow-sm"
+              title="View and Print Official IMD & ICAR Gramin Krishi Mausam Sewa (GKMS) District Agromet Advisory Bulletin"
+            >
+              <FileText className="w-3.5 h-3.5" />
+              <span className="font-bold">Official GKMS Bulletin ↗</span>
+            </a>
           </div>
         </div>
 

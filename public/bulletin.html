@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MAUSAM — National Synoptic Weather Bulletin</title>
+  <link rel="stylesheet" href="/css/bulletin.css">
+</head>
+<body>
+  <div class="no-print" style="max-width: 960px; margin: 0 auto 16px; display: flex; justify-content: flex-end; gap: 12px;">
+    <button onclick="window.print()" style="background: #0F172A; color: #FFF; border: none; padding: 8px 16px; border-radius: 4px; font-weight: 600; cursor: pointer; font-size: 13px;">
+      🖨️ Print / Save Official PDF
+    </button>
+    <a href="/" style="background: #E2E8F0; color: #0F172A; text-decoration: none; padding: 8px 16px; border-radius: 4px; font-weight: 600; font-size: 13px;">
+      ← Return to Platform
+    </a>
+  </div>
+
+  <article class="bulletin-sheet">
+    <!-- Official Header -->
+    <header class="bulletin-header">
+      <div class="bulletin-title-group">
+        <h1>Mausam Atmospheric Intelligence</h1>
+        <h2>National Meteorological Operations Center — New Delhi</h2>
+      </div>
+      <div class="bulletin-meta">
+        <div>BULLETIN NO.: <span class="bold-id">MAUSAM/SYN/2026/0909</span></div>
+        <div>ISSUED: <span class="bold-id">09-SEP-2026 12:30 IST</span></div>
+        <div>VALID UNTIL: <span class="bold-id">10-SEP-2026 12:30 IST</span></div>
+      </div>
+    </header>
+
+    <!-- Warning Priority Banner -->
+    <div class="warning-banner orange-alert">
+      <div class="warning-badge">Orange Warning</div>
+      <div>
+        <strong>Isolated Extremely Heavy Rainfall & Squally Winds:</strong>
+        Well-marked Low Pressure Area over Northwest Bay of Bengal off Odisha-West Bengal coasts is likely to intensify into a Depression during next 24 hours.
+      </div>
+    </div>
+
+    <!-- Synoptic Summary Narrative -->
+    <h3 class="bulletin-section-title">1. Synoptic Weather Situation</h3>
+    <div class="narrative-block">
+      The monsoon trough at mean sea level continues to run south of its normal position, passing through Bikaner, Sikar, Gwalior, Sidhi, Sambalpur, and thence southeastwards into the center of the Well-Marked Low Pressure Area over Northwest Bay of Bengal. Under its influence, active to vigorous monsoon conditions are prevailing over Odisha, Gangetic West Bengal, Chhattisgarh, and East Madhya Pradesh with isolated convective surges over Konkan & Goa.
+    </div>
+
+    <!-- Meteorological Observations Table -->
+    <h3 class="bulletin-section-title">2. Synoptic Station Observations (Past 24 Hours)</h3>
+    <table class="obs-table">
+      <thead>
+        <tr>
+          <th>Station Name</th>
+          <th>WMO Index</th>
+          <th class="num">Max Temp (°C)</th>
+          <th class="num">Min Temp (°C)</th>
+          <th class="num">RH (%)</th>
+          <th class="num">Pressure (hPa)</th>
+          <th class="num">24h Rain (mm)</th>
+          <th>Warning Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Bhubaneswar (IMD)</strong></td>
+          <td>42971</td>
+          <td class="num">30.6</td>
+          <td class="num">24.2</td>
+          <td class="num">92%</td>
+          <td class="num">1003.8</td>
+          <td class="num" style="color: #C2410C; font-weight: 700;">118.4</td>
+          <td><span style="color: #C2410C; font-weight: 600;">Orange (Very Heavy)</span></td>
+        </tr>
+        <tr>
+          <td><strong>Kolkata (Alipore)</strong></td>
+          <td>42809</td>
+          <td class="num">31.5</td>
+          <td class="num">25.8</td>
+          <td class="num">88%</td>
+          <td class="num">1004.2</td>
+          <td class="num" style="color: #B45309; font-weight: 600;">68.2</td>
+          <td><span style="color: #B45309; font-weight: 600;">Yellow (Heavy)</span></td>
+        </tr>
+        <tr>
+          <td><strong>Mumbai (Santacruz)</strong></td>
+          <td>43003</td>
+          <td class="num">30.2</td>
+          <td class="num">25.0</td>
+          <td class="num">86%</td>
+          <td class="num">1007.6</td>
+          <td class="num">42.5</td>
+          <td><span style="color: #B45309; font-weight: 600;">Yellow (Moderate)</span></td>
+        </tr>
+        <tr>
+          <td><strong>New Delhi (Safdarjung)</strong></td>
+          <td>42182</td>
+          <td class="num">34.8</td>
+          <td class="num">26.4</td>
+          <td class="num">65%</td>
+          <td class="num">1004.8</td>
+          <td class="num">0.0</td>
+          <td><span style="color: #15803D; font-weight: 600;">Green (No Warning)</span></td>
+        </tr>
+        <tr>
+          <td><strong>Chennai (Meenambakkam)</strong></td>
+          <td>43279</td>
+          <td class="num">35.2</td>
+          <td class="num">27.6</td>
+          <td class="num">70%</td>
+          <td class="num">1007.2</td>
+          <td class="num">0.0</td>
+          <td><span style="color: #15803D; font-weight: 600;">Green (No Warning)</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- Marine & Fishermen Warnings -->
+    <h3 class="bulletin-section-title">3. Fishermen Warning & Sea Condition</h3>
+    <div class="narrative-block" style="border-left-color: var(--imd-orange);">
+      <strong>Squally wind speed reaching 45-55 km/h gusting to 65 km/h</strong> is likely to prevail over Northwest & adjoining Westcentral Bay of Bengal along and off Odisha and West Bengal coasts. Sea condition will be rough to very rough. Fishermen are strictly advised not to venture into these marine zones during the next 48 hours.
+    </div>
+
+    <!-- Sign-off -->
+    <footer class="bulletin-footer">
+      <div>
+        <div>MAUSAM Scientific Computation Engine v2.1.0</div>
+        <div>Data Sources: IMD Synoptic GTS Network & C-Accelerated Numerical Core</div>
+      </div>
+      <div class="signature-box">
+        <div class="officer-name">Dr. A. K. Srivastava</div>
+        <div>Director, Duty Forecasting Officer</div>
+        <div>National Weather Forecasting Centre</div>
+      </div>
+    </footer>
+  </article>
+</body>
+</html>
