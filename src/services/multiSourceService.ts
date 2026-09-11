@@ -11,6 +11,11 @@ export interface ProviderHealthDetail {
   name: string;
   category: 'GOVERNMENT' | 'COMMERCIAL' | 'OPEN_DATA';
   status: ProviderStatusCode;
+  role?: string;
+  fallback?: string | null;
+  currentDataSource?: string | null;
+  reason?: string | null;
+  nextAction?: string | null;
   isConfigured: boolean;
   requiredKey: string | null;
   latency: number | null; // in ms

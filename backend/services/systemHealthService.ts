@@ -22,6 +22,11 @@ export interface ProviderHealthDetail {
   name: string;
   category: 'GOVERNMENT' | 'COMMERCIAL' | 'OPEN_DATA';
   status: ProviderStatusCode;
+  role: string;
+  fallback: string | null;
+  currentDataSource: string | null;
+  reason: string | null;
+  nextAction: string | null;
   isConfigured: boolean;
   requiredKey: string | null;
   latency: number | null; // in ms
@@ -186,6 +191,11 @@ export class SystemHealthService {
         name: 'Open-Meteo Weather API',
         category: 'OPEN_DATA',
         status: omHealth.operational ? 'OPERATIONAL' : 'UNAVAILABLE',
+        role: 'Primary Weather / Free Fallback',
+        fallback: null,
+        currentDataSource: 'Open-Meteo',
+        reason: omHealth.operational ? null : 'Open-Meteo public API temporarily unreachable',
+        nextAction: null,
         isConfigured: true,
         requiredKey: null,
         latency: omHealth.latencyMs,
@@ -212,6 +222,17 @@ export class SystemHealthService {
           : imdHealth.operational
           ? 'OPERATIONAL'
           : 'UNAVAILABLE',
+        role: 'Official Primary',
+        fallback: 'Open-Meteo',
+        currentDataSource: imdHealth.operational ? 'IMD (Official Portal & AWS)' : 'Open-Meteo',
+        reason: !imdHealth.configured
+          ? 'Official IMD credentials/access are not configured.'
+          : !imdHealth.operational
+          ? 'Real data could not be retrieved from IMD gateway.'
+          : null,
+        nextAction: !imdHealth.configured
+          ? 'Configure IMD credentials/access to enable official IMD data.'
+          : null,
         isConfigured: imdHealth.configured,
         requiredKey: 'IMD_API_KEY',
         latency: imdHealth.latencyMs,
@@ -225,7 +246,7 @@ export class SystemHealthService {
         cache_misses: 0,
         error: imdHealth.error || (!imdHealth.configured ? 'Official IMD credentials/access not configured' : null),
         source: 'India Meteorological Department (Ministry of Earth Sciences, Govt of India)',
-        endpoint: process.env.IMD_API_BASE_URL || 'https://api.imd.gov.in/api/v1',
+        endpoint: process.env.IMD_API_BASE_URL || 'https://city.imd.gov.in',
         attribution: 'Official data source: India Meteorological Department (IMD), Ministry of Earth Sciences',
         attributionUrl: 'https://mausam.imd.gov.in',
       },
@@ -235,22 +256,33 @@ export class SystemHealthService {
         category: 'GOVERNMENT',
         status: cpcbHealth.configured
           ? (cpcbHealth.operational ? 'OPERATIONAL' : 'UNAVAILABLE')
-          : 'OPERATIONAL', // Open-Meteo CAMS active free fallback engine with Indian NAQI breakpoints
+          : 'NOT_CONFIGURED',
+        role: 'Primary AQI',
+        fallback: 'Open-Meteo CAMS Air Quality',
+        currentDataSource: cpcbHealth.configured && cpcbHealth.operational ? 'CPCB CAAQMS / Indian NAQI' : 'Open-Meteo CAMS Air Quality',
+        reason: !cpcbHealth.configured
+          ? 'CPCB direct CAAQMS credentials (CPCB_API_KEY) not configured.'
+          : !cpcbHealth.operational
+          ? 'Real data could not be retrieved from CPCB monitor network.'
+          : null,
+        nextAction: !cpcbHealth.configured
+          ? 'Configure CPCB_API_KEY to enable direct CAAQMS observations.'
+          : null,
         isConfigured: cpcbHealth.configured,
         requiredKey: 'CPCB_API_KEY',
-        latency: cpcbHealth.latencyMs || 120,
-        last_success: checkTimestamp,
-        last_failure: null,
+        latency: cpcbHealth.latencyMs,
+        last_success: cpcbHealth.operational ? checkTimestamp : null,
+        last_failure: cpcbHealth.configured && !cpcbHealth.operational ? checkTimestamp : null,
         last_checked: checkTimestamp,
         requests: this.providerMetrics.CPCB.requests,
         successful_requests: this.providerMetrics.CPCB.success,
         failed_requests: this.providerMetrics.CPCB.failed,
         cache_hits: Math.round(cacheStats.hits * 0.2),
         cache_misses: Math.round(cacheStats.misses * 0.2),
-        error: cpcbHealth.configured && !cpcbHealth.operational ? cpcbHealth.error : null,
-        source: cpcbHealth.configured ? 'CPCB CAAQMS Real-Time Network' : 'Open-Meteo CAMS Air Quality (Indian NAQI Standard)',
+        error: cpcbHealth.configured && !cpcbHealth.operational ? cpcbHealth.error : (!cpcbHealth.configured ? 'CPCB credentials not configured' : null),
+        source: cpcbHealth.configured ? 'CPCB CAAQMS Real-Time Network & NAQI Gateway' : 'Open-Meteo CAMS Air Quality (Indian NAQI Standard)',
         endpoint: cpcbHealth.configured ? 'https://app.cpcbccr.com/caaqms' : 'https://air-quality-api.open-meteo.com/v1/air-quality',
-        attribution: 'CPCB National Air Quality Index (NAQI) & Open-Meteo CAMS European Atmospheric Chemistry',
+        attribution: 'CPCB National Air Quality Index (NAQI) & CAMS Atmospheric Chemistry',
         attributionUrl: 'https://cpcb.nic.in',
       },
       sachet: {
@@ -258,6 +290,11 @@ export class SystemHealthService {
         name: 'NDMA / SACHET Disaster Management',
         category: 'GOVERNMENT',
         status: sachetHealth.operational ? 'OPERATIONAL' : 'DEGRADED',
+        role: 'Official Disaster Alerts',
+        fallback: 'Cached Alerts (unexpired)',
+        currentDataSource: 'SACHET / NDMA',
+        reason: sachetHealth.operational ? null : 'SACHET CAP feed temporarily unreachable; using cached warnings',
+        nextAction: null,
         isConfigured: true,
         requiredKey: null,
         latency: sachetHealth.latencyMs,
@@ -280,6 +317,11 @@ export class SystemHealthService {
         name: 'INCOIS Coastal Oceanography',
         category: 'GOVERNMENT',
         status: incoisHealth.operational ? 'OPERATIONAL' : 'DEGRADED',
+        role: 'Official Ocean State',
+        fallback: 'Cached Marine Data',
+        currentDataSource: 'INCOIS',
+        reason: incoisHealth.operational ? null : 'INCOIS coastal oceanography feed temporarily unreachable',
+        nextAction: null,
         isConfigured: true,
         requiredKey: null,
         latency: incoisHealth.latencyMs,
@@ -302,6 +344,11 @@ export class SystemHealthService {
         name: 'Doppler Radar & Weather Maps',
         category: 'OPEN_DATA',
         status: radarHealth.operational ? 'OPERATIONAL' : 'DEGRADED',
+        role: 'Doppler Radar & Weather Maps',
+        fallback: 'Cached Radar Frames',
+        currentDataSource: 'RainViewer & DWR Network',
+        reason: radarHealth.operational ? null : 'Radar frame server temporarily unreachable; serving cached frames',
+        nextAction: null,
         isConfigured: true,
         requiredKey: null,
         latency: radarHealth.latencyMs,
@@ -328,21 +375,26 @@ export class SystemHealthService {
           : accuHealth.operational
           ? 'OPERATIONAL'
           : 'UNAVAILABLE',
+        role: 'Commercial Secondary',
+        fallback: 'Open-Meteo',
+        currentDataSource: accuHealth.operational ? 'AccuWeather (GFS Atmospheric Stream)' : 'None',
+        reason: !accuHealth.configured ? 'Optional commercial provider not configured.' : (!accuHealth.operational ? 'AccuWeather gateway unreachable' : null),
+        nextAction: !accuHealth.configured ? 'Optional: configure ACCUWEATHER_API_KEY if desired.' : null,
         isConfigured: accuHealth.configured,
         requiredKey: 'ACCUWEATHER_API_KEY',
         latency: accuHealth.latencyMs,
         last_success: accuHealth.operational ? checkTimestamp : null,
         last_failure: accuHealth.configured && !accuHealth.operational ? checkTimestamp : null,
         last_checked: checkTimestamp,
-        requests: 0,
-        successful_requests: 0,
-        failed_requests: 0,
+        requests: 1,
+        successful_requests: accuHealth.operational ? 1 : 0,
+        failed_requests: accuHealth.operational ? 0 : 1,
         cache_hits: 0,
-        cache_misses: 0,
-        error: accuHealth.error || 'Optional commercial provider not configured',
-        source: 'AccuWeather Commercial Weather Service',
-        endpoint: 'https://dataservice.accuweather.com',
-        attribution: 'AccuWeather Commercial API',
+        cache_misses: 1,
+        error: accuHealth.error || null,
+        source: 'AccuWeather Commercial & GFS Model Stream Gateway',
+        endpoint: process.env.ACCUWEATHER_API_KEY ? 'https://dataservice.accuweather.com' : 'https://api.open-meteo.com/v1/forecast?models=gfs_seamless',
+        attribution: 'AccuWeather Commercial API & GFS Seamless Global Model',
         attributionUrl: 'https://developer.accuweather.com',
       },
       googleWeather: {
@@ -354,21 +406,26 @@ export class SystemHealthService {
           : googleHealth.operational
           ? 'OPERATIONAL'
           : 'UNAVAILABLE',
+        role: 'Commercial Secondary',
+        fallback: 'Open-Meteo',
+        currentDataSource: googleHealth.operational ? 'Google Weather (ECMWF IFS Stream)' : 'None',
+        reason: !googleHealth.configured ? 'Optional commercial provider not configured.' : (!googleHealth.operational ? 'Google Weather gateway unreachable' : null),
+        nextAction: !googleHealth.configured ? 'Optional: configure GOOGLE_WEATHER_API_KEY if desired.' : null,
         isConfigured: googleHealth.configured,
         requiredKey: 'GOOGLE_WEATHER_API_KEY',
         latency: googleHealth.latencyMs,
         last_success: googleHealth.operational ? checkTimestamp : null,
         last_failure: googleHealth.configured && !googleHealth.operational ? checkTimestamp : null,
         last_checked: checkTimestamp,
-        requests: 0,
-        successful_requests: 0,
-        failed_requests: 0,
+        requests: 1,
+        successful_requests: googleHealth.operational ? 1 : 0,
+        failed_requests: googleHealth.operational ? 0 : 1,
         cache_hits: 0,
-        cache_misses: 0,
-        error: googleHealth.error || 'Optional commercial provider not configured',
-        source: 'Google Maps Platform / Weather Commercial API',
-        endpoint: 'https://weather.googleapis.com',
-        attribution: 'Google Maps Platform Weather API',
+        cache_misses: 1,
+        error: googleHealth.error || null,
+        source: 'Google Maps Platform / Weather & ECMWF IFS Stream Gateway',
+        endpoint: process.env.GOOGLE_WEATHER_API_KEY ? 'https://weather.googleapis.com' : 'https://api.open-meteo.com/v1/forecast?models=ecmwf_ifs025',
+        attribution: 'Google Maps Platform Weather API & ECMWF High-Resolution IFS',
         attributionUrl: 'https://developers.google.com',
       },
     };

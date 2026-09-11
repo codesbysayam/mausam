@@ -4,11 +4,13 @@ import { WarningRecord } from '../../types/warningTypes';
 interface WarningTickerProps {
   warnings: WarningRecord[];
   onSelectWarning: (warning: WarningRecord) => void;
+  source?: string;
 }
 
 export const WarningTicker: React.FC<WarningTickerProps> = ({
   warnings,
   onSelectWarning,
+  source = 'NDMA / SACHET CAP Feed',
 }) => {
   const activeAlerts = warnings.filter((w) => w.severity !== 'green');
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -52,7 +54,7 @@ export const WarningTicker: React.FC<WarningTickerProps> = ({
             No critical severe weather alerts currently in effect across sub-divisions.
           </span>
         </div>
-        <span className="text-[11px] font-mono text-[#B8C7D9]">IMD Live Feed</span>
+        <span className="text-[11px] font-mono text-[#B8C7D9]">{source}</span>
       </div>
     );
   }

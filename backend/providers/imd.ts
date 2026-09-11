@@ -9,11 +9,10 @@ import { WeatherNormalizer } from '../normalization/weatherNormalizer';
 
 export class IMDProvider {
   private static baseUrl = process.env.IMD_API_BASE_URL || 'https://api.imd.gov.in/api/v1';
+  private static publicPortalUrl = process.env.IMD_PUBLIC_PORTAL_URL || 'https://city.imd.gov.in';
 
   public static isConfigured(): boolean {
-    const isEnabled = process.env.IMD_ENABLED !== 'false';
-    const hasKey = !!(process.env.IMD_API_KEY || process.env.IMD_API_TOKEN);
-    return isEnabled && hasKey;
+    return process.env.IMD_ENABLED !== 'false';
   }
 
   public static async checkHealth(): Promise<{
@@ -27,21 +26,39 @@ export class IMDProvider {
         configured: false,
         operational: false,
         latencyMs: null,
-        error: 'Official IMD credentials/access not configured',
+        error: 'IMD provider disabled (IMD_ENABLED=false)',
       };
     }
 
     const start = Date.now();
     try {
       const apiKey = process.env.IMD_API_KEY;
-      const headers: Record<string, string> = {
-        Accept: 'application/json',
-        'User-Agent': 'MAUSAM-Atmospheric-Platform/3.0',
-      };
-      if (apiKey) headers['X-API-KEY'] = apiKey;
+      if (apiKey) {
+        const headers: Record<string, string> = {
+          Accept: 'application/json',
+          'User-Agent': 'MAUSAM-Atmospheric-Platform/3.0',
+          'X-API-KEY': apiKey,
+        };
+        const res = await fetch(`${this.baseUrl}/health`, {
+          headers,
+          signal: AbortSignal.timeout(4000),
+        });
 
-      const res = await fetch(`${this.baseUrl}/health`, {
-        headers,
+        const latencyMs = Date.now() - start;
+        return {
+          configured: true,
+          operational: res.ok,
+          latencyMs,
+          error: res.ok ? undefined : `HTTP ${res.status}: ${res.statusText}`,
+        };
+      }
+
+      // Probing official IMD Public Portal Gateway
+      const res = await fetch(this.publicPortalUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        },
         signal: AbortSignal.timeout(4000),
       });
 
@@ -50,7 +67,7 @@ export class IMDProvider {
         configured: true,
         operational: res.ok,
         latencyMs,
-        error: res.ok ? undefined : `HTTP ${res.status}: ${res.statusText}`,
+        error: res.ok ? undefined : `HTTP ${res.status}`,
       };
     } catch (err: any) {
       return {
@@ -148,6 +165,10 @@ export class IMDProvider {
     } catch {
       return null;
     }
+  }
+
+  public static async fetchForecast(loc: GeoLocation, stationId?: string): Promise<NormalizedForecast | null> {
+    return this.fetchCityForecast(loc);
   }
 
   public static async fetchDistrictWarnings(district: string, state?: string): Promise<NormalizedWarningItem[]> {

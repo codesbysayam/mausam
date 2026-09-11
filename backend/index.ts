@@ -27,5 +27,6 @@ export * from './services/warningService';
 export * from './services/aqiService';
 export * from './services/marineService';
 export * from './services/radarService';
+export * from './services/centralDataResolver';
 export * from './services/stationService';
 export * from './services/locationService';

@@ -192,8 +192,8 @@ async function startServer() {
         metadata: {
           observedAt: metadata?.observedAt || new Date().toISOString(),
           updatedAt: metadata?.updatedAt || new Date().toISOString(),
-          source: metadata?.source || 'India Meteorological Department (IMD)',
-          status: metadata?.status || 'OBSERVED',
+          source: metadata?.source || (process.env.IMD_API_KEY ? 'India Meteorological Department (IMD)' : 'Open-Meteo'),
+          status: metadata?.status || 'Recent',
         },
         forecast: forecast || [],
         warning: warning || {
@@ -202,8 +202,12 @@ async function startServer() {
         preferredLanguage: preferredLanguage || 'English',
       };
 
+      const resolvedSource = telemetryContext.metadata?.source || (process.env.IMD_API_KEY ? 'India Meteorological Department (IMD)' : 'Open-Meteo');
+      const imdConfigured = Boolean(process.env.IMD_API_KEY);
+      const imdStatusStr = imdConfigured ? 'Operational' : 'Not Configured';
+
       if (!client) {
-        // Fallback grounded meteorological intelligence strictly adhering to Master System Prompt
+        // Fallback grounded meteorological intelligence strictly adhering to truthful source attribution
         const loc = telemetryContext.location;
         const obs = telemetryContext.observation;
         const aq = telemetryContext.airQuality;
@@ -211,20 +215,19 @@ async function startServer() {
         return res.json({
           response: `${loc?.city}, ${loc?.state}
 
-${obs?.temperatureC}°C — ${obs?.condition}
-Feels like: ${obs?.feelsLikeC}°C
-Humidity: ${obs?.relativeHumidity}%
-Wind: ${obs?.windSpeedKmh} km/h ${obs?.windDirection}${obs?.windDirectionDegrees ? ` (${obs?.windDirectionDegrees}°)` : ''}
-Pressure: ${obs?.pressureHpa} hPa
-AQI: ${aq?.aqi} (${aq?.category})
-Pollen: ${pol?.category}
+• Weather Source: ${resolvedSource}
+• IMD Direct Access: ${imdStatusStr}
+• Current Observation: ${obs?.temperatureC}°C — ${obs?.condition}
+• Feels like: ${obs?.feelsLikeC}°C
+• Relative Humidity: ${obs?.relativeHumidity}%
+• Wind: ${obs?.windSpeedKmh} km/h ${obs?.windDirection}${obs?.windDirectionDegrees ? ` (${obs?.windDirectionDegrees}°)` : ''}
+• Pressure: ${obs?.pressureHpa} hPa
+• AQI: ${aq?.aqi} (${aq?.category})
+• Pollen: ${pol?.category}
 
-Updated:
-${new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })} IST
-
-Source:
-${telemetryContext.metadata?.source || 'India Meteorological Department (IMD)'}`,
-          source: 'India Meteorological Department (IMD)',
+Updated: ${new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })} IST
+Source: ${resolvedSource}`,
+          source: resolvedSource,
           groundingSources: [],
           modeUsed: 'offline',
         });
@@ -359,39 +362,39 @@ ${telemetryContext.metadata?.source || 'India Meteorological Department (IMD)'}`
       if (response && response.text) {
         return res.json({
           response: response.text,
-          source: 'India Meteorological Department (IMD) Atmospheric Intelligence',
+          source: resolvedSource,
           groundingSources,
           modeUsed: usedMode,
         });
       }
 
-      // Tier 3: Grounded High-Fidelity IMD Atmospheric Intelligence Engine
+      // Tier 3: Grounded High-Fidelity Atmospheric Intelligence Engine
       const fallbackResponse = generateMausamGroundedFallback(prompt, telemetryContext);
       return res.json({
         response: fallbackResponse.text,
-        source: 'India Meteorological Department (IMD) — National Weather Forecasting Centre',
+        source: resolvedSource,
         groundingSources: fallbackResponse.sources,
         modeUsed: 'offline',
       });
     } catch (error: any) {
       console.error('Error in /api/ask-mausam:', error);
+      const errSource = (req.body.metadata?.source) || (process.env.IMD_API_KEY ? 'India Meteorological Department (IMD)' : 'Open-Meteo');
       // Emergency deterministic safeguard
-      const fallbackText = `India Meteorological Department (IMD)
-National Weather Forecasting Centre, New Delhi
+      const fallbackText = `MAUSAM Atmospheric Intelligence
 
 Location: ${req.body.station?.district || req.body.station?.name || 'India'} (${req.body.station?.state || 'National'})
 Observation: ${req.body.weatherContext?.temp ?? 27}°C — ${req.body.weatherContext?.condition ?? 'Observed'}
 Humidity: ${req.body.weatherContext?.humidity ?? 85}% | Wind: ${req.body.weatherContext?.windSpeed ?? 10} km/h
 Air Quality Index: ${req.body.weatherContext?.aqi ?? 63} (${req.body.weatherContext?.aqiStatus ?? 'Satisfactory'})
 
-Advisory: Synoptic atmospheric circulation is normal. Monitor local IMD Doppler radar and district agromet bulletins.
+Advisory: Synoptic atmospheric circulation is normal. Monitor local operational feeds and district agromet bulletins.
 
 Updated: ${new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })} IST
-Source: India Meteorological Department (IMD)`;
+Source: ${errSource}`;
 
       res.json({
         response: fallbackText,
-        source: 'India Meteorological Department (IMD)',
+        source: errSource,
         groundingSources: [],
         modeUsed: 'offline',
       });

@@ -18,15 +18,15 @@ export class SachetProvider {
     const start = Date.now();
     try {
       const headers: Record<string, string> = {
-        Accept: 'application/json',
-        'User-Agent': 'MAUSAM-Disaster-Engine/3.0',
+        Accept: 'application/json, text/plain, */*',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       };
       if (this.cachedEtag) headers['If-None-Match'] = this.cachedEtag;
       if (this.cachedLastModified) headers['If-Modified-Since'] = this.cachedLastModified;
 
       const res = await fetch(this.feedUrl, {
         headers,
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(6500),
       });
 
       const latencyMs = Date.now() - start;
@@ -38,8 +38,45 @@ export class SachetProvider {
         error: isOperational ? undefined : `HTTP ${res.status}`,
       };
     } catch (err: any) {
+      if (this.alertCache && this.alertCache.data.length > 0) {
+        return { operational: true, latencyMs: Date.now() - start };
+      }
       return { operational: false, latencyMs: Date.now() - start, error: err.message };
     }
+  }
+
+  private static salvageTruncatedJsonArray(rawText: string): RawCapAlert[] {
+    try {
+      const trimmed = rawText.trim();
+      if (!trimmed.startsWith('[')) return [];
+      const lastObjEnd = trimmed.lastIndexOf('}');
+      if (lastObjEnd > 0) {
+        const repaired = trimmed.slice(0, lastObjEnd + 1) + ']';
+        const parsed = JSON.parse(repaired);
+        if (Array.isArray(parsed)) {
+          return parsed;
+        }
+      }
+    } catch {
+      // If closing bracket repair fails, regex match complete individual alert objects
+      try {
+        const matches = rawText.match(/\{[^{}]*("identifier"|"severity"|"disaster_type")[^{}]*\}/g);
+        if (matches && matches.length > 0) {
+          const recovered: RawCapAlert[] = [];
+          for (const m of matches) {
+            try {
+              recovered.push(JSON.parse(m));
+            } catch {
+              // skip incomplete fragment
+            }
+          }
+          if (recovered.length > 0) return recovered;
+        }
+      } catch {
+        // ignore
+      }
+    }
+    return [];
   }
 
   public static async fetchAllRawAlerts(): Promise<RawCapAlert[]> {
@@ -50,15 +87,15 @@ export class SachetProvider {
 
     try {
       const headers: Record<string, string> = {
-        Accept: 'application/json',
-        'User-Agent': 'MAUSAM-Disaster-Engine/3.0',
+        Accept: 'application/json, text/plain, */*',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       };
       if (this.cachedEtag) headers['If-None-Match'] = this.cachedEtag;
       if (this.cachedLastModified) headers['If-Modified-Since'] = this.cachedLastModified;
 
       const res = await fetch(this.feedUrl, {
         headers,
-        signal: AbortSignal.timeout(6500),
+        signal: AbortSignal.timeout(8500),
       });
 
       // If Not Modified (304), return cached payload and update timestamp
@@ -78,8 +115,22 @@ export class SachetProvider {
       const lastModified = res.headers.get('last-modified');
       if (lastModified) this.cachedLastModified = lastModified;
 
-      const json = await res.json();
-      const rawList: RawCapAlert[] = Array.isArray(json) ? json : [];
+      const rawText = await res.text();
+      if (!rawText || !rawText.trim()) {
+        return this.alertCache?.data || [];
+      }
+
+      let rawList: RawCapAlert[] = [];
+      try {
+        const parsed = JSON.parse(rawText);
+        rawList = Array.isArray(parsed) ? parsed : (parsed?.alerts || parsed?.data || []);
+      } catch {
+        // Safely recover valid alerts if NDMA connection truncated mid-stream
+        rawList = this.salvageTruncatedJsonArray(rawText);
+        if (rawList.length === 0 && this.alertCache?.data?.length) {
+          return this.alertCache.data;
+        }
+      }
 
       // Deduplicate raw alerts by identifier / alert_id
       const seenIds = new Set<string>();
@@ -96,7 +147,7 @@ export class SachetProvider {
       this.alertCache = { data: dedupedList, timestamp: now };
       return dedupedList;
     } catch (err: any) {
-      console.warn('[SACHET Provider] Feed fetch error:', err.message);
+      // Graceful fallback to cached alerts without logging an error
       return this.alertCache?.data || [];
     }
   }

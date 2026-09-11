@@ -3,7 +3,16 @@
 // Normalized Data Model & Type System
 // ====================================================================
 
-export type DataStatus = 'LIVE' | 'RECENT' | 'STALE' | 'UNAVAILABLE' | 'NOT_CONFIGURED';
+export type DataStatus =
+  | 'LIVE'
+  | 'OPERATIONAL'
+  | 'RECENT'
+  | 'STALE'
+  | 'DEGRADED'
+  | 'NOT_CONFIGURED'
+  | 'NO_COVERAGE'
+  | 'UNAVAILABLE'
+  | 'LOADING';
 
 export interface GeoLocation {
   id?: string;
@@ -30,6 +39,12 @@ export interface StandardApiResponse<T> {
   ageSeconds: number;
   primarySource: string;
   fallbackSource?: string;
+  fallbackUsed?: boolean;
+  primaryProvider?: string;
+  primaryStatus?: DataStatus;
+  fallbackProvider?: string;
+  reason?: string | null;
+  nextAction?: string | null;
   attribution?: string;
   data: T;
   error?: string | null;

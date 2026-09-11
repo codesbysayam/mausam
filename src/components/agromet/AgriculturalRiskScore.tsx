@@ -300,7 +300,7 @@ export const AgriculturalRiskScore: React.FC<AgriculturalRiskScoreProps> = ({ bu
 
               <div className="p-3 rounded-xl bg-[#101A26] border border-[#1E2E40] text-[11px] text-[#64748B] flex items-center justify-between">
                 <span>Data Mode:</span>
-                <span className="text-[#2ECC71] font-mono font-semibold">Live IMD Sensor + NWP</span>
+                <span className="text-[#2ECC71] font-mono font-semibold">Live Sensor Telemetry + NWP</span>
               </div>
             </div>
           </div>

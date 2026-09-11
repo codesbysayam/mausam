@@ -51,8 +51,31 @@ export class NDMAAdapter {
         return this.alertCache?.data || [];
       }
 
-      const json = await res.json();
-      const alerts = Array.isArray(json) ? json : [];
+      const rawText = await res.text();
+      let alerts: any[] = [];
+      if (rawText && rawText.trim()) {
+        try {
+          const parsed = JSON.parse(rawText);
+          alerts = Array.isArray(parsed) ? parsed : [];
+        } catch {
+          // Attempt repair of truncated array if socket cut off
+          const trimmed = rawText.trim();
+          const lastObj = trimmed.lastIndexOf('}');
+          if (trimmed.startsWith('[') && lastObj > 0) {
+            try {
+              const repaired = JSON.parse(trimmed.slice(0, lastObj + 1) + ']');
+              if (Array.isArray(repaired)) alerts = repaired;
+            } catch {
+              // ignore
+            }
+          }
+        }
+      }
+
+      if (alerts.length === 0 && this.alertCache?.data?.length) {
+        alerts = this.alertCache.data;
+      }
+
       this.alertCache = { data: alerts, timestamp: now };
       dataHealthService.recordSuccess('NDMA_SACHET', latency, alerts.length, res.status);
       return alerts;

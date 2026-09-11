@@ -324,7 +324,7 @@ class WeatherService {
     }
 
     const now = new Date();
-    const lastUpdated = `${this.formatIstTime(now)} IST (Live IMD/WRF/CPCB)`;
+    const lastUpdated = `${this.formatIstTime(now)} IST (Open-Meteo / CPCB)`;
 
     // Find index of current hour first for telemetry referencing
     let startIdx = 0;
@@ -458,9 +458,9 @@ class WeatherService {
       locationId: location.id,
       lastUpdated,
       lastUpdatedTimestamp: now.getTime(),
-      source: 'Open-Meteo / IMD & CPCB Surface Grid',
+      source: 'Open-Meteo',
       observationStatus: 'LIVE',
-      observationSource: location.imdStation ? `IMD Station (${location.imdStation}) & Open-Meteo Grid` : 'Open-Meteo Surface Grid (IMD Coordinates Fallback)',
+      observationSource: 'Open-Meteo (IMD Not Configured Fallback)',
       observationTimeFormatted: `${this.formatIstDate(now)} • ${this.formatIstTime(now)} IST`,
       previousHourTelemetry: startIdx > 0 ? {
         temp: hourlyRaw.temperature_2m?.[startIdx - 1] !== undefined ? Math.round(hourlyRaw.temperature_2m[startIdx - 1] * 10) / 10 : undefined,

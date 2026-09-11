@@ -5,12 +5,14 @@ interface WarningHeaderProps {
   lastUpdated?: string;
   onRefresh: () => void;
   isLoading?: boolean;
+  source?: string;
 }
 
 export const WarningHeader: React.FC<WarningHeaderProps> = ({
   lastUpdated,
   onRefresh,
   isLoading = false,
+  source = 'National Alert Feed (NDMA / SACHET)',
 }) => {
   const [justRefreshed, setJustRefreshed] = useState(false);
 
@@ -69,8 +71,8 @@ export const WarningHeader: React.FC<WarningHeaderProps> = ({
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#008000] opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-[#008000]"></span>
               </span>
-              <span className="text-[10px] font-bold text-[#00E676] uppercase tracking-wider">
-                Live IMD Telemetry
+              <span className="text-[10px] font-bold text-[#00E676] uppercase tracking-wider truncate max-w-[200px]">
+                {source}
               </span>
             </div>
 

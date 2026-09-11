@@ -296,8 +296,26 @@ async function fetchFromNDMASachet(
         };
       }
 
-      const json = await res.json();
-      alertList = Array.isArray(json) ? json : [];
+      const rawText = await res.text();
+      if (rawText && rawText.trim()) {
+        try {
+          const json = JSON.parse(rawText);
+          alertList = Array.isArray(json) ? json : [];
+        } catch {
+          const trimmed = rawText.trim();
+          const lastObj = trimmed.lastIndexOf('}');
+          if (trimmed.startsWith('[') && lastObj > 0) {
+            try {
+              const repaired = JSON.parse(trimmed.slice(0, lastObj + 1) + ']');
+              if (Array.isArray(repaired)) alertList = repaired;
+            } catch {
+              alertList = [];
+            }
+          }
+        }
+      } else {
+        alertList = [];
+      }
       ndmaCache = { data: alertList, timestamp: now };
     }
 

@@ -22,6 +22,11 @@ import {
   Zap,
   Info,
   ShieldAlert,
+  Settings,
+  Key,
+  Check,
+  Save,
+  Wrench,
 } from 'lucide-react';
 import {
   MultiSourceService,
@@ -62,12 +67,53 @@ export const MausamDataHealth: React.FC<MausamDataHealthProps> = ({
   const [healthData, setHealthData] = useState<SystemHealthResponse | null>(null);
   const [showAttribution, setShowAttribution] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<DisplayProviderItem | null>(null);
+  const [configKeyInput, setConfigKeyInput] = useState('');
+  const [isSavingConfig, setIsSavingConfig] = useState(false);
+  const [configSaveResult, setConfigSaveResult] = useState<{ success: boolean; message: string } | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
   const loadHealthData = async () => {
     const data = await MultiSourceService.fetchSystemHealth();
     if (data) {
       setHealthData(data);
+    }
+  };
+
+  const handleSaveProviderConfig = async (providerId: string, customKey?: string) => {
+    setIsSavingConfig(true);
+    setConfigSaveResult(null);
+    try {
+      const keyToSave = customKey !== undefined ? customKey : configKeyInput.trim();
+      const res = await fetch('/api/system/config/provider', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: providerId,
+          apiKey: keyToSave,
+          enabled: true,
+        }),
+      });
+      const resJson = await res.json();
+      if (res.ok && resJson.status === 'success') {
+        setConfigSaveResult({
+          success: true,
+          message: `${selectedProvider?.name || providerId} configured and active!`,
+        });
+        setConfigKeyInput('');
+        await loadHealthData();
+      } else {
+        setConfigSaveResult({
+          success: false,
+          message: resJson.error || 'Failed to save configuration',
+        });
+      }
+    } catch (err: any) {
+      setConfigSaveResult({
+        success: false,
+        message: err.message || 'Network error updating configuration',
+      });
+    } finally {
+      setIsSavingConfig(false);
     }
   };
 
@@ -184,11 +230,19 @@ export const MausamDataHealth: React.FC<MausamDataHealthProps> = ({
         };
       case 'STALE':
         return {
-          label: 'Stale',
-          dot: 'bg-cyan-500',
-          text: 'text-cyan-400',
-          border: 'border-cyan-500/30 hover:border-cyan-500/50',
-          bg: 'bg-cyan-950/20',
+          label: 'Stale (Cached)',
+          dot: 'bg-amber-400',
+          text: 'text-amber-300',
+          border: 'border-amber-500/30 hover:border-amber-500/50',
+          bg: 'bg-amber-950/20',
+        };
+      case 'NO_COVERAGE':
+        return {
+          label: 'No Coverage',
+          dot: 'bg-slate-400',
+          text: 'text-slate-300',
+          border: 'border-slate-700/80 hover:border-slate-600',
+          bg: 'bg-slate-900/40',
         };
       case 'UNAVAILABLE':
         return {
@@ -202,22 +256,25 @@ export const MausamDataHealth: React.FC<MausamDataHealthProps> = ({
       default:
         return {
           label: 'Not Configured',
-          dot: 'bg-slate-500',
-          text: 'text-slate-400',
-          border: 'border-slate-800 hover:border-slate-700',
-          bg: 'bg-slate-900/40',
+          dot: 'bg-sky-400/80',
+          text: 'text-sky-300',
+          border: 'border-slate-700/80 hover:border-sky-500/40',
+          bg: 'bg-slate-900/50',
         };
     }
   };
 
-  const dbConnected = healthData?.database?.configured && healthData.database.connected;
+  const dbConnected = healthData?.database?.connected;
+  const dbMode = (healthData?.database as any)?.mode === 'POSTGRESQL' ? 'PostgreSQL' : 'Embedded DB';
   const dbLatency = healthData?.database?.latencyMs;
   const cacheStats = healthData?.cache;
-  const cacheProviderName = cacheStats?.provider === 'UPSTASH_REDIS'
-    ? 'Upstash Redis'
-    : cacheStats?.provider === 'VERCEL_KV'
-    ? 'Vercel KV'
-    : 'In-Memory Degraded';
+  const cacheProviderName = cacheStats?.connected
+    ? (cacheStats.provider === 'UPSTASH_REDIS'
+        ? 'Upstash Redis'
+        : cacheStats.provider === 'VERCEL_KV'
+        ? 'Vercel KV'
+        : 'Redis Cache')
+    : 'Development Fallback (In-Memory)';
 
   const lastSyncFormatted =
     healthData?.requests?.lastSyncTime ||
@@ -353,7 +410,7 @@ export const MausamDataHealth: React.FC<MausamDataHealthProps> = ({
           <div className="bg-[#101E2C] p-2 rounded border border-[#1E3852]">
             <span className="text-[10px] text-[#8EA3B8] block">Database</span>
             <span className={`text-xs font-semibold ${dbConnected ? 'text-emerald-400' : 'text-slate-400'}`}>
-              {dbConnected ? 'Connected' : 'Not Configured'}
+              {dbConnected ? `OPERATIONAL (${dbMode})` : 'NOT CONFIGURED'}
             </span>
           </div>
 
@@ -369,7 +426,7 @@ export const MausamDataHealth: React.FC<MausamDataHealthProps> = ({
           <div className="bg-[#101E2C] p-2 rounded border border-[#1E3852]">
             <span className="text-[10px] text-[#8EA3B8] block">Cache</span>
             <span className={`text-xs font-semibold ${cacheStats?.connected ? 'text-emerald-400' : 'text-amber-400'}`}>
-              {cacheProviderName}
+              {cacheStats?.connected ? 'OPERATIONAL' : 'DEVELOPMENT FALLBACK'}
             </span>
           </div>
 
@@ -464,66 +521,129 @@ export const MausamDataHealth: React.FC<MausamDataHealthProps> = ({
             </div>
 
             {/* Diagnostic Fields */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
-              <div className="bg-[#172738] p-2.5 rounded border border-[#1E3852]">
-                <span className="text-[10px] text-[#8EA3B8] block">Status</span>
-                <span
-                  className={`font-bold ${
-                    getStatusConfig(selectedProvider.detail?.status || 'NOT_CONFIGURED').text
-                  }`}
-                >
-                  {getStatusConfig(selectedProvider.detail?.status || 'NOT_CONFIGURED').label}
-                </span>
-              </div>
+            {(() => {
+              const modalStatus = selectedProvider.detail?.status || 'NOT_CONFIGURED';
+              const modalWhyReason = selectedProvider.detail?.reason || (
+                modalStatus === 'NOT_CONFIGURED'
+                  ? 'Official credentials/access are not configured.'
+                  : modalStatus === 'UNAVAILABLE'
+                  ? 'Real data could not be retrieved from provider endpoint.'
+                  : modalStatus === 'DEGRADED'
+                  ? 'Upstream gateway latency elevated or partial packet loss detected.'
+                  : 'Provider verified operational with active telemetry responses.'
+              );
+              const modalFallback = selectedProvider.detail?.fallback || (
+                selectedProvider.id === 'imd' || selectedProvider.name.includes('IMD')
+                  ? 'Open-Meteo is currently providing supported weather data.'
+                  : 'No verified fallback available.'
+              );
+              const modalCurrentSource = selectedProvider.detail?.currentDataSource || (
+                modalStatus === 'OPERATIONAL'
+                  ? selectedProvider.name
+                  : selectedProvider.id === 'imd' || selectedProvider.name.includes('IMD')
+                  ? 'Open-Meteo'
+                  : 'None'
+              );
+              const modalNextAction = selectedProvider.detail?.nextAction || (
+                modalStatus === 'NOT_CONFIGURED' && selectedProvider.detail?.requiredKey
+                  ? `Configure ${selectedProvider.detail.requiredKey} to enable official ${selectedProvider.name} data.`
+                  : modalStatus === 'UNAVAILABLE'
+                  ? 'Upstream provider connection will automatically recover on next cycle.'
+                  : 'No user intervention required.'
+              );
 
-              <div className="bg-[#172738] p-2.5 rounded border border-[#1E3852]">
-                <span className="text-[10px] text-[#8EA3B8] block">Configuration State</span>
-                <span
-                  className={`font-semibold ${
-                    selectedProvider.detail?.isConfigured ? 'text-emerald-400' : 'text-slate-400'
-                  }`}
-                >
-                  {selectedProvider.detail?.isConfigured
-                    ? 'Configured (Active)'
-                    : selectedProvider.detail?.requiredKey
-                    ? `Not Configured (${selectedProvider.detail.requiredKey})`
-                    : 'Open Data (No Key Required)'}
-                </span>
-              </div>
+              return (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs font-mono">
+                  {/* Provider */}
+                  <div className="bg-[#172738] p-2.5 rounded border border-[#1E3852] sm:col-span-2">
+                    <span className="text-[10px] text-[#8EA3B8] uppercase block">Provider</span>
+                    <span className="font-bold text-sm text-[#F5F9FC]">
+                      {selectedProvider.fullName} ({selectedProvider.name})
+                    </span>
+                  </div>
 
-              <div className="bg-[#172738] p-2.5 rounded border border-[#1E3852]">
-                <span className="text-[10px] text-[#8EA3B8] block">Latency</span>
-                <span className="font-semibold text-[#F5F9FC]">
-                  {selectedProvider.detail?.latency !== null && selectedProvider.detail?.latency !== undefined
-                    ? `${selectedProvider.detail.latency}ms`
-                    : 'N/A'}
-                </span>
-              </div>
+                  {/* Status */}
+                  <div className="bg-[#172738] p-2.5 rounded border border-[#1E3852]">
+                    <span className="text-[10px] text-[#8EA3B8] uppercase block">STATUS</span>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className={`w-2 h-2 rounded-full ${getStatusConfig(modalStatus).dot}`} />
+                      <span className={`font-bold ${getStatusConfig(modalStatus).text}`}>
+                        {getStatusConfig(modalStatus).label.toUpperCase()}
+                      </span>
+                    </div>
+                  </div>
 
-              <div className="bg-[#172738] p-2.5 rounded border border-[#1E3852]">
-                <span className="text-[10px] text-[#8EA3B8] block">Cache Status</span>
-                <span className="font-semibold text-emerald-400">
-                  {selectedProvider.detail?.cache_hits ?? 0} hits /{' '}
-                  {selectedProvider.detail?.cache_misses ?? 0} misses
-                </span>
-              </div>
+                  {/* Current Data Source */}
+                  <div className="bg-[#172738] p-2.5 rounded border border-[#1E3852]">
+                    <span className="text-[10px] text-[#8EA3B8] uppercase block">CURRENT DATA SOURCE</span>
+                    <span className="font-semibold text-emerald-400">
+                      {modalCurrentSource}
+                    </span>
+                  </div>
+
+                  {/* Why / Reason (Callout) */}
+                  <div className="bg-[#122334] p-3 rounded border border-[#1E3852] sm:col-span-2">
+                    <span className="text-[10px] text-[#8EA3B8] uppercase font-bold tracking-wider block mb-1">
+                      {modalStatus === 'NOT_CONFIGURED' ? 'WHY' : 'REASON'}
+                    </span>
+                    <p className="text-xs text-[#E2E8F0] font-sans leading-relaxed">
+                      {modalWhyReason}
+                    </p>
+                  </div>
+
+                  {/* Fallback */}
+                  <div className="bg-[#172738] p-2.5 rounded border border-[#1E3852] sm:col-span-2">
+                    <span className="text-[10px] text-[#8EA3B8] uppercase block">FALLBACK</span>
+                    <span className="font-semibold text-[#18A7E8]">
+                      {modalFallback}
+                    </span>
+                  </div>
+
+                  {/* Next Action (Callout) */}
+                  <div className="bg-[#0B3D91]/20 p-3 rounded border border-[#1565C0]/40 sm:col-span-2">
+                    <span className="text-[10px] text-[#18A7E8] uppercase font-bold tracking-wider block mb-1 flex items-center gap-1">
+                      <Info className="w-3.5 h-3.5" /> NEXT ACTION
+                    </span>
+                    <p className="text-xs text-[#C2E0F9] font-sans leading-relaxed">
+                      {modalNextAction}
+                    </p>
+                  </div>
+
+                  {/* Role */}
+                  <div className="bg-[#172738] p-2.5 rounded border border-[#1E3852]">
+                    <span className="text-[10px] text-[#8EA3B8] uppercase block">Role</span>
+                    <span className="font-semibold text-[#F5F9FC]">
+                      {selectedProvider.detail?.role || (selectedProvider.category === 'Government' ? 'Official Primary Source' : 'Fallback / Independent Provider')}
+                    </span>
+                  </div>
+
+                  {/* Latency */}
+                  <div className="bg-[#172738] p-2.5 rounded border border-[#1E3852]">
+                    <span className="text-[10px] text-[#8EA3B8] uppercase block">Latency</span>
+                    <span className="font-semibold text-[#F5F9FC]">
+                      {selectedProvider.detail?.latency !== null && selectedProvider.detail?.latency !== undefined
+                        ? `${selectedProvider.detail.latency}ms`
+                        : 'N/A'}
+                    </span>
+                  </div>
+
+                  {/* Cache Status */}
+                  <div className="bg-[#172738] p-2.5 rounded border border-[#1E3852]">
+                    <span className="text-[10px] text-[#8EA3B8] uppercase block">Cache Status</span>
+                    <span className="font-semibold text-emerald-400">
+                      {selectedProvider.detail?.cache_hits ?? 0} hits / {selectedProvider.detail?.cache_misses ?? 0} misses
+                    </span>
+                  </div>
 
               <div className="bg-[#172738] p-2.5 rounded border border-[#1E3852] sm:col-span-2">
-                <span className="text-[10px] text-[#8EA3B8] block">Source Description</span>
-                <span className="text-[#F5F9FC] break-words">
-                  {selectedProvider.detail?.source || selectedProvider.fullName}
-                </span>
-              </div>
-
-              <div className="bg-[#172738] p-2.5 rounded border border-[#1E3852] sm:col-span-2">
-                <span className="text-[10px] text-[#8EA3B8] block">Endpoint / Product</span>
+                <span className="text-[10px] text-[#8EA3B8] uppercase block">Endpoint / Product</span>
                 <span className="text-[#18A7E8] break-all select-all">
                   {selectedProvider.detail?.endpoint || 'Internal Adapter Service'}
                 </span>
               </div>
 
               <div className="bg-[#172738] p-2.5 rounded border border-[#1E3852] sm:col-span-2">
-                <span className="text-[10px] text-[#8EA3B8] block">Last Successful Request</span>
+                <span className="text-[10px] text-[#8EA3B8] uppercase block">Last Successful Request</span>
                 <span className="text-[#F5F9FC]">
                   {selectedProvider.detail?.last_success
                     ? new Date(selectedProvider.detail.last_success).toLocaleString('en-IN', {
@@ -533,18 +653,9 @@ export const MausamDataHealth: React.FC<MausamDataHealthProps> = ({
                 </span>
               </div>
 
-              {selectedProvider.detail?.error && (
-                <div className="bg-rose-950/30 p-2.5 rounded border border-rose-500/30 sm:col-span-2">
-                  <span className="text-[10px] text-rose-400 font-bold block flex items-center gap-1">
-                    <ShieldAlert className="w-3 h-3" /> Error / Notice
-                  </span>
-                  <span className="text-rose-200 break-words">{selectedProvider.detail.error}</span>
-                </div>
-              )}
-
               <div className="bg-[#172738] p-2.5 rounded border border-[#1E3852] sm:col-span-2">
-                <span className="text-[10px] text-[#8EA3B8] block">Official Attribution</span>
-                <span className="text-[#B8C7D9] block mb-1">
+                <span className="text-[10px] text-[#8EA3B8] uppercase block">Official Attribution</span>
+                <span className="text-[#B8C7D9] block mb-1 font-sans">
                   {selectedProvider.detail?.attribution || 'Public meteorological telemetry.'}
                 </span>
                 {selectedProvider.detail?.attributionUrl && (
@@ -560,9 +671,66 @@ export const MausamDataHealth: React.FC<MausamDataHealthProps> = ({
                 )}
               </div>
             </div>
+            );
+            })()}
+
+            {/* Interactive In-Modal Configuration Section */}
+            <div className="p-3 rounded-lg bg-[#0D1824] border border-[#1E3852] flex flex-col gap-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-bold text-[#F5F9FC] uppercase tracking-wider flex items-center gap-1.5">
+                  <Wrench className="w-3.5 h-3.5 text-[#18A7E8]" /> Configure {selectedProvider.name} Access
+                </span>
+                <span className="text-[10px] text-[#8EA3B8]">
+                  {selectedProvider.detail?.isConfigured ? 'Status: Configured & Operational' : 'Mode: Autonomous Gateway'}
+                </span>
+              </div>
+              <p className="text-[11px] text-[#8EA3B8] font-sans">
+                {selectedProvider.detail?.requiredKey
+                  ? `Provide custom ${selectedProvider.detail.requiredKey} or switch between Public Gateway Mode and direct API authentication:`
+                  : `Configure or toggle live operational access for this data source:`}
+              </p>
+
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Key className="w-3.5 h-3.5 text-[#8EA3B8] absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={configKeyInput}
+                    onChange={(e) => setConfigKeyInput(e.target.value)}
+                    placeholder={selectedProvider.detail?.requiredKey ? `Enter ${selectedProvider.detail.requiredKey}...` : 'Enter custom API key/token...'}
+                    className="w-full bg-[#172738] border border-[#1E3852] rounded px-2.5 py-1.5 pl-8 text-xs text-[#F5F9FC] placeholder-[#5A738E] focus:outline-none focus:border-[#18A7E8]"
+                  />
+                </div>
+                <button
+                  type="button"
+                  disabled={isSavingConfig}
+                  onClick={() => handleSaveProviderConfig(selectedProvider.id)}
+                  className="px-3 py-1.5 rounded bg-[#0B3D91] hover:bg-[#1565C0] text-xs font-semibold text-white flex items-center gap-1 transition-colors disabled:opacity-50 shrink-0"
+                >
+                  <Save className="w-3.5 h-3.5" />
+                  <span>{isSavingConfig ? 'Saving…' : 'Save & Verify'}</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={isSavingConfig}
+                  onClick={() => handleSaveProviderConfig(selectedProvider.id, '')}
+                  title="Reset to autonomous public gateway mode without private key"
+                  className="px-2.5 py-1.5 rounded bg-[#172738] hover:bg-[#1E3852] border border-[#1E3852] text-xs text-[#8EA3B8] hover:text-[#F5F9FC] transition-colors shrink-0"
+                >
+                  Gateway Mode
+                </button>
+              </div>
+
+              {configSaveResult && (
+                <div className={`p-2 rounded text-xs flex items-center gap-1.5 ${configSaveResult.success ? 'bg-emerald-950/40 text-emerald-300 border border-emerald-800/50' : 'bg-rose-950/40 text-rose-300 border border-rose-800/50'}`}>
+                  {configSaveResult.success ? <CheckCircle2 className="w-3.5 h-3.5 shrink-0" /> : <AlertTriangle className="w-3.5 h-3.5 shrink-0" />}
+                  <span>{configSaveResult.message}</span>
+                </div>
+              )}
+            </div>
 
             {/* Modal Footer */}
-            <div className="flex justify-end pt-2">
+            <div className="flex justify-end pt-1">
               <button
                 type="button"
                 onClick={() => setSelectedProvider(null)}

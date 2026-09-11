@@ -111,8 +111,8 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
         <div className="md:col-span-4 bg-[#1E2733] card-border rounded-xl p-3.5 flex items-center justify-between shadow-md">
           <div className="flex flex-col">
             <span className="text-[12px] text-[#4FA8E0] font-semibold flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-[#2ECC71] animate-pulse"></span>
-              {weather.isLive ? 'Live IMD Telemetry Feed' : 'Local Sensor Model'}
+              <span className={`w-2 h-2 rounded-full ${weather.isLive ? 'bg-[#2ECC71] animate-pulse' : 'bg-[#E67E22]'}`}></span>
+              {weather.isLive ? `Live ${weather.source || 'Operational'} Telemetry Feed` : 'Local Sensor Model'}
             </span>
             <span className="text-xs text-[#8A94A6] mt-0.5">
               {weather.lastUpdated}

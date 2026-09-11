@@ -256,7 +256,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                       currentDemo === 'LIVE' ? 'bg-[#0B72B9] text-[#FFFFFF] font-bold' : 'text-[#FFFFFF] hover:bg-[#242F3D]'
                     }`}
                   >
-                    <span>● Official Live IMD Telemetry</span>
+                    <span>● Live Operational Feed</span>
                     {currentDemo === 'LIVE' && <span className="material-symbols-outlined text-[16px]">check</span>}
                   </button>
                   <button

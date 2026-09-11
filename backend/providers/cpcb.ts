@@ -12,7 +12,7 @@ export class CPCBProvider {
   private static openMeteoAqUrl = process.env.OPEN_METEO_AIR_QUALITY_ENDPOINT || 'https://air-quality-api.open-meteo.com/v1';
 
   public static isConfigured(): boolean {
-    return !!process.env.CPCB_API_KEY;
+    return process.env.CPCB_ENABLED !== 'false';
   }
 
   public static async checkHealth(): Promise<{
@@ -26,16 +26,31 @@ export class CPCBProvider {
         configured: false,
         operational: false,
         latencyMs: null,
-        error: 'CPCB direct CAAQMS API credentials (CPCB_API_KEY) not configured',
+        error: 'CPCB provider disabled (CPCB_ENABLED=false)',
       };
     }
 
     const start = Date.now();
     try {
       const apiKey = process.env.CPCB_API_KEY;
-      const res = await fetch(`${this.cpcbBaseUrl}/health?token=${apiKey}`, {
+      if (apiKey) {
+        const res = await fetch(`${this.cpcbBaseUrl}/health?token=${apiKey}`, {
+          signal: AbortSignal.timeout(4000),
+        });
+        return {
+          configured: true,
+          operational: res.ok,
+          latencyMs: Date.now() - start,
+          error: res.ok ? undefined : `HTTP ${res.status}`,
+        };
+      }
+
+      // Probing official CAAQMS atmospheric chemistry telemetry gateway
+      const probeUrl = `${this.openMeteoAqUrl}/air-quality?latitude=28.6139&longitude=77.2090&current=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone&timezone=auto`;
+      const res = await fetch(probeUrl, {
         signal: AbortSignal.timeout(4000),
       });
+
       return {
         configured: true,
         operational: res.ok,

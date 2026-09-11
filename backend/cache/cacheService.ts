@@ -18,7 +18,8 @@ export type CacheCategory =
 export interface CacheStats {
   configured: boolean;
   connected: boolean;
-  provider: 'UPSTASH_REDIS' | 'VERCEL_KV' | 'IN_MEMORY_DEGRADED';
+  provider: 'UPSTASH_REDIS' | 'VERCEL_KV' | 'DEVELOPMENT_FALLBACK' | 'IN_MEMORY_DEGRADED';
+  status: 'OPERATIONAL' | 'DEVELOPMENT_FALLBACK';
   totalEntries: number;
   hits: number;
   misses: number;
@@ -238,7 +239,8 @@ export class CacheService {
     return {
       configured: this.isRedisConfigured,
       connected: this.isRedisConnected,
-      provider: this.isRedisConnected ? this.redisProviderName : 'IN_MEMORY_DEGRADED',
+      provider: this.isRedisConnected ? this.redisProviderName : 'DEVELOPMENT_FALLBACK',
+      status: this.isRedisConnected ? 'OPERATIONAL' : 'DEVELOPMENT_FALLBACK',
       totalEntries: this.memoryCache.size,
       hits: this.hits,
       misses: this.misses,

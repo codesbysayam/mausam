@@ -120,6 +120,10 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
       minute: '2-digit',
     });
 
+    const resolvedSource = weather.source || 'Open-Meteo';
+    const isImdLive = resolvedSource.includes('IMD');
+    const imdStatusStr = isImdLive ? 'Operational' : 'Not Configured';
+
     const structuredGreeting: StructuredAssistantResponse = {
       title: `Atmospheric Intelligence · ${activeLocation.city || activeLocation.district}`,
       statusBadge: {
@@ -127,9 +131,11 @@ export const AskMausamDrawer: React.FC<AskMausamDrawerProps> = ({
         type: 'info',
       },
       metricsLine: `🌡️ ${weather.temp}°C | 💧 ${weather.humidity}% RH | 💨 ${weather.windSpeed} km/h | 🌧️ ${weather.precipitationProbability ?? 0}% rain | 🫁 AQI ${weather.aqiIndex ?? weather.aqiPm25 ?? 65}`,
-      summary: `Atmospheric intelligence active for ${stationDisplayName}. Real-time surface telemetry synchronized.`,
+      summary: `Atmospheric intelligence active for ${stationDisplayName}. Source: ${resolvedSource} (IMD: ${imdStatusStr}).`,
       markdownContent: `### Atmospheric Intelligence — ${stationDisplayName}
-Connected to authorized meteorological telemetry.
+• **Weather Source**: **${resolvedSource}**
+• **IMD Direct Access**: **${imdStatusStr}**
+• **Observation Status**: **${weather.observationStatus || 'LIVE'}**
 
 **Current Surface Observation**:
 • **Air Temperature**: **${weather.temp}°C** (Feels like **${weather.feelsLike ?? weather.temp}°C**)
@@ -141,8 +147,8 @@ Connected to authorized meteorological telemetry.
 
 Ask any question below or tap a quick action to analyze rain risk, workout windows, travel safety, or crop advisories.
 
-*Source: connected MAUSAM weather data · Updated ${timeStr} IST*`,
-      source: `connected MAUSAM weather data · Updated ${timeStr} IST`,
+*Source: ${resolvedSource} · Updated ${timeStr} IST*`,
+      source: `${resolvedSource} · Updated ${timeStr} IST`,
       suggestedFollowUps: [
         'Will it rain today in my location?',
         'Can I go for an outdoor run right now?',
@@ -157,7 +163,7 @@ Ask any question below or tap a quick action to analyze rain risk, workout windo
       content: structuredGreeting.markdownContent,
       structured: structuredGreeting,
       timestamp: timeStr,
-      source: `connected MAUSAM weather data · Updated ${timeStr} IST`,
+      source: `${resolvedSource} · Updated ${timeStr} IST`,
       suggestedFollowUps: structuredGreeting.suggestedFollowUps,
       targetLocation: activeLocation,
     };
@@ -360,8 +366,9 @@ Ask any question below or tap a quick action to analyze rain risk, workout windo
           },
           metadata: {
             observedAt: weather.lastUpdated || new Date().toISOString(),
-            source: 'connected MAUSAM weather data',
-            status: 'LIVE',
+            source: weather.source || 'Open-Meteo',
+            imdStatus: (weather.source && weather.source.includes('IMD')) ? 'Operational' : 'Not Configured',
+            status: weather.observationStatus || 'LIVE',
           },
         }),
       });
