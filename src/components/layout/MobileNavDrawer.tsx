@@ -17,6 +17,7 @@ import { LocationRecord } from '../../types';
 import { LocatingPhase } from '../../services/geolocationService';
 import { LanguageSelector } from './LanguageSelector';
 import { UseMyLocationButton } from '../location/UseMyLocationButton';
+import { AudioAlertToggle } from '../common/AudioAlertToggle';
 import { triggerHaptic } from '../../utils/haptics';
 
 interface MobileNavDrawerProps {
@@ -283,8 +284,17 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({
           </div>
         </div>
 
-        {/* Bottom Preferences: Language, Font Adjuster, Legal */}
+        {/* Bottom Preferences: Language, Audio Alert, Font Adjuster, Legal */}
         <div className="p-4 border-t border-[#334155] bg-[#17212B] flex flex-col gap-3">
+          {/* Audio Alert Toggle */}
+          <div className="flex items-center justify-between">
+            <div className="flex flex-col">
+              <span className="text-xs font-semibold text-white">Severe Audio Alert</span>
+              <span className="text-[10px] text-[#8A94A6]">Chime when warnings increase</span>
+            </div>
+            <AudioAlertToggle variant="compact" showLabel={true} />
+          </div>
+
           {/* Language Selector */}
           <div className="flex flex-col gap-1">
             <span className="text-[10px] text-[#8A94A6] uppercase font-bold tracking-wider">

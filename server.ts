@@ -491,6 +491,20 @@ Source: ${errSource}`;
     res.status(500).json({ error: err?.message || 'Internal Server Error' });
   });
 
+  // Serve public static assets (including emergency alert sound files)
+  app.use('/sounds', express.static(path.join(process.cwd(), 'public/sounds'), {
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith('.wav')) {
+        res.setHeader('Content-Type', 'audio/wav');
+        res.setHeader('Accept-Ranges', 'bytes');
+      } else if (filePath.endsWith('.mp3')) {
+        res.setHeader('Content-Type', 'audio/mpeg');
+        res.setHeader('Accept-Ranges', 'bytes');
+      }
+    },
+  }));
+  app.use(express.static(path.join(process.cwd(), 'public')));
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({

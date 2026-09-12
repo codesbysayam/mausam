@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { formatIndianDateTime } from '../../utils/dateUtils';
+import { AudioAlertToggle } from '../common/AudioAlertToggle';
 
 interface WarningHeaderProps {
   lastUpdated?: string;
@@ -63,44 +64,48 @@ export const WarningHeader: React.FC<WarningHeaderProps> = ({
           </p>
         </div>
 
-        {/* Right: Last Updated IST timestamp with live status indicator & refresh */}
-        <div className="flex items-center gap-3 self-start lg:self-center bg-[#081F33] border border-[#1D5278] px-3.5 py-2 rounded shadow-xs">
-          <div className="flex flex-col text-left sm:text-right">
-            <div className="flex items-center gap-1.5 sm:justify-end">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#008000] opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-[#008000]"></span>
-              </span>
-              <span className="text-[10px] font-bold text-[#00E676] uppercase tracking-wider truncate max-w-[200px]">
-                {source}
-              </span>
+        {/* Right: Audio Alert Toggle & Last Updated IST timestamp with live status indicator & refresh */}
+        <div className="flex flex-wrap items-center gap-3 self-start lg:self-center">
+          <AudioAlertToggle variant="header" />
+
+          <div className="flex items-center gap-3 bg-[#081F33] border border-[#1D5278] px-3.5 py-2 rounded shadow-xs">
+            <div className="flex flex-col text-left sm:text-right">
+              <div className="flex items-center gap-1.5 sm:justify-end">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#008000] opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-[#008000]"></span>
+                </span>
+                <span className="text-[10px] font-bold text-[#00E676] uppercase tracking-wider truncate max-w-[200px]">
+                  {source}
+                </span>
+              </div>
+
+              <div className="text-[11px] text-[#AFC4D8] font-mono mt-0.5 flex items-center gap-1">
+                <span>Updated:</span>
+                <span className="text-white font-semibold">{displayTimestamp}</span>
+              </div>
             </div>
 
-            <div className="text-[11px] text-[#AFC4D8] font-mono mt-0.5 flex items-center gap-1">
-              <span>Updated:</span>
-              <span className="text-white font-semibold">{displayTimestamp}</span>
-            </div>
-          </div>
+            <div className="h-7 w-[1px] bg-[#1D5278]" />
 
-          <div className="h-7 w-[1px] bg-[#1D5278]" />
-
-          <button
-            id="btn-refresh-warning-telemetry"
-            type="button"
-            onClick={handleRefreshClick}
-            disabled={isLoading || justRefreshed}
-            title="Refresh National Warning Feed"
-            aria-label="Refresh warning data"
-            className="w-8 h-8 rounded bg-[#102D47] hover:bg-[#1565C0] text-[#AFC4D8] hover:text-white border border-[#1D5278] flex items-center justify-center transition-colors cursor-pointer disabled:opacity-50"
-          >
-            <span
-              className={`material-symbols-outlined text-[18px] ${
-                isLoading || justRefreshed ? 'animate-spin text-[#E3F2FD]' : ''
-              }`}
+            <button
+              id="btn-refresh-warning-telemetry"
+              type="button"
+              onClick={handleRefreshClick}
+              disabled={isLoading || justRefreshed}
+              title="Refresh National Warning Feed"
+              aria-label="Refresh warning data"
+              className="w-8 h-8 rounded bg-[#102D47] hover:bg-[#1565C0] text-[#AFC4D8] hover:text-white border border-[#1D5278] flex items-center justify-center transition-colors cursor-pointer disabled:opacity-50"
             >
-              refresh
-            </span>
-          </button>
+              <span
+                className={`material-symbols-outlined text-[18px] ${
+                  isLoading || justRefreshed ? 'animate-spin text-[#E3F2FD]' : ''
+                }`}
+              >
+                refresh
+              </span>
+            </button>
+          </div>
         </div>
       </div>
     </header>

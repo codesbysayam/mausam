@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { WeatherAlert } from '../types';
+import { AudioAlertToggle } from './common/AudioAlertToggle';
 
 interface AlertTickerProps {
   alerts: WeatherAlert[];
@@ -79,6 +80,8 @@ export const AlertTicker: React.FC<AlertTickerProps> = ({ alerts, onSelectAlert 
 
         {/* Right Controls & Counter */}
         <div className="flex items-center gap-2.5 shrink-0">
+          <AudioAlertToggle variant="ticker" />
+
           {alerts.length > 1 && (
             <div className="flex items-center gap-1.5">
               <span className="text-xs text-[#87929a] hidden sm:inline font-medium">

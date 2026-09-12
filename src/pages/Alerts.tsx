@@ -11,6 +11,8 @@ import { warningService } from '../services/warningService';
 import { WarningHeader } from '../components/warnings/WarningHeader';
 import { NationalAlertStatus } from '../components/warnings/NationalAlertStatus';
 import { WarningTicker } from '../components/warnings/WarningTicker';
+import { useAlertAudio } from '../hooks/useAlertAudio';
+import { Volume2 } from 'lucide-react';
 import { WarningFilterBar } from '../components/warnings/WarningFilterBar';
 import { NationalWarningMap } from '../components/warnings/NationalWarningMap';
 import { StateWatchlistPanel } from '../components/warnings/StateWatchlistPanel';
@@ -45,6 +47,16 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
   const [selectedDrawerWarning, setSelectedDrawerWarning] = useState<WarningRecord | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [alertSurgeNotice, setAlertSurgeNotice] = useState<string | null>(null);
+
+  // Monitor alert count and trigger audio chime when count increases
+  const { isAudioAlertEnabled } = useAlertAudio({
+    alertCount: warningsList.length,
+    onAlertIncrease: (newCount, oldCount) => {
+      setAlertSurgeNotice(`Severe weather alert count increased (${oldCount} → ${newCount})`);
+      setTimeout(() => setAlertSurgeNotice(null), 7000);
+    },
+  });
 
   // Fetch verified warnings for the current location
   const loadWarnings = useCallback(async (force = false) => {
@@ -202,6 +214,23 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
         onRefresh={handleRefresh}
         isLoading={isRefreshing}
       />
+
+      {/* Optional Severe Audio Alert Trigger Notice Banner */}
+      {alertSurgeNotice && (
+        <div
+          id="severe-alert-surge-banner"
+          className="flex items-center justify-between gap-3 px-4 py-3 rounded-lg bg-[#E74C3C]/20 border border-[#E74C3C] text-white shadow-lg animate-pulse"
+        >
+          <div className="flex items-center gap-2.5 text-xs sm:text-sm font-bold">
+            <Volume2 className="w-5 h-5 text-[#FF8A80] shrink-0" />
+            <span className="text-[#FF8A80] uppercase tracking-wider">Audio Notification:</span>
+            <span>{alertSurgeNotice}</span>
+          </div>
+          <span className="text-[11px] font-mono text-[#FFCDD2] bg-[#E74C3C]/40 px-2 py-0.5 rounded">
+            {isAudioAlertEnabled ? 'Chime Played' : 'Muted'}
+          </span>
+        </div>
+      )}
 
       {/* 2. National Alert Status & Live Warning Ticker */}
       <div className="flex flex-col gap-3">

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { INITIAL_ALERTS } from '../data/weatherData';
 import { WeatherAlert } from '../types';
+import { AudioAlertToggle } from './common/AudioAlertToggle';
 
 export const AlertsView: React.FC = () => {
   const [filter, setFilter] = useState<'all' | 'severe' | 'warning'>('all');
@@ -30,8 +31,11 @@ export const AlertsView: React.FC = () => {
           </p>
         </div>
 
-        {/* Severity Filter */}
-        <div className="flex gap-1.5 p-1 bg-[#0F141A] rounded-lg card-border">
+        {/* Controls: Audio Alert & Severity Filter */}
+        <div className="flex flex-wrap items-center gap-2.5">
+          <AudioAlertToggle variant="pill" showLabel={true} />
+
+          <div className="flex gap-1.5 p-1 bg-[#0F141A] rounded-lg card-border">
           {(['all', 'severe', 'warning'] as const).map((f) => (
             <button
               key={f}
@@ -45,6 +49,7 @@ export const AlertsView: React.FC = () => {
               {f === 'all' ? 'All Bulletins' : f}
             </button>
           ))}
+          </div>
         </div>
       </div>
 

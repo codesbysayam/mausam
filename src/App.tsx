@@ -30,6 +30,8 @@ import { LocationPrivacyModal } from './components/location/LocationPrivacyModal
 import { NetworkStatusBanner } from './components/common/NetworkStatusBanner';
 import { useNetworkStatus } from './hooks/useNetworkStatus';
 import { useSwipeGesture } from './hooks/useSwipeGesture';
+import { useAlertAudio } from './hooks/useAlertAudio';
+import { Volume2, AlertTriangle } from 'lucide-react';
 import './styles/mausam.css';
 
 export type AppView = MainNavTab | FooterView;
@@ -125,6 +127,16 @@ export default function App() {
   const [isLoadingWeather, setIsLoadingWeather] = useState(false);
   const [isAskMausamOpen, setIsAskMausamOpen] = useState(false);
   const [selectedFooterPublication, setSelectedFooterPublication] = useState<MeteorologicalPublication | null>(null);
+  const [globalAlertSurge, setGlobalAlertSurge] = useState<{ newCount: number; oldCount: number } | null>(null);
+
+  // Optional audio alert monitor: triggers distinct audible chime when severe alert count increases
+  const { isAudioAlertEnabled } = useAlertAudio({
+    alertCount: weatherBundle.alerts?.length || 0,
+    onAlertIncrease: (newCount, oldCount) => {
+      setGlobalAlertSurge({ newCount, oldCount });
+      setTimeout(() => setGlobalAlertSurge(null), 8000);
+    },
+  });
 
   // Real-time network and API status listener
   const { isOnline, isApiReachable, retryConnection } = useNetworkStatus();
@@ -605,6 +617,56 @@ export default function App() {
         <span className="font-semibold tracking-wide text-[11px] sm:text-xs">Ask MAUSAM</span>
         <span className="w-2 h-2 rounded-full bg-[#2ECC71] animate-ping" />
       </button>
+
+      {/* Severe Weather Alert Surge Floating Toast */}
+      {globalAlertSurge && (
+        <div
+          id="global-severe-alert-surge-toast"
+          role="alert"
+          aria-live="assertive"
+          className="fixed bottom-16 sm:bottom-20 right-4 sm:right-6 z-50 max-w-sm w-full bg-[#180B0D] border-2 border-[#E74C3C] text-white p-4 rounded-xl shadow-2xl flex flex-col gap-2.5"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-[#FF8A80]">
+              <AlertTriangle className="w-5 h-5 text-[#E74C3C] animate-pulse" />
+              <span className="text-xs font-bold uppercase tracking-wider">
+                Severe Warning Surge
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setGlobalAlertSurge(null)}
+              className="text-[#8EA3B8] hover:text-white text-xs cursor-pointer p-1"
+              aria-label="Dismiss alert toast"
+            >
+              ✕
+            </button>
+          </div>
+
+          <p className="text-xs text-[#E3F2FD] leading-relaxed">
+            Active severe weather alerts increased from{' '}
+            <span className="font-bold text-white">{globalAlertSurge.oldCount}</span> to{' '}
+            <span className="font-bold text-[#FF8A80]">{globalAlertSurge.newCount}</span> for your sector.
+          </p>
+
+          <div className="flex items-center justify-between pt-1 border-t border-[#3A1417]">
+            <div className="flex items-center gap-1.5 text-[11px] text-[#8EA3B8]">
+              <Volume2 className="w-3.5 h-3.5 text-[#FF8A80]" />
+              <span>{isAudioAlertEnabled ? 'Emergency alert audio played' : 'Audio alert muted'}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setGlobalAlertSurge(null);
+                navigateToTab('warnings');
+              }}
+              className="text-xs font-bold text-[#38BDF8] hover:underline cursor-pointer"
+            >
+              View Warnings →
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Ask MAUSAM Atmospheric Intelligence Drawer */}
       <AskMausamDrawer

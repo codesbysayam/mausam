@@ -9,6 +9,7 @@ import { MainNavTab } from './MainNavigation';
 import { FooterView } from './FooterNavigation';
 import { UseMyLocationButton } from '../location/UseMyLocationButton';
 import { BrandLogo } from './BrandLogo';
+import { AudioAlertToggle } from '../common/AudioAlertToggle';
 
 interface GovernmentHeaderProps {
   selectedLocation: LocationRecord;
@@ -347,6 +348,11 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
                   <span className="hidden sm:inline font-semibold">Ask MAUSAM</span>
                 </button>
               )}
+
+              {/* Optional Severe Audio Alert Toggle */}
+              <div className="hidden sm:block">
+                <AudioAlertToggle variant="pill" showLabel={false} />
+              </div>
 
               {/* Language Selector */}
               <div className="hidden sm:block">

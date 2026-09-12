@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { WarningRecord } from '../../types/warningTypes';
+import { AudioAlertToggle } from '../common/AudioAlertToggle';
 
 interface WarningTickerProps {
   warnings: WarningRecord[];
@@ -129,8 +130,10 @@ export const WarningTicker: React.FC<WarningTickerProps> = ({
         </div>
       </div>
 
-      {/* Right: Controls & View Button */}
+      {/* Right: Controls, Audio Alert Toggle & View Button */}
       <div className="flex items-center gap-1.5 shrink-0">
+        <AudioAlertToggle variant="ticker" />
+
         {/* View Details Button */}
         <button
           id={`btn-ticker-view-${currentWarning.id}`}
