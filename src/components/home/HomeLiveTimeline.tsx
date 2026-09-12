@@ -84,7 +84,7 @@ export const HomeLiveTimeline: React.FC<HomeLiveTimelineProps> = ({
           </p>
         </div>
       ) : (
-        <div className="overflow-x-auto pb-2 scrollbar-thin">
+        <div className="w-full max-w-full overflow-x-auto pb-2 scrollbar-thin">
           <div className="flex items-stretch gap-2.5 min-w-[760px]">
             {slots.map((slot) => {
               const item = hourly[slot.index];

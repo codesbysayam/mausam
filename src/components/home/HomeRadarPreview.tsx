@@ -771,7 +771,7 @@ export const HomeRadarPreview: React.FC<HomeRadarPreviewProps> = ({
         {/* Right 7 Columns: Real Functional Leaflet Radar Map with 6-Frame Playback Controls */}
         <div className="lg:col-span-7 flex flex-col gap-2">
           {/* Viewport controls & Mode Selector */}
-          <div className="flex items-center justify-between gap-2 px-1">
+          <div className="flex flex-wrap items-center justify-between gap-2 px-1">
             <div className="flex items-center gap-1.5 bg-[#071018] p-1 rounded-lg border border-[#162331]">
               <button
                 type="button"

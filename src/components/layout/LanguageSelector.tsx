@@ -67,14 +67,14 @@ export const LanguageSelector: React.FC = () => {
         aria-expanded={isOpen}
         aria-haspopup="listbox"
         aria-label={`Current language: ${currentLanguageInfo.name}. Click to change language.`}
-        className="flex items-center justify-between gap-1.5 h-[38px] px-3 bg-[#17212B] hover:bg-[#1E2733] border border-[#334155] rounded-[5px] text-white text-xs font-semibold tracking-wide transition-colors focus:outline-none focus:ring-1 focus:ring-[#0B72B9]"
+        className="flex items-center justify-between gap-1.5 h-10 px-2.5 sm:px-3 bg-[#0B2239] hover:bg-[#102D47] border border-[#1D4E73] hover:border-[#1565C0]/60 rounded-xl text-white text-xs font-semibold tracking-wide transition-colors focus:outline-none focus:ring-1 focus:ring-[#1565C0] shrink-0 whitespace-nowrap cursor-pointer"
       >
         <span className="material-symbols-outlined text-[16px] text-[#4FA8E0]">
           translate
         </span>
         
         {/* Desktop Label: Native name or English */}
-        <span className="hidden sm:inline">
+        <span className="hidden sm:inline whitespace-nowrap">
           {currentLanguageInfo.nativeName !== currentLanguageInfo.name
             ? `${currentLanguageInfo.nativeName}`
             : currentLanguageInfo.name}
@@ -99,7 +99,7 @@ export const LanguageSelector: React.FC = () => {
         <div
           role="listbox"
           aria-label="Select platform language"
-          className="absolute right-0 mt-1.5 w-64 sm:w-72 max-w-[calc(100vw-24px)] bg-[#17212B] border border-[#334155] rounded-[5px] shadow-2xl z-50 overflow-hidden flex flex-col"
+          className="absolute right-0 mt-1.5 w-64 sm:w-72 max-w-[calc(100vw-24px)] bg-[#0B2239] border border-[#1D4E73] rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col"
           style={{ maxHeight: '380px' }}
         >
           {/* Search Header */}

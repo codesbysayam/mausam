@@ -74,7 +74,7 @@ export const AgriculturalTimeline72h: React.FC<AgriculturalTimeline72hProps> = (
       </div>
 
       {/* Horizontal Scrollable Timeline Cards */}
-      <div className="overflow-x-auto pb-3 -mx-2 px-2 scrollbar-thin scrollbar-thumb-[#334155] scrollbar-track-transparent">
+      <div className="w-full max-w-full overflow-x-auto pb-3 scrollbar-thin scrollbar-thumb-[#334155] scrollbar-track-transparent">
         <div className="flex items-stretch gap-3 min-w-[840px]">
           {timelineItems.map((item, idx) => {
             const isNow = idx === 0;

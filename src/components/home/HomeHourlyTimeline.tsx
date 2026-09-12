@@ -110,7 +110,7 @@ export const HomeHourlyTimeline: React.FC<HomeHourlyTimelineProps> = ({
       {/* Horizontal Scrollable Timeline Strip */}
       <div
         ref={scrollContainerRef}
-        className="flex items-stretch gap-3 overflow-x-auto pb-2 pt-1 scrollbar-thin scroll-smooth select-none"
+        className="w-full max-w-full min-w-0 flex items-stretch gap-3 overflow-x-auto pb-2 pt-1 scrollbar-thin scroll-smooth select-none"
       >
         {displayList.map((item, idx) => {
           const isSelected = selectedHourIndex === idx;

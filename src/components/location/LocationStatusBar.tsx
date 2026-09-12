@@ -129,20 +129,20 @@ export const LocationStatusBar: React.FC<LocationStatusBarProps> = ({
   return (
     <div
       id={id}
-      className={`w-full rounded-xl border border-[#1E3852] bg-[#101E2C] px-3.5 py-2.5 sm:px-4 sm:py-2.5 lg:px-5 shadow-xs transition-colors ${className}`}
+      className={`w-full rounded-xl border border-[#1E3852] bg-[#101E2C] px-3.5 py-2.5 sm:px-4 sm:py-2.5 lg:px-5 shadow-xs transition-colors overflow-hidden ${className}`}
     >
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 min-w-0">
         {/* Left Section: Icon + Structured Information */}
-        <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">
+        <div className="flex items-start sm:items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
           {/* Location Pin Icon Container */}
           <div className="w-8 h-8 rounded-lg bg-[#0B3D91]/25 border border-[#1565C0]/40 text-[#38BDF8] flex items-center justify-center shrink-0 mt-0.5 sm:mt-0">
             <MapPin className="w-4 h-4" />
           </div>
 
           {/* Text Information Hierarchy */}
-          <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-x-3 gap-y-1 min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-x-2.5 sm:gap-x-3 gap-y-1 min-w-0 flex-1">
             {/* Top row / Leading: GPS status + Primary Location Name */}
-            <div className="flex items-center gap-2 flex-wrap min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
               {/* GPS Status Badge */}
               <span
                 id="location-status-badge"
@@ -159,7 +159,7 @@ export const LocationStatusBar: React.FC<LocationStatusBarProps> = ({
               {/* Primary Location Name */}
               <span
                 id="location-primary-name"
-                className="font-bold text-sm sm:text-[15px] text-[#F8FAFC] tracking-tight truncate"
+                className="font-bold text-sm sm:text-[15px] text-[#F8FAFC] tracking-tight truncate max-w-[200px] sm:max-w-xs"
               >
                 {placeName}, {state}
               </span>
@@ -169,23 +169,23 @@ export const LocationStatusBar: React.FC<LocationStatusBarProps> = ({
             <span className="hidden sm:inline text-[#2A435E] select-none">•</span>
 
             {/* Secondary: Nearest Observation Station */}
-            <span className="text-xs text-[#94A3B8] truncate">
+            <span className="text-xs text-[#94A3B8] truncate max-w-[220px] sm:max-w-xs lg:max-w-sm xl:max-w-none">
               Nearest Observation:{' '}
               <strong className="text-[#CBD5E1] font-semibold">{nearestObservation}</strong>
             </span>
 
-            {/* Separator on desktop/tablet */}
-            <span className="hidden sm:inline text-[#2A435E] select-none">•</span>
+            {/* Separator on large desktop */}
+            <span className="hidden xl:inline text-[#2A435E] select-none">•</span>
 
             {/* Small metadata: Coordinates */}
-            <span className="font-mono text-[11px] text-[#64748B] shrink-0">
+            <span className="hidden xl:inline font-mono text-[11px] text-[#64748B] shrink-0">
               {coordsFormatted}
             </span>
           </div>
         </div>
 
         {/* Right Section: Compact Action Buttons */}
-        <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto">
+        <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto ml-auto">
           {/* Refresh Button */}
           <button
             type="button"
@@ -193,7 +193,7 @@ export const LocationStatusBar: React.FC<LocationStatusBarProps> = ({
             onClick={handleRefresh}
             disabled={locating}
             title="Refresh current location and weather telemetry"
-            className="h-8 px-3 rounded-lg bg-[#172738] hover:bg-[#1E354F] text-[#38BDF8] border border-[#1E3852] hover:border-[#38BDF8]/40 text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-60 flex-1 sm:flex-initial"
+            className="h-8 px-3 rounded-lg bg-[#172738] hover:bg-[#1E354F] text-[#38BDF8] border border-[#1E3852] hover:border-[#38BDF8]/40 text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-60 whitespace-nowrap shrink-0"
           >
             {locating ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin text-[#38BDF8]" />
@@ -208,7 +208,7 @@ export const LocationStatusBar: React.FC<LocationStatusBarProps> = ({
             type="button"
             id="btn-location-change"
             onClick={handleChangeLocation}
-            className="h-8 px-3 rounded-lg bg-[#0B3D91] hover:bg-[#1565C0] text-white border border-[#1565C0] hover:border-[#38BDF8] text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs flex-1 sm:flex-initial"
+            className="h-8 px-3 rounded-lg bg-[#0B3D91] hover:bg-[#1565C0] text-white border border-[#1565C0] hover:border-[#38BDF8] text-xs font-semibold inline-flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-xs whitespace-nowrap shrink-0"
             title="Search or select a different observation location"
           >
             <Search className="w-3.5 h-3.5" />

@@ -336,7 +336,7 @@ export const AudioAlertToggle: React.FC<AudioAlertToggleProps> = ({
 
   // 3. Compact / Pill Variant
   return (
-    <div className={`inline-flex items-center gap-1.5 ${className}`}>
+    <div className={`inline-flex items-center gap-1.5 shrink-0 ${className}`}>
       <button
         id="audio-alert-toggle-pill"
         type="button"
@@ -348,22 +348,22 @@ export const AudioAlertToggle: React.FC<AudioAlertToggleProps> = ({
             ? `Severe Weather Audio Alert: ${activeProfile.label} (Click to mute)`
             : 'Severe Weather Audio Alert: Off (Click to activate emergency alert sound)'
         }
-        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-semibold transition-all cursor-pointer ${
+        className={`inline-flex items-center justify-center gap-1.5 h-10 px-2.5 rounded-xl border text-xs font-semibold transition-all cursor-pointer select-none shrink-0 ${
           isAudioAlertEnabled
-            ? 'bg-[#2A1719] border-[#E74C3C]/80 text-[#FF8A80] hover:bg-[#3D1E22]'
-            : 'bg-[#101824] border-[#223246] text-[#8EA3B8] hover:text-[#D7DEE8] hover:border-[#334D6E]'
+            ? 'bg-[#E74C3C]/15 border-[#E74C3C]/60 text-[#FF8A80] hover:bg-[#E74C3C]/25'
+            : 'bg-[#0B2239] border-[#1D4E73] hover:border-[#1565C0]/60 text-[#8EA3B8] hover:text-[#D7DEE8] hover:bg-[#102D47]'
         }`}
       >
         {isAudioAlertEnabled ? (
           <>
-            <Volume2 className="w-3.5 h-3.5 text-[#FF6B6B]" />
+            <Volume2 className="w-4 h-4 text-[#FF6B6B]" />
             {showLabel && (
               <span className="text-[11px] font-mono">Audio Alert ON</span>
             )}
           </>
         ) : (
           <>
-            <VolumeX className="w-3.5 h-3.5 text-[#8EA3B8]" />
+            <VolumeX className="w-4 h-4 text-[#8EA3B8]" />
             {showLabel && (
               <span className="text-[11px] font-mono">Audio Alert OFF</span>
             )}
@@ -371,12 +371,12 @@ export const AudioAlertToggle: React.FC<AudioAlertToggleProps> = ({
         )}
       </button>
 
-      {isAudioAlertEnabled && (
+      {isAudioAlertEnabled && showLabel && (
         <button
           type="button"
           onClick={(e) => handleTestAudio(e)}
           title="Test Alert Audio"
-          className="px-1.5 py-1 rounded border border-[#223246] bg-[#101824] hover:bg-[#182333] text-[#38BDF8] text-[10px] font-mono cursor-pointer"
+          className="h-10 px-2 rounded-xl border border-[#223246] bg-[#101824] hover:bg-[#182333] text-[#38BDF8] text-[10px] font-mono cursor-pointer"
         >
           {isPlaying ? '■' : '▶'}
         </button>

@@ -129,7 +129,7 @@ export const MainNavigation: React.FC<MainNavigationProps> = ({
       aria-label="Primary Navigation"
     >
       <div className="max-w-[1440px] mx-auto">
-        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none lg:grid lg:grid-cols-8 lg:gap-2 xl:gap-2.5">
+        <div className="grid grid-cols-8 gap-1 sm:gap-1.5 md:gap-2 w-full">
           {NAV_CONFIG.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
@@ -145,7 +145,7 @@ export const MainNavigation: React.FC<MainNavigationProps> = ({
                   triggerHaptic('light');
                   onTabChange(item.id);
                 }}
-                className={`flex-1 min-w-fit flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border text-xs font-bold transition-all duration-150 cursor-pointer select-none relative ${
+                className={`w-full min-w-0 flex items-center justify-center gap-1.5 py-2 px-1 sm:px-2 rounded-xl border text-[11px] xl:text-xs font-bold transition-all duration-150 cursor-pointer select-none relative ${
                   isActive
                     ? 'bg-[#0B72B9] text-white border-[#0B72B9] shadow-md shadow-[#0B72B9]/30 ring-1 ring-[#38BDF8]/40'
                     : `bg-[#1E2733] text-[#D7DEE8] border-[#334155] ${item.bgHover} hover:text-white hover:bg-[#253243]`
@@ -153,15 +153,15 @@ export const MainNavigation: React.FC<MainNavigationProps> = ({
                 aria-current={isActive ? 'page' : undefined}
               >
                 <Icon
-                  className={`w-4 h-4 shrink-0 transition-colors ${
+                  className={`w-3.5 h-3.5 xl:w-4 xl:h-4 shrink-0 transition-colors ${
                     isActive ? 'text-white' : item.color
                   }`}
                 />
-                <span className="tracking-wide uppercase whitespace-nowrap font-bold">
+                <span className="tracking-wide uppercase whitespace-nowrap font-bold truncate">
                   {item.shortLabel !== item.defaultLabel ? (
                     <>
-                      <span className="hidden xl:inline">{displayLabel}</span>
-                      <span className="xl:hidden">{item.shortLabel}</span>
+                      <span className="hidden 2xl:inline">{displayLabel}</span>
+                      <span className="2xl:hidden">{item.shortLabel}</span>
                     </>
                   ) : (
                     displayLabel
@@ -170,7 +170,7 @@ export const MainNavigation: React.FC<MainNavigationProps> = ({
 
                 {badgeCount > 0 && (
                   <span
-                    className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-black leading-none shrink-0 ${
+                    className={`ml-0.5 px-1 py-0.2 rounded-full text-[9px] font-black leading-none shrink-0 ${
                       isActive
                         ? 'bg-white text-[#0B72B9]'
                         : 'bg-[#E74C3C] text-white shadow-xs animate-pulse'

@@ -142,7 +142,7 @@ export const FieldOperationsCalendarGrid: React.FC<FieldOperationsCalendarGridPr
       </div>
 
       {/* Responsive Matrix Table */}
-      <div className="overflow-x-auto -mx-2 px-2">
+      <div className="w-full max-w-full overflow-x-auto">
         <table className="w-full text-left border-collapse min-w-[720px]">
           <thead>
             <tr className="border-b border-[#1E293B] bg-[#0F172A]/80">

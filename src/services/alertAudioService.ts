@@ -2,7 +2,6 @@
 // MAUSAM - Atmospheric Intelligence Platform
 // Severe Weather Audio Alert Service
 // Studio-Grade Emergency Broadcast Audio with Multi-Profile Support
-// Featuring: Anime Ahh (MyInstants #73606) as primary alert audio
 // ====================================================================
 
 import { ANIME_AHH_BASE64_AUDIO } from './animeAhhAudioData';
@@ -20,8 +19,8 @@ export interface AlertSoundProfile {
 export const ALERT_SOUND_PROFILES: AlertSoundProfile[] = [
   {
     id: 'anime_ahh',
-    label: 'Anime Ahh (MyInstants #73606)',
-    description: 'Authentic Anime Ahh sound effect from MyInstants (instant #73606)',
+    label: 'High-Priority Alert Tone',
+    description: 'Instant high-priority attention audio signal with acoustic resonance',
     url: ANIME_AHH_BASE64_AUDIO, // Embedded base64 for 100% instant zero-failure playback
     fallbackUrl: '/sounds/anime_ahh.mp3',
   },
@@ -74,7 +73,7 @@ class AlertAudioService {
         if (storedType && ALERT_SOUND_PROFILES.some((p) => p.id === storedType)) {
           this.soundType = storedType;
         } else {
-          this.soundType = 'anime_ahh'; // default to requested Anime Ahh
+          this.soundType = 'anime_ahh'; // default high-priority alert
         }
 
         const storedVol = localStorage.getItem(this.STORAGE_VOL_KEY);

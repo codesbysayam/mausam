@@ -113,15 +113,15 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
             <BrandLogo onClick={() => onNavigateTab && onNavigateTab('home')} />
 
             {/* Center: Search / Observatory Station Finder (Desktop/Tablet) */}
-            <div className="relative hidden md:flex items-center gap-2 flex-1 max-w-md lg:max-w-2xl">
-              <div className="relative flex-1">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#B8C7D9] text-[18px]">
+            <div className="relative hidden md:flex items-center flex-1 max-w-lg lg:max-w-xl mx-2 lg:mx-4 min-w-0">
+              <div className="relative w-full">
+                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#B8C7D9] text-[18px] pointer-events-none">
                   search
                 </span>
                 <input
                   type="text"
                   id="station-search-input-desktop"
-                  placeholder={t('searchPlaceholder', "Search 'Weather in Bhubaneswar', 'Cyclone warnings Delhi', 'Kolkata AQI'...")}
+                  placeholder={t('searchPlaceholder', "Search city, state, or PIN code...")}
                   value={searchQuery}
                   onFocus={() => setIsSearchOpen(true)}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -131,55 +131,37 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
                       handleSearchSubmit();
                     }
                   }}
-                  className="w-full h-10 bg-[#0B2239] border border-[#1D4E73] hover:border-[#1565C0]/60 focus:border-[#1565C0] rounded-xl text-white text-xs pl-9 pr-8 focus:outline-none transition-colors"
-                  aria-label={t('searchPlaceholder', "Search 'Weather in Bhubaneswar', 'Cyclone warnings Delhi', 'Kolkata AQI'...")}
+                  className="w-full h-10 bg-[#0B2239] border border-[#1D4E73] hover:border-[#1565C0]/60 focus:border-[#1565C0] rounded-xl text-white text-xs pl-9 pr-16 focus:outline-none transition-colors shadow-inner"
+                  aria-label={t('searchPlaceholder', "Search city, state, or PIN code...")}
                 />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#B8C7D9] hover:text-white"
-                    aria-label="Clear search"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">close</span>
-                  </button>
-                )}
-              </div>
-
-              {/* Prominent 📍 Use My Location Button (Desktop) */}
-              {onDetectLocation && (
-                <UseMyLocationButton
-                  onDetect={handleMyLocationClick}
-                  isLocating={isLocating}
-                  phase={locatePhase}
-                  locationSource={locationSource}
-                  variant="primary"
-                  className="h-10 shrink-0 font-semibold px-3 shadow-md"
-                />
-              )}
-
-              {/* Quick Location Badge & Switcher Button */}
-              {onOpenLocationCenter && (
-                <button
-                  type="button"
-                  id="header-location-center-btn"
-                  onClick={onOpenLocationCenter}
-                  className="hidden lg:flex items-center gap-1.5 h-10 px-3 bg-[#0B2239] hover:bg-[#102D47] border border-[#1D4E73] hover:border-[#1565C0]/60 rounded-xl text-xs text-[#D7DEE8] transition-colors shrink-0 group cursor-pointer"
-                  title="Manage and switch station locations"
-                >
-                  <span className="material-symbols-outlined text-[16px] text-[#E3F2FD]">
-                    location_on
-                  </span>
-                  <span className="font-semibold text-white truncate max-w-[110px]">
-                    {selectedLocation.city}
-                  </span>
-                  {locationSource === 'DEVICE_GPS' && (
-                    <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-[#008000]/20 text-[#008000] border border-[#008000]/40">
-                      GPS
-                    </span>
+                <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="p-1 text-[#B8C7D9] hover:text-white rounded-lg hover:bg-white/10 transition-colors"
+                      aria-label="Clear search"
+                    >
+                      <span className="material-symbols-outlined text-[16px]">close</span>
+                    </button>
                   )}
-                </button>
-              )}
+                  {onDetectLocation && (
+                    <button
+                      type="button"
+                      id="search-gps-locate-btn"
+                      onClick={handleMyLocationClick}
+                      disabled={isLocating}
+                      title={locationSource === 'DEVICE_GPS' ? 'GPS Active • Click to Refresh' : 'Detect My Location (GPS)'}
+                      className="p-1 rounded-lg text-[#38BDF8] hover:text-white hover:bg-[#1499E8]/25 transition-all flex items-center justify-center cursor-pointer disabled:opacity-50"
+                      aria-label="Detect GPS Location"
+                    >
+                      <span className={`material-symbols-outlined text-[18px] ${isLocating ? 'animate-spin text-[#38BDF8]' : ''}`}>
+                        {isLocating ? 'progress_activity' : 'my_location'}
+                      </span>
+                    </button>
+                  )}
+                </div>
+              </div>
 
               {/* Desktop Search Dropdown */}
               {isSearchOpen && (
@@ -279,10 +261,10 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
               )}
             </div>
 
-            {/* Right Controls: IST Clock, Ask MAUSAM, Language, Accessibility */}
-            <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-              {/* IST Clock */}
-              <div className="hidden lg:flex flex-col text-right pr-3 border-r border-[#1D4E73]">
+            {/* Right Controls: Ask MAUSAM, Audio Alert, Language Selector, Mobile Drawer */}
+            <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
+              {/* IST Clock (Large Screens Only) */}
+              <div className="hidden 2xl:flex flex-col text-right pr-3 border-r border-[#1D4E73]">
                 <div className="text-white font-semibold text-xs font-mono tracking-wide">
                   {istTimeString} <span className="text-[#E3F2FD]">IST</span>
                 </div>
@@ -291,77 +273,35 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
                 </div>
               </div>
 
-              {/* REFRESH ALL Button */}
-              {onRefreshAll && (
-                <button
-                  type="button"
-                  id="header-refresh-all-button"
-                  onClick={() => onRefreshAll()}
-                  disabled={isRefreshing}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0B2239] hover:bg-[#102D47] border border-[#1499E8]/50 hover:border-[#1499E8] text-white text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50"
-                  title="Refresh All Meteorological Feeds (Weather, Radar, Alerts, Stations)"
-                >
-                  <span
-                    className={`material-symbols-outlined text-[16px] text-[#64B5F6] ${
-                      isRefreshing ? 'animate-spin' : ''
-                    }`}
-                  >
-                    sync
-                  </span>
-                  <span className="hidden sm:inline">REFRESH ALL</span>
-                </button>
-              )}
-
-              {/* MY WEATHER Button */}
-              {onDetectLocation && (
-                <button
-                  type="button"
-                  id="header-my-weather-button"
-                  onClick={() => onDetectLocation(true)}
-                  disabled={isLocating}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#0B72B9] hover:bg-[#1565C0] border border-[#1565C0] text-white text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50"
-                  title="Detect GPS location and show local weather"
-                >
-                  <span
-                    className={`material-symbols-outlined text-[16px] text-white ${
-                      isLocating ? 'animate-spin' : ''
-                    }`}
-                  >
-                    {isLocating ? 'progress_activity' : 'my_location'}
-                  </span>
-                  <span className="hidden sm:inline">MY WEATHER</span>
-                </button>
-              )}
-
               {/* Ask MAUSAM Assistant Trigger */}
               {onOpenAskMausam && (
                 <button
                   type="button"
                   id="header-ask-mausam-button"
                   onClick={onOpenAskMausam}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[#0B2239] hover:bg-[#102D47] border border-[#1565C0]/50 hover:border-[#1565C0] text-white text-xs font-medium transition-all shadow-sm shadow-[#1565C0]/10"
-                  title={t('askMausam', 'Ask MAUSAM AI')}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#0B2239] hover:bg-[#102D47] border border-[#1565C0]/50 hover:border-[#1565C0] text-white text-xs font-semibold transition-all shadow-sm shadow-[#1565C0]/10 shrink-0 cursor-pointer"
+                  title={t('askMausam', 'Ask MAUSAM AI Assistant')}
                 >
-                  <span className="material-symbols-outlined text-[16px] text-[#E3F2FD]">
+                  <span className="material-symbols-outlined text-[17px] text-[#38BDF8]">
                     auto_awesome
                   </span>
-                  <span className="hidden sm:inline font-semibold">Ask MAUSAM</span>
+                  <span className="whitespace-nowrap">Ask MAUSAM</span>
                 </button>
               )}
 
               {/* Optional Severe Audio Alert Toggle */}
-              <div className="hidden sm:block">
+              <div className="hidden sm:flex items-center shrink-0">
                 <AudioAlertToggle variant="pill" showLabel={false} />
               </div>
 
               {/* Language Selector */}
-              <div className="hidden sm:block">
+              <div className="hidden sm:flex items-center shrink-0">
                 <LanguageSelector />
               </div>
 
-              {/* Accessibility Font Size Controls */}
+              {/* Accessibility Font Size Controls (2XL only) */}
               <div
-                className="hidden xl:flex items-center bg-[#0B2239] border border-[#1D4E73] rounded-lg px-1.5 h-[36px]"
+                className="hidden 2xl:flex items-center bg-[#0B2239] border border-[#1D4E73] rounded-lg px-1.5 h-[36px]"
                 role="group"
                 aria-label="Font size controls"
               >
@@ -411,51 +351,53 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
 
           {/* Mobile Second Row Search & Location Trigger */}
           <div className="md:hidden pb-3 pt-1 relative">
-            <div className="flex items-center gap-2 w-full">
-              <div className="relative flex-1">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#B8C7D9] text-[18px]">
-                  search
-                </span>
-                <input
-                  type="text"
-                  id="station-search-input-mobile"
-                  placeholder={t('searchPlaceholder', "Search 'Weather in Bhubaneswar', 'Cyclone warnings Delhi'...")}
-                  value={searchQuery}
-                  onFocus={() => setIsSearchOpen(true)}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      handleSearchSubmit();
-                    }
-                  }}
-                  className="w-full h-10 bg-[#0B2239] border border-[#1D4E73] rounded-xl text-white text-xs pl-9 pr-8 focus:outline-none focus:border-[#1565C0]"
-                  aria-label={t('searchPlaceholder', "Search 'Weather in Bhubaneswar', 'Cyclone warnings Delhi'...")}
-                />
+            <div className="relative w-full">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[#B8C7D9] text-[18px] pointer-events-none">
+                search
+              </span>
+              <input
+                type="text"
+                id="station-search-input-mobile"
+                placeholder={t('searchPlaceholder', "Search city, state, or PIN code...")}
+                value={searchQuery}
+                onFocus={() => setIsSearchOpen(true)}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleSearchSubmit();
+                  }
+                }}
+                className="w-full h-10 bg-[#0B2239] border border-[#1D4E73] rounded-xl text-white text-xs pl-9 pr-16 focus:outline-none focus:border-[#1565C0] shadow-inner"
+                aria-label={t('searchPlaceholder', "Search city, state, or PIN code...")}
+              />
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
                 {searchQuery && (
                   <button
                     type="button"
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-[#B8C7D9] hover:text-white"
+                    className="p-1 text-[#B8C7D9] hover:text-white rounded-lg hover:bg-white/10 transition-colors"
                     aria-label="Clear search"
                   >
                     <span className="material-symbols-outlined text-[16px]">close</span>
                   </button>
                 )}
+                {onDetectLocation && (
+                  <button
+                    type="button"
+                    id="search-gps-locate-btn-mobile"
+                    onClick={handleMyLocationClick}
+                    disabled={isLocating}
+                    title={locationSource === 'DEVICE_GPS' ? 'GPS Active • Click to Refresh' : 'Detect My Location (GPS)'}
+                    className="p-1 rounded-lg text-[#38BDF8] hover:text-white hover:bg-[#1499E8]/25 transition-all flex items-center justify-center cursor-pointer disabled:opacity-50"
+                    aria-label="Detect GPS Location"
+                  >
+                    <span className={`material-symbols-outlined text-[18px] ${isLocating ? 'animate-spin text-[#38BDF8]' : ''}`}>
+                      {isLocating ? 'progress_activity' : 'my_location'}
+                    </span>
+                  </button>
+                )}
               </div>
-
-              {/* Mobile Quick Use My Location Button */}
-              {onDetectLocation && (
-                <UseMyLocationButton
-                  onDetect={handleMyLocationClick}
-                  isLocating={isLocating}
-                  phase={locatePhase}
-                  locationSource={locationSource}
-                  compact
-                  variant="primary"
-                  className="h-10 shrink-0 px-2.5 shadow-sm"
-                />
-              )}
             </div>
 
             {/* Mobile Search Dropdown */}
