@@ -7,7 +7,13 @@ import { NormalizedMarine, GeoLocation } from '../normalization/types';
 import { WeatherNormalizer } from '../normalization/weatherNormalizer';
 
 export class INCOISProvider {
+  public static readonly providerName = 'INCOIS Coastal Oceanography';
+  public readonly name = 'INCOIS Coastal Oceanography';
   private static incoisEndpoint = process.env.INCOIS_BASE_URL || 'https://incois.gov.in';
+
+  public static isConfigured(): boolean {
+    return process.env.INCOIS_ENABLED !== 'false';
+  }
 
   public static isCoastalLocation(lat: number, lon: number, locationText?: string): boolean {
     const coastalKeywords = [

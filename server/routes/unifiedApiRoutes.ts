@@ -52,6 +52,27 @@ unifiedApiRouter.get('/system/health', async (req: Request, res: Response) => {
   }
 });
 
+// 1b. System Providers API: GET /api/system/providers
+unifiedApiRouter.get('/system/providers', async (req: Request, res: Response) => {
+  try {
+    const providers = await systemHealthService.getProviders();
+    res.json(providers);
+  } catch (err: any) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 1c. System Readiness API: GET /api/system/readiness
+unifiedApiRouter.get('/system/readiness', async (req: Request, res: Response) => {
+  try {
+    const readiness = await systemHealthService.getReadiness();
+    const httpStatus = readiness.status === 'NOT_READY' ? 503 : 200;
+    res.status(httpStatus).json(readiness);
+  } catch (err: any) {
+    res.status(500).json({ status: 'NOT_READY', error: err.message });
+  }
+});
+
 // Alias for existing frontend compatibility
 unifiedApiRouter.get('/v2/health/sources', async (req: Request, res: Response) => {
   try {

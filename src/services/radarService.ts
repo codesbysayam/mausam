@@ -338,19 +338,34 @@ export async function fetchLiveRadarData(
   }
 
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 7000);
-
-    const res = await fetch('https://api.rainviewer.com/public/weather-maps.json', {
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
-
-    if (!res.ok) {
-      throw new Error(`Radar API responded with HTTP ${res.status}`);
+    let data: any = null;
+    try {
+      const serverRes = await fetch('/api/radar');
+      if (serverRes.ok) {
+        const json = await serverRes.json();
+        if (json?.data?.host || json?.host) {
+          data = json.data || json;
+        }
+      }
+    } catch {
+      // fallback to direct fetch
     }
 
-    const data = await res.json();
+    if (!data) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 7000);
+
+      const res = await fetch('https://api.rainviewer.com/public/weather-maps.json', {
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (!res.ok) {
+        throw new Error(`Radar API responded with HTTP ${res.status}`);
+      }
+
+      data = await res.json();
+    }
     const host = data.host || 'https://tilecache.rainviewer.com';
     const past = data.radar?.past || [];
     const nowcast = data.radar?.nowcast || [];

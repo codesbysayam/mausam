@@ -995,6 +995,130 @@ img, svg, canvas, video {
 }
 
 /* ==========================================================
+   Doppler Radar Sweep Arm & Pulsing Live Indicator Animations
+   ========================================================== */
+@keyframes radarSweepRotate {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes radarSweepPulse {
+  0%, 100% {
+    opacity: 0.85;
+    box-shadow: 0 0 15px rgba(67, 199, 244, 0.4), inset 0 0 15px rgba(67, 199, 244, 0.2);
+  }
+  50% {
+    opacity: 0.4;
+    box-shadow: 0 0 25px rgba(67, 199, 244, 0.7), inset 0 0 30px rgba(67, 199, 244, 0.4);
+  }
+}
+
+@keyframes liveIndicatorPing {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+}
+
+.radar-sweep-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(560px, 86%);
+  aspect-ratio: 1 / 1;
+  pointer-events: none;
+  z-index: 10;
+  border-radius: 50%;
+  border: 1px solid rgba(67, 199, 244, 0.22);
+  box-shadow: 0 0 30px rgba(67, 199, 244, 0.1), inset 0 0 30px rgba(67, 199, 244, 0.05);
+  overflow: hidden;
+}
+
+.radar-sweep-arm {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: conic-gradient(
+    from 0deg,
+    rgba(67, 199, 244, 0.32) 0deg,
+    rgba(67, 199, 244, 0.12) 30deg,
+    rgba(67, 199, 244, 0.03) 60deg,
+    transparent 80deg,
+    transparent 360deg
+  );
+  animation: radarSweepRotate 4s linear infinite;
+  transform-origin: center center;
+}
+
+.radar-sweep-line {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 50%;
+  height: 2px;
+  background: linear-gradient(to right, rgba(255, 255, 255, 0.95), rgba(67, 199, 244, 0.85) 60%, transparent);
+  box-shadow: 0 0 8px rgba(67, 199, 244, 0.9);
+  transform-origin: 0% 50%;
+  animation: radarSweepRotate 4s linear infinite;
+}
+
+.radar-sweep-center-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: #43C7F4;
+  box-shadow: 0 0 10px #43C7F4, 0 0 20px #43C7F4;
+  z-index: 12;
+}
+
+.radar-live-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(7, 16, 24, 0.88);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(67, 199, 244, 0.35);
+  border-radius: 9999px;
+  padding: 4px 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.radar-live-pulse-dot {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #22C7A0;
+}
+
+.radar-live-pulse-dot::after {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background-color: #22C7A0;
+  animation: liveIndicatorPing 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+}
+
+/* ==========================================================
    MAUSAM Authoritative Meteorological Warning Bulletin Cards
    ========================================================== */
 .warning-card {

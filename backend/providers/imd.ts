@@ -8,6 +8,8 @@ import { NormalizedWeather, NormalizedForecast, NormalizedWarningItem, GeoLocati
 import { WeatherNormalizer } from '../normalization/weatherNormalizer';
 
 export class IMDProvider {
+  public static readonly providerName = 'India Meteorological Department (IMD)';
+  public readonly name = 'India Meteorological Department (IMD)';
   private static baseUrl = process.env.IMD_API_BASE_URL || 'https://api.imd.gov.in/api/v1';
   private static publicPortalUrl = process.env.IMD_PUBLIC_PORTAL_URL || 'https://city.imd.gov.in';
 

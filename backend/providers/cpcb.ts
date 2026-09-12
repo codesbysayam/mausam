@@ -8,6 +8,8 @@ import { AqiNormalizer } from '../normalization/aqiNormalizer';
 import { WeatherNormalizer } from '../normalization/weatherNormalizer';
 
 export class CPCBProvider {
+  public static readonly providerName = 'Central Pollution Control Board (CPCB / NAQI)';
+  public readonly name = 'Central Pollution Control Board (CPCB / NAQI)';
   private static cpcbBaseUrl = process.env.CPCB_BASE_URL || 'https://app.cpcbccr.com/caaqms';
   private static openMeteoAqUrl = process.env.OPEN_METEO_AIR_QUALITY_ENDPOINT || 'https://air-quality-api.open-meteo.com/v1';
 

@@ -6,7 +6,13 @@
 import { RadarFrameInfo, DataStatus } from '../normalization/types';
 
 export class RadarProvider {
+  public static readonly providerName = 'Doppler Radar & Weather Maps';
+  public readonly name = 'Doppler Radar & Weather Maps';
   private static rainviewerApi = 'https://api.rainviewer.com/public/weather-maps.json';
+
+  public static isConfigured(): boolean {
+    return process.env.RADAR_ENABLED !== 'false';
+  }
   private static cachedMeta: { data: any; timestamp: number } | null = null;
   private static CACHE_TTL_MS = 3 * 60 * 1000; // 3 minutes
 

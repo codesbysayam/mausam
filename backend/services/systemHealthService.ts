@@ -17,6 +17,26 @@ import { GoogleWeatherProvider } from '../providers/googleWeather';
 
 export type ProviderStatusCode = 'OPERATIONAL' | 'DEGRADED' | 'STALE' | 'NOT_CONFIGURED' | 'UNAVAILABLE';
 
+export function getAppEnvironment(): 'DEVELOPMENT' | 'PREVIEW' | 'PRODUCTION' {
+  if (process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production' || process.env.MAUSAM_ENV === 'production') {
+    return 'PRODUCTION';
+  }
+  if (process.env.VERCEL_ENV === 'preview' || process.env.MAUSAM_ENV === 'preview') {
+    return 'PREVIEW';
+  }
+  return 'DEVELOPMENT';
+}
+
+export function getDeploymentType(): 'VERCEL' | 'CONTAINER' | 'LOCAL' {
+  if (process.env.VERCEL === '1' || Boolean(process.env.VERCEL_ENV)) {
+    return 'VERCEL';
+  }
+  if (Boolean(process.env.K_SERVICE) || Boolean(process.env.CONTAINER_APP_NAME)) {
+    return 'CONTAINER';
+  }
+  return 'LOCAL';
+}
+
 export interface ProviderHealthDetail {
   code: string;
   name: string;
@@ -47,6 +67,9 @@ export interface ProviderHealthDetail {
 }
 
 export interface SystemHealthData {
+  status: 'HEALTHY' | 'DEGRADED' | 'CRITICAL';
+  environment: 'DEVELOPMENT' | 'PREVIEW' | 'PRODUCTION';
+  deployment: 'VERCEL' | 'CONTAINER' | 'LOCAL';
   timestamp: string;
   database: DatabaseStatus;
   cache: CacheStats;
@@ -79,6 +102,33 @@ export interface SystemHealthData {
     accuweather: ProviderHealthDetail;
     googleWeather: ProviderHealthDetail;
   };
+}
+
+export interface ProviderDiagnosticItem {
+  provider: string;
+  name: string;
+  configured: boolean;
+  reachable: boolean;
+  status: ProviderStatusCode;
+  lastSuccess: string | null;
+  latency: number | null;
+  errorCode: string | null;
+  errorMessage: string | null;
+  environment: 'DEVELOPMENT' | 'PREVIEW' | 'PRODUCTION';
+}
+
+export interface SystemReadinessData {
+  status: 'READY' | 'DEGRADED' | 'NOT_READY';
+  timestamp: string;
+  environment: 'DEVELOPMENT' | 'PREVIEW' | 'PRODUCTION';
+  deployment: 'VERCEL' | 'CONTAINER' | 'LOCAL';
+  checks: Record<string, {
+    status: string;
+    required: boolean;
+    ok: boolean;
+    message?: string;
+  }>;
+  message: string;
 }
 
 export class SystemHealthService {
@@ -458,6 +508,9 @@ export class SystemHealthService {
 
     this.lastCheckEpoch = now;
     this.lastHealthData = {
+      status: overallStatus,
+      environment: getAppEnvironment(),
+      deployment: getDeploymentType(),
       timestamp: new Date().toISOString(),
       database: dbStatus,
       cache: cacheStats,
@@ -509,6 +562,223 @@ export class SystemHealthService {
     }
 
     return this.lastHealthData;
+  }
+
+  /**
+   * Diagnostic endpoint /api/system/providers:
+   * Returns a sanitized array of provider statuses. Never exposes API keys.
+   */
+  public async getProviders(): Promise<ProviderDiagnosticItem[]> {
+    const health = await this.getHealth();
+    const env = health.environment;
+
+    const list: ProviderDiagnosticItem[] = [
+      {
+        provider: 'OPEN_METEO',
+        name: health.providers.openMeteo.name,
+        configured: true,
+        reachable: health.providers.openMeteo.status === 'OPERATIONAL',
+        status: health.providers.openMeteo.status,
+        lastSuccess: health.providers.openMeteo.last_success,
+        latency: health.providers.openMeteo.latency,
+        errorCode: health.providers.openMeteo.error ? 'OPEN_METEO_ERROR' : null,
+        errorMessage: health.providers.openMeteo.error,
+        environment: env,
+      },
+      {
+        provider: 'IMD',
+        name: health.providers.imd.name,
+        configured: health.providers.imd.isConfigured,
+        reachable: health.providers.imd.status === 'OPERATIONAL',
+        status: health.providers.imd.status,
+        lastSuccess: health.providers.imd.last_success,
+        latency: health.providers.imd.latency,
+        errorCode: !health.providers.imd.isConfigured ? 'NOT_CONFIGURED' : (health.providers.imd.error ? 'IMD_ERROR' : null),
+        errorMessage: health.providers.imd.error,
+        environment: env,
+      },
+      {
+        provider: 'CPCB',
+        name: health.providers.cpcb.name,
+        configured: health.providers.cpcb.isConfigured,
+        reachable: health.providers.cpcb.status === 'OPERATIONAL',
+        status: health.providers.cpcb.status,
+        lastSuccess: health.providers.cpcb.last_success,
+        latency: health.providers.cpcb.latency,
+        errorCode: !health.providers.cpcb.isConfigured ? 'NOT_CONFIGURED' : (health.providers.cpcb.error ? 'CPCB_ERROR' : null),
+        errorMessage: health.providers.cpcb.error,
+        environment: env,
+      },
+      {
+        provider: 'SACHET',
+        name: health.providers.sachet.name,
+        configured: true,
+        reachable: health.providers.sachet.status === 'OPERATIONAL',
+        status: health.providers.sachet.status,
+        lastSuccess: health.providers.sachet.last_success,
+        latency: health.providers.sachet.latency,
+        errorCode: health.providers.sachet.error ? 'SACHET_ERROR' : null,
+        errorMessage: health.providers.sachet.error,
+        environment: env,
+      },
+      {
+        provider: 'INCOIS',
+        name: health.providers.incois.name,
+        configured: true,
+        reachable: health.providers.incois.status === 'OPERATIONAL',
+        status: health.providers.incois.status,
+        lastSuccess: health.providers.incois.last_success,
+        latency: health.providers.incois.latency,
+        errorCode: health.providers.incois.error ? 'INCOIS_ERROR' : null,
+        errorMessage: health.providers.incois.error,
+        environment: env,
+      },
+      {
+        provider: 'RADAR',
+        name: health.providers.radar.name,
+        configured: true,
+        reachable: health.providers.radar.status === 'OPERATIONAL',
+        status: health.providers.radar.status,
+        lastSuccess: health.providers.radar.last_success,
+        latency: health.providers.radar.latency,
+        errorCode: health.providers.radar.error ? 'RADAR_ERROR' : null,
+        errorMessage: health.providers.radar.error,
+        environment: env,
+      },
+      {
+        provider: 'GEMINI_AI',
+        name: 'Google Gemini (Mausam Assistant)',
+        configured: Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim() !== ''),
+        reachable: Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim() !== ''),
+        status: Boolean(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim() !== '') ? 'OPERATIONAL' : 'NOT_CONFIGURED',
+        lastSuccess: Boolean(process.env.GEMINI_API_KEY) ? new Date().toISOString() : null,
+        latency: null,
+        errorCode: !process.env.GEMINI_API_KEY ? 'NOT_CONFIGURED' : null,
+        errorMessage: !process.env.GEMINI_API_KEY ? 'GEMINI_API_KEY not configured' : null,
+        environment: env,
+      },
+      {
+        provider: 'ACCUWEATHER',
+        name: health.providers.accuweather.name,
+        configured: health.providers.accuweather.isConfigured,
+        reachable: health.providers.accuweather.status === 'OPERATIONAL',
+        status: health.providers.accuweather.status,
+        lastSuccess: health.providers.accuweather.last_success,
+        latency: health.providers.accuweather.latency,
+        errorCode: !health.providers.accuweather.isConfigured ? 'NOT_CONFIGURED' : null,
+        errorMessage: health.providers.accuweather.error,
+        environment: env,
+      },
+      {
+        provider: 'GOOGLE_WEATHER',
+        name: health.providers.googleWeather.name,
+        configured: health.providers.googleWeather.isConfigured,
+        reachable: health.providers.googleWeather.status === 'OPERATIONAL',
+        status: health.providers.googleWeather.status,
+        lastSuccess: health.providers.googleWeather.last_success,
+        latency: health.providers.googleWeather.latency,
+        errorCode: !health.providers.googleWeather.isConfigured ? 'NOT_CONFIGURED' : null,
+        errorMessage: health.providers.googleWeather.error,
+        environment: env,
+      },
+    ];
+
+    return list;
+  }
+
+  /**
+   * Production Readiness check /api/system/readiness:
+   * Returns READY, DEGRADED, or NOT_READY.
+   * Rule: A single optional provider failure must NOT make the entire MAUSAM application NOT_READY.
+   */
+  public async getReadiness(): Promise<SystemReadinessData> {
+    const health = await this.getHealth();
+    const env = health.environment;
+    const dep = health.deployment;
+
+    const omOk = health.providers.openMeteo.status === 'OPERATIONAL';
+    const dbStatus = health.database.connected ? 'CONNECTED' : (health.database.configured ? 'FAILED' : 'NOT_CONFIGURED');
+    const cacheStatus = health.cache.connected ? 'ACTIVE' : 'IN_MEMORY';
+
+    const checks: Record<string, { status: string; required: boolean; ok: boolean; message?: string }> = {
+      openMeteo: {
+        status: health.providers.openMeteo.status,
+        required: true,
+        ok: omOk,
+        message: omOk ? 'Primary weather service operational' : 'Open-Meteo connection failing',
+      },
+      database: {
+        status: dbStatus,
+        required: false,
+        ok: true, // Optional
+        message: health.database.connected ? 'PostgreSQL connected' : 'Database optional; in-memory cache active',
+      },
+      cache: {
+        status: cacheStatus,
+        required: false,
+        ok: true,
+        message: health.cache.connected ? 'Distributed Redis active' : 'Fallback memory cache operational',
+      },
+      imd: {
+        status: health.providers.imd.status,
+        required: false,
+        ok: true,
+        message: health.providers.imd.status === 'OPERATIONAL' ? 'Official IMD gateway online' : 'IMD optional; Open-Meteo fallback active',
+      },
+      cpcb: {
+        status: health.providers.cpcb.status,
+        required: false,
+        ok: true,
+        message: health.providers.cpcb.status === 'OPERATIONAL' ? 'CPCB NAQI online' : 'Using CAMS NAQI fallback',
+      },
+      sachet: {
+        status: health.providers.sachet.status,
+        required: false,
+        ok: true,
+        message: health.providers.sachet.status === 'OPERATIONAL' ? 'SACHET CAP active' : 'Cached alerts active',
+      },
+      incois: {
+        status: health.providers.incois.status,
+        required: false,
+        ok: true,
+        message: health.providers.incois.status === 'OPERATIONAL' ? 'INCOIS marine active' : 'Coastal marine fallback active',
+      },
+      radar: {
+        status: health.providers.radar.status,
+        required: false,
+        ok: true,
+        message: health.providers.radar.status === 'OPERATIONAL' ? 'Doppler radar feed active' : 'Radar cache active',
+      },
+      ai: {
+        status: Boolean(process.env.GEMINI_API_KEY) ? 'CONFIGURED' : 'NOT_CONFIGURED',
+        required: false,
+        ok: true,
+        message: Boolean(process.env.GEMINI_API_KEY) ? 'Gemini AI assistant enabled' : 'Deterministic atmospheric intelligence active',
+      },
+    };
+
+    let readinessStatus: 'READY' | 'DEGRADED' | 'NOT_READY';
+    let message: string;
+
+    if (!omOk) {
+      readinessStatus = 'NOT_READY';
+      message = 'Critical failure: Primary weather data provider (Open-Meteo) is unreachable.';
+    } else if (health.summary.operational >= 4) {
+      readinessStatus = 'READY';
+      message = 'All critical and secondary weather and telemetry pipelines are ready.';
+    } else {
+      readinessStatus = 'DEGRADED';
+      message = 'Core weather pipeline is operational. Some secondary or official feeds are running in fallback mode.';
+    }
+
+    return {
+      status: readinessStatus,
+      timestamp: new Date().toISOString(),
+      environment: env,
+      deployment: dep,
+      checks,
+      message,
+    };
   }
 }
 

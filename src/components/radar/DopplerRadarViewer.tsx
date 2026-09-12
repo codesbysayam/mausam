@@ -1221,6 +1221,13 @@ export const DopplerRadarViewer: React.FC<DopplerRadarViewerProps> = ({
           />
         </MapContainer>
 
+        {/* Animated Rotating Radar Sweep Arm Overlay */}
+        <div className="radar-sweep-container pointer-events-none" aria-hidden="true">
+          <div className="radar-sweep-arm" />
+          <div className="radar-sweep-line" />
+          <div className="radar-sweep-center-dot" />
+        </div>
+
         {/* Compass / True North (Top-Right) */}
         <div className="absolute top-4 right-4 z-20 pointer-events-none bg-[#071018]/90 backdrop-blur-xs border border-[#162331] rounded-xl p-2.5 shadow-xl flex flex-col items-center">
           <div className="relative w-9 h-9 flex items-center justify-center">
@@ -1269,6 +1276,13 @@ export const DopplerRadarViewer: React.FC<DopplerRadarViewerProps> = ({
             <span className="font-mono text-[#22C7A0]">{activeProduct}</span>
             <span>Azimuth Radials:</span>
             <span className="font-mono text-[#D1DCE8]">30° Geodesic</span>
+          </div>
+          <div className="flex items-center justify-between mt-1 pt-1.5 border-t border-[#162331]/80">
+            <div className="radar-live-badge">
+              <span className="radar-live-pulse-dot" />
+              <span className="text-[10px] font-mono font-bold tracking-wider text-[#22C7A0]">LIVE SWEEP ACTIVE</span>
+            </div>
+            <span className="text-[10px] font-mono text-[#93A4B8]">4s CYCLE</span>
           </div>
         </div>
 

@@ -101,4 +101,24 @@ export class MultiSourceService {
       return null;
     }
   }
+
+  public static async fetchSystemProviders(): Promise<any[] | null> {
+    try {
+      const res = await fetch('/api/system/providers');
+      if (res.ok) return await res.json();
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  public static async fetchSystemReadiness(): Promise<any | null> {
+    try {
+      const res = await fetch('/api/system/readiness');
+      if (res.ok || res.status === 503) return await res.json();
+      return null;
+    } catch {
+      return null;
+    }
+  }
 }
