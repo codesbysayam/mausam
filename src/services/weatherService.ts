@@ -100,27 +100,47 @@ class WeatherService {
     }
 
     try {
-      // Fetch live forecast telemetry and air-quality/pollen telemetry in parallel
-      const weatherUrl = `https://api.open-meteo.com/v1/forecast?latitude=${location.lat}&longitude=${location.lng}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,showers,snowfall,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m,dew_point_2m,visibility&hourly=temperature_2m,relative_humidity_2m,dew_point_2m,apparent_temperature,precipitation_probability,precipitation,rain,weather_code,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m,uv_index,visibility,cloud_cover,direct_normal_irradiance,soil_moisture_0_to_1cm,soil_temperature_0cm,et0_fao_evapotranspiration&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant&timezone=Asia%2FKolkata&forecast_days=7`;
-      const airQualityUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${location.lat}&longitude=${location.lng}&current=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone,european_aqi,us_aqi,dust,alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen,ammonia&timezone=Asia%2FKolkata`;
+      const weatherQuery = `latitude=${location.lat}&longitude=${location.lng}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,showers,snowfall,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m,dew_point_2m,visibility&hourly=temperature_2m,relative_humidity_2m,dew_point_2m,apparent_temperature,precipitation_probability,precipitation,rain,weather_code,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m,uv_index,visibility,cloud_cover,direct_normal_irradiance,soil_moisture_0_to_1cm,soil_temperature_0cm,et0_fao_evapotranspiration&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant&timezone=Asia%2FKolkata&forecast_days=7`;
+      const airQuery = `latitude=${location.lat}&longitude=${location.lng}&current=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone,european_aqi,us_aqi,dust,alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen,ammonia&timezone=Asia%2FKolkata`;
 
-      const [weatherRes, airRes] = await Promise.allSettled([
-        fetch(weatherUrl),
-        fetch(airQualityUrl),
-      ]);
+      let weatherData: any = null;
+      let airData: any = null;
 
-      if (weatherRes.status !== 'fulfilled' || !weatherRes.value.ok) {
-        throw new Error(`Weather API connection failed`);
+      // Try local same-origin proxy first (guaranteed no CORS or sandbox blocking)
+      try {
+        const [wRes, aRes] = await Promise.all([
+          fetch(`/api/proxy/open-meteo?${weatherQuery}`),
+          fetch(`/api/proxy/air-quality?${airQuery}`),
+        ]);
+        if (wRes.ok) weatherData = await wRes.json();
+        if (aRes.ok) airData = await aRes.json();
+      } catch (proxyErr) {
+        console.warn('[WeatherService] Proxy fetch attempt failed, trying direct Open-Meteo:', proxyErr);
       }
 
-      const weatherData = await weatherRes.value.json();
-      let airData = null;
-      if (airRes.status === 'fulfilled' && airRes.value.ok) {
-        try {
-          airData = await airRes.value.json();
-        } catch (e) {
-          console.warn('[WeatherService] Air quality JSON parse error:', e);
+      // If proxy didn't succeed, try direct Open-Meteo
+      if (!weatherData) {
+        const weatherUrl = `https://api.open-meteo.com/v1/forecast?${weatherQuery}`;
+        const airQualityUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?${airQuery}`;
+        const [weatherRes, airRes] = await Promise.allSettled([
+          fetch(weatherUrl),
+          fetch(airQualityUrl),
+        ]);
+
+        if (weatherRes.status === 'fulfilled' && weatherRes.value.ok) {
+          weatherData = await weatherRes.value.json();
         }
+        if (airRes.status === 'fulfilled' && airRes.value.ok) {
+          try {
+            airData = await airRes.value.json();
+          } catch (e) {
+            console.warn('[WeatherService] Direct Air quality JSON parse error:', e);
+          }
+        }
+      }
+
+      if (!weatherData) {
+        throw new Error(`Weather API connection failed`);
       }
 
       const bundle = this.transformOpenMeteoResponse(location, weatherData, airData);

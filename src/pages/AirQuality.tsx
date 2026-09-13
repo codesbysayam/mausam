@@ -200,6 +200,13 @@ export const AirQualityPage: React.FC<AirQualityPageProps> = ({
     return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, [showDateCalendar]);
 
+  // Synchronize active state with selected location
+  useEffect(() => {
+    if (selectedLocation?.state) {
+      setActiveStateName(selectedLocation.state);
+    }
+  }, [selectedLocation?.state]);
+
   // Find active state data or fallback
   const activeStateRecord = useMemo(() => {
     return (

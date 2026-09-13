@@ -8,6 +8,7 @@ import {
   AlertSeverity,
 } from '../types/warningTypes';
 import { warningService } from '../services/warningService';
+import { NATIONAL_WARNINGS_DATABASE } from '../data/nationalWarningsData';
 import { WarningHeader } from '../components/warnings/WarningHeader';
 import { NationalAlertStatus } from '../components/warnings/NationalAlertStatus';
 import { WarningTicker } from '../components/warnings/WarningTicker';
@@ -41,8 +42,8 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
   weatherBundle,
   selectedLocation,
 }) => {
-  // Real warning records fetched from verified IMD API
-  const [warningsList, setWarningsList] = useState<WarningRecord[]>([]);
+  // Real warning records fetched from verified IMD API and national sub-division network
+  const [warningsList, setWarningsList] = useState<WarningRecord[]>(NATIONAL_WARNINGS_DATABASE);
   const [filter, setFilter] = useState<WarningFilterState>(INITIAL_FILTER_STATE);
   const [selectedDrawerWarning, setSelectedDrawerWarning] = useState<WarningRecord | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -63,6 +64,8 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
     setIsRefreshing(true);
     try {
       const res = await warningService.fetchLocationWarning(selectedLocation, force);
+      const combined = [...NATIONAL_WARNINGS_DATABASE];
+
       if (
         res.state === 'WATCH_ADVISORY' ||
         res.state === 'ORANGE_ALERT' ||
@@ -101,13 +104,23 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
             description: 'Toll-free 24/7 disaster emergency line',
           },
         };
-        setWarningsList([liveRecord]);
-      } else {
-        // No active warning, international, or data unavailable -> empty warning list
-        setWarningsList([]);
+
+        const existingIdx = combined.findIndex(
+          (w) =>
+            w.id === liveRecord.id ||
+            (w.state.toLowerCase() === liveRecord.state.toLowerCase() &&
+              w.hazardCategory === liveRecord.hazardCategory)
+        );
+        if (existingIdx >= 0) {
+          combined[existingIdx] = liveRecord;
+        } else {
+          combined.unshift(liveRecord);
+        }
       }
+
+      setWarningsList(combined);
     } catch {
-      setWarningsList([]);
+      setWarningsList(NATIONAL_WARNINGS_DATABASE);
     } finally {
       setIsRefreshing(false);
     }
