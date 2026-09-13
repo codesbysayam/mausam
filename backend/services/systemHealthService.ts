@@ -219,19 +219,36 @@ export class SystemHealthService {
       };
     }
 
-    // Run real live health probes against all upstream providers
-    const [dbStatus, omHealth, imdHealth, cpcbHealth, sachetHealth, incoisHealth, radarHealth, accuHealth, googleHealth] =
-      await Promise.all([
-        dbService.getStatus(),
-        OpenMeteoProvider.checkHealth(),
-        IMDProvider.checkHealth(),
-        CPCBProvider.checkHealth(),
-        SachetProvider.checkHealth(),
-        INCOISProvider.checkHealth(),
-        RadarProvider.checkHealth(),
-        AccuWeatherProvider.checkHealth(),
-        GoogleWeatherProvider.checkHealth(),
-      ]);
+    // Run real live health probes against all upstream providers safely using Promise.allSettled
+    const results = await Promise.allSettled([
+      dbService.getStatus(),
+      OpenMeteoProvider.checkHealth(),
+      IMDProvider.checkHealth(),
+      CPCBProvider.checkHealth(),
+      SachetProvider.checkHealth(),
+      INCOISProvider.checkHealth(),
+      RadarProvider.checkHealth(),
+      AccuWeatherProvider.checkHealth(),
+      GoogleWeatherProvider.checkHealth(),
+    ]);
+
+    const dbStatus: DatabaseStatus = results[0].status === 'fulfilled'
+      ? results[0].value
+      : {
+          connected: false,
+          configured: false,
+          provider: 'NOT_CONFIGURED',
+          latencyMs: null,
+          lastChecked: new Date().toISOString(),
+        };
+    const omHealth = results[1].status === 'fulfilled' ? results[1].value : { operational: false, latencyMs: 0, error: 'Open-Meteo probe failed' };
+    const imdHealth = results[2].status === 'fulfilled' ? results[2].value : { configured: false, operational: false, latencyMs: null, error: 'IMD probe failed' };
+    const cpcbHealth = results[3].status === 'fulfilled' ? results[3].value : { configured: false, operational: false, latencyMs: null, error: 'CPCB probe failed' };
+    const sachetHealth = results[4].status === 'fulfilled' ? results[4].value : { operational: false, latencyMs: 0, error: 'SACHET probe failed' };
+    const incoisHealth = results[5].status === 'fulfilled' ? results[5].value : { configured: false, operational: false, latencyMs: null, error: 'INCOIS probe failed' };
+    const radarHealth = results[6].status === 'fulfilled' ? results[6].value : { operational: false, latencyMs: 0, error: 'Radar probe failed' };
+    const accuHealth = results[7].status === 'fulfilled' ? results[7].value : { configured: false, operational: false, latencyMs: null, error: 'AccuWeather probe failed' };
+    const googleHealth = results[8].status === 'fulfilled' ? results[8].value : { configured: false, operational: false, latencyMs: null, error: 'Google Weather probe failed' };
 
     const checkTimestamp = new Date().toISOString();
 
@@ -366,17 +383,27 @@ export class SystemHealthService {
         code: 'INCOIS',
         name: 'INCOIS Coastal Oceanography',
         category: 'GOVERNMENT',
-        status: incoisHealth.operational ? 'OPERATIONAL' : 'DEGRADED',
+        status: !incoisHealth.configured
+          ? 'NOT_CONFIGURED'
+          : incoisHealth.operational
+          ? 'OPERATIONAL'
+          : 'UNAVAILABLE',
         role: 'Official Ocean State',
-        fallback: 'Cached Marine Data',
-        currentDataSource: 'INCOIS',
-        reason: incoisHealth.operational ? null : 'INCOIS coastal oceanography feed temporarily unreachable',
-        nextAction: null,
-        isConfigured: true,
-        requiredKey: null,
+        fallback: 'Open-Meteo Marine Data',
+        currentDataSource: incoisHealth.configured && incoisHealth.operational ? 'INCOIS' : 'Open-Meteo Marine Data',
+        reason: !incoisHealth.configured
+          ? 'Official INCOIS credentials (INCOIS_API_KEY) not configured.'
+          : incoisHealth.operational
+          ? null
+          : 'INCOIS coastal oceanography feed temporarily unreachable',
+        nextAction: !incoisHealth.configured
+          ? 'Optional: configure INCOIS credentials to enable direct INCOIS marine observation.'
+          : null,
+        isConfigured: incoisHealth.configured,
+        requiredKey: 'INCOIS_API_KEY',
         latency: incoisHealth.latencyMs,
         last_success: incoisHealth.operational ? checkTimestamp : this.providerMetrics.INCOIS.lastSuccess,
-        last_failure: incoisHealth.operational ? this.providerMetrics.INCOIS.lastFailure : checkTimestamp,
+        last_failure: incoisHealth.configured && !incoisHealth.operational ? checkTimestamp : this.providerMetrics.INCOIS.lastFailure,
         last_checked: checkTimestamp,
         requests: this.providerMetrics.INCOIS.requests,
         successful_requests: this.providerMetrics.INCOIS.success,
@@ -384,8 +411,8 @@ export class SystemHealthService {
         cache_hits: Math.round(cacheStats.hits * 0.1),
         cache_misses: Math.round(cacheStats.misses * 0.1),
         error: incoisHealth.error || null,
-        source: 'Indian National Centre for Ocean Information Services (INCOIS) & Open Marine',
-        endpoint: 'https://marine-api.open-meteo.com/v1/marine',
+        source: incoisHealth.configured ? 'Indian National Centre for Ocean Information Services (INCOIS)' : 'Open-Meteo Marine Data (Open Data)',
+        endpoint: incoisHealth.configured ? 'https://incois.gov.in' : 'https://marine-api.open-meteo.com/v1/marine',
         attribution: 'INCOIS, Ministry of Earth Sciences & Open Marine under CC BY 4.0',
         attributionUrl: 'https://incois.gov.in',
       },
@@ -624,12 +651,12 @@ export class SystemHealthService {
       {
         provider: 'INCOIS',
         name: health.providers.incois.name,
-        configured: true,
+        configured: health.providers.incois.isConfigured,
         reachable: health.providers.incois.status === 'OPERATIONAL',
         status: health.providers.incois.status,
         lastSuccess: health.providers.incois.last_success,
         latency: health.providers.incois.latency,
-        errorCode: health.providers.incois.error ? 'INCOIS_ERROR' : null,
+        errorCode: !health.providers.incois.isConfigured ? 'NOT_CONFIGURED' : (health.providers.incois.error ? 'INCOIS_ERROR' : null),
         errorMessage: health.providers.incois.error,
         environment: env,
       },
@@ -778,6 +805,196 @@ export class SystemHealthService {
       deployment: dep,
       checks,
       message,
+    };
+  }
+
+  /**
+   * Diagnostic Self-Test /api/system/self-test:
+   * Actively runs end-to-end integration tests on critical sub-systems
+   * and reports truthful latency and pass/fail state.
+   */
+  public async getSelfTest() {
+    const startAll = performance.now();
+    const tests: Array<{
+      name: string;
+      category: string;
+      status: 'PASSED' | 'FAILED' | 'SKIPPED';
+      latencyMs: number | null;
+      message: string;
+      details?: any;
+    }> = [];
+
+    // 1. Primary Weather (Open-Meteo) Test
+    const omStart = performance.now();
+    try {
+      const omRes = await OpenMeteoProvider.checkHealth();
+      tests.push({
+        name: 'Primary Atmospheric Feed (Open-Meteo)',
+        category: 'WEATHER_CORE',
+        status: omRes.operational ? 'PASSED' : 'FAILED',
+        latencyMs: Math.round(performance.now() - omStart),
+        message: omRes.operational ? 'Successfully retrieved atmospheric telemetry' : (omRes.error || 'Connection failed'),
+      });
+    } catch (e: any) {
+      tests.push({
+        name: 'Primary Atmospheric Feed (Open-Meteo)',
+        category: 'WEATHER_CORE',
+        status: 'FAILED',
+        latencyMs: Math.round(performance.now() - omStart),
+        message: e.message,
+      });
+    }
+
+    // 2. NDMA / SACHET Disaster Warnings Feed Test
+    const sachetStart = performance.now();
+    try {
+      const sachetRes = await SachetProvider.checkHealth();
+      tests.push({
+        name: 'NDMA / SACHET Disaster Warning Gateway',
+        category: 'GOVERNMENT_DISASTER',
+        status: sachetRes.operational ? 'PASSED' : 'FAILED',
+        latencyMs: Math.round(performance.now() - sachetStart),
+        message: sachetRes.operational ? 'CAP 1.2 disaster alert feed reachable' : (sachetRes.error || 'SACHET connection failed'),
+      });
+    } catch (e: any) {
+      tests.push({
+        name: 'NDMA / SACHET Disaster Warning Gateway',
+        category: 'GOVERNMENT_DISASTER',
+        status: 'FAILED',
+        latencyMs: Math.round(performance.now() - sachetStart),
+        message: e.message,
+      });
+    }
+
+    // 3. Doppler Radar Feed (RainViewer) Test
+    const radarStart = performance.now();
+    try {
+      const radarRes = await RadarProvider.checkHealth();
+      tests.push({
+        name: 'Doppler Radar Map Telemetry (RainViewer)',
+        category: 'RADAR_SYSTEM',
+        status: radarRes.operational ? 'PASSED' : 'FAILED',
+        latencyMs: Math.round(performance.now() - radarStart),
+        message: radarRes.operational ? 'Radar frame metadata active' : (radarRes.error || 'Radar feed unreachable'),
+      });
+    } catch (e: any) {
+      tests.push({
+        name: 'Doppler Radar Map Telemetry (RainViewer)',
+        category: 'RADAR_SYSTEM',
+        status: 'FAILED',
+        latencyMs: Math.round(performance.now() - radarStart),
+        message: e.message,
+      });
+    }
+
+    // 4. Official IMD Gateway Test
+    if (IMDProvider.isConfigured()) {
+      const imdStart = performance.now();
+      try {
+        const imdRes = await IMDProvider.checkHealth();
+        tests.push({
+          name: 'Official IMD Direct API Access',
+          category: 'GOVERNMENT_MET',
+          status: imdRes.operational ? 'PASSED' : 'FAILED',
+          latencyMs: Math.round(performance.now() - imdStart),
+          message: imdRes.operational ? 'IMD gateway responding' : (imdRes.error || 'IMD unreachable'),
+        });
+      } catch (e: any) {
+        tests.push({
+          name: 'Official IMD Direct API Access',
+          category: 'GOVERNMENT_MET',
+          status: 'FAILED',
+          latencyMs: Math.round(performance.now() - imdStart),
+          message: e.message,
+        });
+      }
+    } else {
+      tests.push({
+        name: 'Official IMD Direct API Access',
+        category: 'GOVERNMENT_MET',
+        status: 'SKIPPED',
+        latencyMs: null,
+        message: 'IMD_API_KEY not configured. Running in open-data fallback mode.',
+      });
+    }
+
+    // 5. CPCB NAQI Air Chemistry Test
+    if (CPCBProvider.isConfigured()) {
+      const cpcbStart = performance.now();
+      try {
+        const cpcbRes = await CPCBProvider.checkHealth();
+        tests.push({
+          name: 'CPCB CAAQMS Direct Monitoring',
+          category: 'ENVIRONMENT',
+          status: cpcbRes.operational ? 'PASSED' : 'FAILED',
+          latencyMs: Math.round(performance.now() - cpcbStart),
+          message: cpcbRes.operational ? 'CPCB telemetry active' : (cpcbRes.error || 'CPCB unreachable'),
+        });
+      } catch (e: any) {
+        tests.push({
+          name: 'CPCB CAAQMS Direct Monitoring',
+          category: 'ENVIRONMENT',
+          status: 'FAILED',
+          latencyMs: Math.round(performance.now() - cpcbStart),
+          message: e.message,
+        });
+      }
+    } else {
+      tests.push({
+        name: 'CPCB CAAQMS Direct Monitoring',
+        category: 'ENVIRONMENT',
+        status: 'SKIPPED',
+        latencyMs: null,
+        message: 'CPCB_API_KEY not configured. Using CAMS European/NAQI standard fallback.',
+      });
+    }
+
+    // 6. Cache Layer Health
+    const cacheStart = performance.now();
+    try {
+      const testKey = '__self_test_probe__';
+      await cacheService.set(testKey, { test: true }, 'SYSTEM_HEALTH', 'self-test', 10000);
+      const retrieved = await cacheService.get(testKey);
+      tests.push({
+        name: 'Multi-Tier Cache Storage',
+        category: 'CACHE_INFRASTRUCTURE',
+        status: retrieved && retrieved.isHit ? 'PASSED' : 'FAILED',
+        latencyMs: Math.round(performance.now() - cacheStart),
+        message: retrieved && retrieved.isHit ? 'Cache read/write cycle verified' : 'Cache returned null',
+      });
+    } catch (e: any) {
+      tests.push({
+        name: 'Multi-Tier Cache Storage',
+        category: 'CACHE_INFRASTRUCTURE',
+        status: 'FAILED',
+        latencyMs: Math.round(performance.now() - cacheStart),
+        message: e.message,
+      });
+    }
+
+    let passed = 0;
+    let failed = 0;
+    let skipped = 0;
+    for (const t of tests) {
+      if (t.status === 'PASSED') passed++;
+      else if (t.status === 'FAILED') failed++;
+      else skipped++;
+    }
+
+    const overallStatus: 'PASSED' | 'DEGRADED' | 'FAILED' =
+      failed === 0 ? 'PASSED' : passed >= 2 ? 'DEGRADED' : 'FAILED';
+
+    return {
+      timestamp: new Date().toISOString(),
+      durationMs: Math.round(performance.now() - startAll),
+      status: overallStatus,
+      summary: {
+        totalTests: tests.length,
+        passed,
+        failed,
+        skipped,
+      },
+      tests,
     };
   }
 }

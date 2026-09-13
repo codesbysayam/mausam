@@ -12,7 +12,10 @@ export class INCOISProvider {
   private static incoisEndpoint = process.env.INCOIS_BASE_URL || 'https://incois.gov.in';
 
   public static isConfigured(): boolean {
-    return process.env.INCOIS_ENABLED !== 'false';
+    return Boolean(
+      (process.env.INCOIS_API_KEY && process.env.INCOIS_API_KEY.trim() !== '') ||
+      (process.env.INCOIS_BASE_URL && process.env.INCOIS_BASE_URL.trim() !== '')
+    );
   }
 
   public static isCoastalLocation(lat: number, lon: number, locationText?: string): boolean {
@@ -37,19 +40,41 @@ export class INCOISProvider {
     return isNearArabianSea || isNearBayOfBengal || isIslands;
   }
 
-  public static async checkHealth(): Promise<{ operational: boolean; latencyMs: number; error?: string }> {
+  public static async checkHealth(): Promise<{ configured: boolean; operational: boolean; latencyMs: number | null; error?: string }> {
+    if (!this.isConfigured()) {
+      return {
+        configured: false,
+        operational: false,
+        latencyMs: null,
+        error: 'Official INCOIS gateway (INCOIS_API_KEY or INCOIS_BASE_URL) not configured',
+      };
+    }
+
     const start = Date.now();
     try {
-      const res = await fetch('https://marine-api.open-meteo.com/v1/marine?latitude=19.8135&longitude=85.8312&current=wave_height', {
+      const res = await fetch(`${this.incoisEndpoint}/health`, {
+        headers: {
+          'User-Agent': 'MAUSAM-INCOIS/3.0',
+          ...(process.env.INCOIS_API_KEY ? { 'X-API-KEY': process.env.INCOIS_API_KEY } : {}),
+        },
         signal: AbortSignal.timeout(4000),
       });
+      const latencyMs = Date.now() - start;
       return {
+        configured: true,
         operational: res.ok,
-        latencyMs: Date.now() - start,
+        latencyMs,
         error: res.ok ? undefined : `HTTP ${res.status}`,
       };
     } catch (err: any) {
-      return { operational: false, latencyMs: Date.now() - start, error: err.message };
+      const latencyMs = Date.now() - start;
+      const isTimeout = err.name === 'AbortError' || err.name === 'TimeoutError';
+      return {
+        configured: true,
+        operational: false,
+        latencyMs: isTimeout ? latencyMs : null,
+        error: isTimeout ? 'TIMEOUT: INCOIS gateway timed out after 4000ms' : err.message,
+      };
     }
   }
 

@@ -44,10 +44,13 @@ export class SachetProvider {
         error: isOperational ? undefined : `HTTP ${res.status}`,
       };
     } catch (err: any) {
-      if (this.alertCache && this.alertCache.data.length > 0) {
-        return { operational: true, latencyMs: Date.now() - start };
-      }
-      return { operational: false, latencyMs: Date.now() - start, error: err.message };
+      const latencyMs = Date.now() - start;
+      const isTimeout = err.name === 'AbortError' || err.name === 'TimeoutError';
+      return {
+        operational: false,
+        latencyMs: isTimeout ? latencyMs : null,
+        error: isTimeout ? 'TIMEOUT: SACHET gateway timed out after 6500ms' : err.message,
+      };
     }
   }
 

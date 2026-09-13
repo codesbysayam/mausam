@@ -73,6 +73,17 @@ unifiedApiRouter.get('/system/readiness', async (req: Request, res: Response) =>
   }
 });
 
+// 1d. System Diagnostic Self-Test: GET /api/system/self-test
+unifiedApiRouter.get('/system/self-test', async (req: Request, res: Response) => {
+  try {
+    const selfTest = await systemHealthService.getSelfTest();
+    const httpStatus = selfTest.status === 'FAILED' ? 503 : 200;
+    res.status(httpStatus).json(selfTest);
+  } catch (err: any) {
+    res.status(500).json({ status: 'FAILED', error: err.message });
+  }
+});
+
 // Alias for existing frontend compatibility
 unifiedApiRouter.get('/v2/health/sources', async (req: Request, res: Response) => {
   try {

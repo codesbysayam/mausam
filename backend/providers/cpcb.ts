@@ -14,7 +14,7 @@ export class CPCBProvider {
   private static openMeteoAqUrl = process.env.OPEN_METEO_AIR_QUALITY_ENDPOINT || 'https://air-quality-api.open-meteo.com/v1';
 
   public static isConfigured(): boolean {
-    return process.env.CPCB_ENABLED !== 'false';
+    return Boolean(process.env.CPCB_API_KEY && process.env.CPCB_API_KEY.trim() !== '');
   }
 
   public static async checkHealth(): Promise<{
@@ -28,43 +28,50 @@ export class CPCBProvider {
         configured: false,
         operational: false,
         latencyMs: null,
-        error: 'CPCB provider disabled (CPCB_ENABLED=false)',
+        error: 'CPCB API key (CPCB_API_KEY) not configured',
       };
     }
 
     const start = Date.now();
     try {
-      const apiKey = process.env.CPCB_API_KEY;
-      if (apiKey) {
-        const res = await fetch(`${this.cpcbBaseUrl}/health?token=${apiKey}`, {
-          signal: AbortSignal.timeout(4000),
-        });
-        return {
-          configured: true,
-          operational: res.ok,
-          latencyMs: Date.now() - start,
-          error: res.ok ? undefined : `HTTP ${res.status}`,
-        };
-      }
-
-      // Probing official CAAQMS atmospheric chemistry telemetry gateway
-      const probeUrl = `${this.openMeteoAqUrl}/air-quality?latitude=28.6139&longitude=77.2090&current=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone&timezone=auto`;
-      const res = await fetch(probeUrl, {
+      const apiKey = process.env.CPCB_API_KEY!;
+      const res = await fetch(`${this.cpcbBaseUrl}/health?token=${apiKey}`, {
+        headers: { 'User-Agent': 'MAUSAM-CPCB/3.0' },
         signal: AbortSignal.timeout(4000),
       });
+      const latencyMs = Date.now() - start;
+
+      if (res.status === 401 || res.status === 403) {
+        return {
+          configured: true,
+          operational: false,
+          latencyMs,
+          error: `AUTH_ERROR: CPCB authentication failed (HTTP ${res.status})`,
+        };
+      }
+      if (res.status === 429) {
+        return {
+          configured: true,
+          operational: false,
+          latencyMs,
+          error: 'RATE_LIMITED: CPCB API quota exceeded (HTTP 429)',
+        };
+      }
 
       return {
         configured: true,
         operational: res.ok,
-        latencyMs: Date.now() - start,
+        latencyMs,
         error: res.ok ? undefined : `HTTP ${res.status}`,
       };
     } catch (err: any) {
+      const latencyMs = Date.now() - start;
+      const isTimeout = err.name === 'AbortError' || err.name === 'TimeoutError';
       return {
         configured: true,
         operational: false,
-        latencyMs: Date.now() - start,
-        error: err.message,
+        latencyMs: isTimeout ? latencyMs : null,
+        error: isTimeout ? 'TIMEOUT: CPCB gateway timed out after 4000ms' : err.message,
       };
     }
   }

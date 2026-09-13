@@ -14,7 +14,7 @@ export class IMDProvider {
   private static publicPortalUrl = process.env.IMD_PUBLIC_PORTAL_URL || 'https://city.imd.gov.in';
 
   public static isConfigured(): boolean {
-    return process.env.IMD_ENABLED !== 'false';
+    return Boolean(process.env.IMD_API_KEY && process.env.IMD_API_KEY.trim() !== '');
   }
 
   public static async checkHealth(): Promise<{
@@ -28,55 +28,55 @@ export class IMDProvider {
         configured: false,
         operational: false,
         latencyMs: null,
-        error: 'IMD provider disabled (IMD_ENABLED=false)',
+        error: 'IMD API key (IMD_API_KEY) not configured',
       };
     }
 
     const start = Date.now();
     try {
-      const apiKey = process.env.IMD_API_KEY;
-      if (apiKey) {
-        const headers: Record<string, string> = {
-          Accept: 'application/json',
-          'User-Agent': 'MAUSAM-Atmospheric-Platform/3.0',
-          'X-API-KEY': apiKey,
-        };
-        const res = await fetch(`${this.baseUrl}/health`, {
-          headers,
-          signal: AbortSignal.timeout(4000),
-        });
-
-        const latencyMs = Date.now() - start;
-        return {
-          configured: true,
-          operational: res.ok,
-          latencyMs,
-          error: res.ok ? undefined : `HTTP ${res.status}: ${res.statusText}`,
-        };
-      }
-
-      // Probing official IMD Public Portal Gateway
-      const res = await fetch(this.publicPortalUrl, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        },
+      const apiKey = process.env.IMD_API_KEY!;
+      const headers: Record<string, string> = {
+        Accept: 'application/json',
+        'User-Agent': 'MAUSAM-Atmospheric-Platform/3.0',
+        'X-API-KEY': apiKey,
+      };
+      const res = await fetch(`${this.baseUrl}/health`, {
+        headers,
         signal: AbortSignal.timeout(4000),
       });
 
       const latencyMs = Date.now() - start;
+      if (res.status === 401 || res.status === 403) {
+        return {
+          configured: true,
+          operational: false,
+          latencyMs,
+          error: `AUTH_ERROR: Invalid or expired IMD_API_KEY (HTTP ${res.status})`,
+        };
+      }
+      if (res.status === 429) {
+        return {
+          configured: true,
+          operational: false,
+          latencyMs,
+          error: 'RATE_LIMITED: IMD API quota exceeded (HTTP 429)',
+        };
+      }
+
       return {
         configured: true,
         operational: res.ok,
         latencyMs,
-        error: res.ok ? undefined : `HTTP ${res.status}`,
+        error: res.ok ? undefined : `HTTP ${res.status}: ${res.statusText}`,
       };
     } catch (err: any) {
+      const latencyMs = Date.now() - start;
+      const isTimeout = err.name === 'AbortError' || err.name === 'TimeoutError';
       return {
         configured: true,
         operational: false,
-        latencyMs: Date.now() - start,
-        error: err.message,
+        latencyMs: isTimeout ? latencyMs : null,
+        error: isTimeout ? 'TIMEOUT: IMD gateway timed out after 4000ms' : err.message,
       };
     }
   }

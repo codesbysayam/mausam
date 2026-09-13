@@ -7,7 +7,7 @@ import { NormalizedWeather, GeoLocation } from '../normalization/types';
 
 export class GoogleWeatherProvider {
   public static isConfigured(): boolean {
-    return process.env.GOOGLE_WEATHER_ENABLED !== 'false';
+    return Boolean(process.env.GOOGLE_WEATHER_API_KEY && process.env.GOOGLE_WEATHER_API_KEY.trim() !== '');
   }
 
   public static async checkHealth(): Promise<{
@@ -21,41 +21,49 @@ export class GoogleWeatherProvider {
         configured: false,
         operational: false,
         latencyMs: null,
-        error: 'Google Weather provider disabled (GOOGLE_WEATHER_ENABLED=false)',
+        error: 'Google Weather API key (GOOGLE_WEATHER_API_KEY) not configured',
       };
     }
 
     const start = Date.now();
     try {
-      if (process.env.GOOGLE_WEATHER_API_KEY) {
-        const res = await fetch(`https://weather.googleapis.com/v1/currentConditions:lookup?key=${process.env.GOOGLE_WEATHER_API_KEY}&location.latitude=28.6139&location.longitude=77.2090`, {
-          signal: AbortSignal.timeout(4000),
-        });
-        return {
-          configured: true,
-          operational: res.ok,
-          latencyMs: Date.now() - start,
-          error: res.ok ? undefined : `HTTP ${res.status}`,
-        };
-      }
-
-      // Atmospheric Global Stream Gateway (ECMWF IFS High-Resolution Global)
-      const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=28.6139&longitude=77.2090&current=temperature_2m&models=ecmwf_ifs025', {
+      const apiKey = process.env.GOOGLE_WEATHER_API_KEY!;
+      const res = await fetch(`https://weather.googleapis.com/v1/currentConditions:lookup?key=${apiKey}&location.latitude=28.6139&location.longitude=77.2090`, {
         signal: AbortSignal.timeout(4000),
       });
+      const latencyMs = Date.now() - start;
+
+      if (res.status === 401 || res.status === 403) {
+        return {
+          configured: true,
+          operational: false,
+          latencyMs,
+          error: `AUTH_ERROR: Google Maps Platform Weather authorization failed (HTTP ${res.status})`,
+        };
+      }
+      if (res.status === 429) {
+        return {
+          configured: true,
+          operational: false,
+          latencyMs,
+          error: 'RATE_LIMITED: Google Maps Platform quota exceeded (HTTP 429)',
+        };
+      }
 
       return {
         configured: true,
         operational: res.ok,
-        latencyMs: Date.now() - start,
+        latencyMs,
         error: res.ok ? undefined : `HTTP ${res.status}`,
       };
     } catch (err: any) {
+      const latencyMs = Date.now() - start;
+      const isTimeout = err.name === 'AbortError' || err.name === 'TimeoutError';
       return {
         configured: true,
         operational: false,
-        latencyMs: Date.now() - start,
-        error: err.message,
+        latencyMs: isTimeout ? latencyMs : null,
+        error: isTimeout ? 'TIMEOUT: Google Weather gateway timed out after 4000ms' : err.message,
       };
     }
   }

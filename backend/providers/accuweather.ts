@@ -9,7 +9,7 @@ export class AccuWeatherProvider {
   private static apiKey = process.env.ACCUWEATHER_API_KEY || null;
 
   public static isConfigured(): boolean {
-    return process.env.ACCUWEATHER_ENABLED !== 'false';
+    return Boolean(process.env.ACCUWEATHER_API_KEY && process.env.ACCUWEATHER_API_KEY.trim() !== '');
   }
 
   public static async checkHealth(): Promise<{
@@ -23,41 +23,49 @@ export class AccuWeatherProvider {
         configured: false,
         operational: false,
         latencyMs: null,
-        error: 'AccuWeather provider disabled (ACCUWEATHER_ENABLED=false)',
+        error: 'AccuWeather API key (ACCUWEATHER_API_KEY) not configured',
       };
     }
 
     const start = Date.now();
     try {
-      if (process.env.ACCUWEATHER_API_KEY) {
-        const res = await fetch(`https://dataservice.accuweather.com/locations/v1/cities/geoposition/search?apikey=${process.env.ACCUWEATHER_API_KEY}&q=28.6139,77.2090`, {
-          signal: AbortSignal.timeout(4000),
-        });
-        return {
-          configured: true,
-          operational: res.ok,
-          latencyMs: Date.now() - start,
-          error: res.ok ? undefined : `HTTP ${res.status}`,
-        };
-      }
-
-      // Atmospheric Model Stream Gateway (GFS Seamless Global)
-      const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=28.6139&longitude=77.2090&current=temperature_2m&models=gfs_seamless', {
+      const apiKey = process.env.ACCUWEATHER_API_KEY!;
+      const res = await fetch(`https://dataservice.accuweather.com/locations/v1/cities/geoposition/search?apikey=${apiKey}&q=28.6139,77.2090`, {
         signal: AbortSignal.timeout(4000),
       });
+      const latencyMs = Date.now() - start;
+
+      if (res.status === 401 || res.status === 403) {
+        return {
+          configured: true,
+          operational: false,
+          latencyMs,
+          error: `AUTH_ERROR: AccuWeather API authorization failed (HTTP ${res.status})`,
+        };
+      }
+      if (res.status === 429) {
+        return {
+          configured: true,
+          operational: false,
+          latencyMs,
+          error: 'RATE_LIMITED: AccuWeather daily quota exceeded (HTTP 429)',
+        };
+      }
 
       return {
         configured: true,
         operational: res.ok,
-        latencyMs: Date.now() - start,
+        latencyMs,
         error: res.ok ? undefined : `HTTP ${res.status}`,
       };
     } catch (err: any) {
+      const latencyMs = Date.now() - start;
+      const isTimeout = err.name === 'AbortError' || err.name === 'TimeoutError';
       return {
         configured: true,
         operational: false,
-        latencyMs: Date.now() - start,
-        error: err.message,
+        latencyMs: isTimeout ? latencyMs : null,
+        error: isTimeout ? 'TIMEOUT: AccuWeather gateway timed out after 4000ms' : err.message,
       };
     }
   }
