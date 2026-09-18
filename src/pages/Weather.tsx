@@ -19,6 +19,7 @@ import { WeatherDataExplainer } from '../components/weather/WeatherDataExplainer
 import { buildHumanWeatherStory } from '../services/humanWeatherEngine';
 import { LocatingPhase, GeolocationServiceError, NearestStationResult } from '../services/geolocationService';
 import { LocationStatusBar } from '../components/location/LocationStatusBar';
+import { PrintReportHeader } from '../components/common/PrintReportHeader';
 import {
   Activity,
   Radio,
@@ -114,6 +115,14 @@ export const WeatherPage: React.FC<WeatherPageProps> = ({
 
   return (
     <div id="weather-comprehensive-view-container" className="flex flex-col gap-6 w-full pb-12">
+      {/* Official Government Print Report Header (Printed documents only) */}
+      <PrintReportHeader
+        reportTitle="Current Synoptic Weather & Telemetry Report"
+        reportSubtitle="India Meteorological Department • Surface Ground Telemetry & Atmospheric Observations"
+        location={selectedLocation}
+        lastUpdated={lastFetchedAt}
+      />
+
       {/* Unified Compact Location Status Bar */}
       <LocationStatusBar
         location={selectedLocation}

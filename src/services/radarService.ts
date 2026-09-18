@@ -505,12 +505,24 @@ export async function loadRadarProduct(
     clientRadarCache.set(cacheKey, { timestamp: now, data });
     return data;
   } catch (err: any) {
-    if (err?.name === 'AbortError') {
-      throw err;
-    }
     // If cached data exists even if expired, return it as fallback
     if (cached) {
       return cached.data;
+    }
+    if (err?.name === 'AbortError') {
+      return {
+        product,
+        label: product,
+        fullName: product,
+        description: 'Atmospheric Doppler radar observation data',
+        unit: '',
+        source: 'India Meteorological Department (IMD)',
+        sourceAttribution: 'IMD Doppler Weather Radar Network',
+        status: 'UNAVAILABLE',
+        available: false,
+        message: 'Request cancelled or timed out',
+        reason: 'Aborted',
+      };
     }
     return {
       product,

@@ -310,7 +310,7 @@ class AlertAudioService {
         for (let i = 0; i < len; i++) {
           bytes[i] = binaryString.charCodeAt(i);
         }
-        ctx.decodeAudioData(
+        const decodeResult = ctx.decodeAudioData(
           bytes.buffer.slice(0),
           (decoded) => {
             this.decodedBufferCache.set(profile.id, decoded);
@@ -320,11 +320,16 @@ class AlertAudioService {
             this.playSynthesizedEmergencyAudio(type);
           }
         );
+        if (decodeResult && typeof (decodeResult as any).catch === 'function') {
+          (decodeResult as any).catch(() => {
+            this.playSynthesizedEmergencyAudio(type);
+          });
+        }
       } else {
         fetch(profile.url)
           .then((r) => r.arrayBuffer())
           .then((arrBuf) => {
-            ctx.decodeAudioData(
+            const decodeResult = ctx.decodeAudioData(
               arrBuf,
               (decoded) => {
                 this.decodedBufferCache.set(profile.id, decoded);
@@ -334,6 +339,11 @@ class AlertAudioService {
                 this.playSynthesizedEmergencyAudio(type);
               }
             );
+            if (decodeResult && typeof (decodeResult as any).catch === 'function') {
+              (decodeResult as any).catch(() => {
+                this.playSynthesizedEmergencyAudio(type);
+              });
+            }
           })
           .catch(() => {
             this.playSynthesizedEmergencyAudio(type);

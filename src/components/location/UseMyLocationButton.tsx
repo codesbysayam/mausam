@@ -51,7 +51,11 @@ export const UseMyLocationButton: React.FC<UseMyLocationButtonProps> = ({
     e.stopPropagation();
     setShowErrorPopover(false);
     const isAlreadyGps = locationSource === 'DEVICE_GPS';
-    await activeDetect(isAlreadyGps);
+    try {
+      await activeDetect(isAlreadyGps);
+    } catch (err) {
+      console.debug('[UseMyLocationButton] Location detection handled error:', err);
+    }
   };
 
   // Determine button text and icon based on phase & source

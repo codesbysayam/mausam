@@ -30,6 +30,7 @@ import { WindIntelligenceCard } from '../components/forecast/WindIntelligenceCar
 import { SolarCycleCard } from '../components/weather/SolarCycleCard';
 import { ModelConsensusCard } from '../components/forecast/ModelConsensusCard';
 import { ForecastMatrixTable } from '../components/forecast/ForecastMatrixTable';
+import { PrintReportHeader } from '../components/common/PrintReportHeader';
 import { CheckCircle2, RefreshCw } from 'lucide-react';
 import { INITIAL_WEATHER } from '../data/weatherData';
 
@@ -189,7 +190,15 @@ export const ForecastPage: React.FC<ForecastPageProps> = ({
   }, [onNavigateToTab]);
 
   return (
-    <div className="flex flex-col gap-6 w-full max-w-7xl mx-auto pb-12">
+    <div id="forecast-view-container" className="flex flex-col gap-6 w-full max-w-7xl mx-auto pb-12">
+      {/* Official Government Print Report Header (Printed documents only) */}
+      <PrintReportHeader
+        reportTitle="Numerical Weather Prediction & Synoptic Forecast Bulletin"
+        reportSubtitle="India Meteorological Department • Multi-Model Atmospheric Simulation (NCUM-G / WRF / GEFS / ECMWF)"
+        location={selectedLocation}
+        lastUpdated={weatherBundle.lastFetchedAt}
+      />
+
       {/* Unified Compact Location Status Bar */}
       <LocationStatusBar
         location={selectedLocation}

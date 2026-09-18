@@ -445,39 +445,54 @@ export interface WeatherResult {
 }
 
 export async function getWeather(region: IndiaRegion): Promise<WeatherResult> {
-  const params = new URLSearchParams({
-    latitude: String(region.latitude),
-    longitude: String(region.longitude),
-    timezone: "Asia/Kolkata",
-    forecast_days: "1",
-    current:
-      "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m",
-    hourly: "precipitation_probability",
-  });
+  try {
+    const params = new URLSearchParams({
+      latitude: String(region.latitude),
+      longitude: String(region.longitude),
+      timezone: "Asia/Kolkata",
+      forecast_days: "1",
+      current:
+        "temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m",
+      hourly: "precipitation_probability",
+    });
 
-  const response = await fetch(
-    `https://api.open-meteo.com/v1/forecast?${params}`
-  );
+    const response = await fetch(
+      `https://api.open-meteo.com/v1/forecast?${params}`
+    );
 
-  if (!response.ok) {
-    throw new Error(`Weather API failed for ${region.name}`);
+    if (!response.ok) {
+      throw new Error(`Weather API failed for ${region.name}`);
+    }
+
+    const data = await response.json();
+
+    return {
+      temperatureC: data.current?.temperature_2m ?? null,
+      humidity: data.current?.relative_humidity_2m ?? null,
+      apparentTemperatureC: data.current?.apparent_temperature ?? null,
+      precipitationMm: data.current?.precipitation ?? null,
+      precipitationProbability:
+        data.hourly?.precipitation_probability?.[0] ?? null,
+      weatherCode: data.current?.weather_code ?? null,
+      windSpeedKmh: data.current?.wind_speed_10m ?? null,
+      observedAt: data.current?.time ?? null,
+      source: "OPEN_METEO",
+      status: "LIVE",
+    };
+  } catch {
+    return {
+      temperatureC: null,
+      humidity: null,
+      apparentTemperatureC: null,
+      precipitationMm: null,
+      precipitationProbability: null,
+      weatherCode: null,
+      windSpeedKmh: null,
+      observedAt: null,
+      source: "OPEN_METEO",
+      status: "UNAVAILABLE",
+    };
   }
-
-  const data = await response.json();
-
-  return {
-    temperatureC: data.current?.temperature_2m ?? null,
-    humidity: data.current?.relative_humidity_2m ?? null,
-    apparentTemperatureC: data.current?.apparent_temperature ?? null,
-    precipitationMm: data.current?.precipitation ?? null,
-    precipitationProbability:
-      data.hourly?.precipitation_probability?.[0] ?? null,
-    weatherCode: data.current?.weather_code ?? null,
-    windSpeedKmh: data.current?.wind_speed_10m ?? null,
-    observedAt: data.current?.time ?? null,
-    source: "OPEN_METEO",
-    status: "LIVE",
-  };
 }
 
 export interface AirQualityResult {

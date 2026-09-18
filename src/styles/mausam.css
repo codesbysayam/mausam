@@ -1169,5 +1169,357 @@ img, svg, canvas, video {
   gap: 6px;
 }
 
+/* ==========================================================================
+   MAUSAM Authoritative Meteorological Print Stylesheet
+   Ensures clean, readable print layout for weather & forecast reports.
+   Strictly hides navigation, interactive action bars, and modal elements.
+   ========================================================================== */
+
+@media print {
+  /* 1. Page Configuration & Geometry */
+  @page {
+    size: A4 portrait;
+    margin: 12mm 15mm 15mm 15mm;
+  }
+
+  /* 2. Global Reset & Print Color Engine */
+  *,
+  *::before,
+  *::after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    filter: none !important;
+    backdrop-filter: none !important;
+  }
+
+  html,
+  body,
+  #root,
+  .mausam-app {
+    background-color: #FFFFFF !important;
+    background: #FFFFFF !important;
+    color: #0F172A !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    font-size: 10.5pt !important;
+    line-height: 1.45 !important;
+  }
+
+  /* 3. Hide Navigation, Modals, Drawers & Interactive Chrome */
+  header,
+  nav,
+  footer,
+  #primary-main-navigation,
+  #mausam-government-header,
+  .government-header,
+  .main-navigation,
+  .footer-navigation,
+  [role="banner"],
+  [role="navigation"],
+  [role="contentinfo"],
+  #station-search-input-desktop,
+  #weather-quick-station-search,
+  .mobile-nav-drawer,
+  
+  /* Modals, Drawers, Overlays & Backdrops */
+  [role="dialog"],
+  [aria-modal="true"],
+  .modal-backdrop,
+  .modal-container,
+  .modal,
+  .drawer,
+  .fixed.inset-0,
+  #location-center-modal,
+  #location-privacy-modal,
+  #ask-mausam-drawer,
+  #report-detail-modal,
+  #report-preview-drawer,
+  #warning-detail-drawer,
+  #bulletin-reader-modal,
+  #hourly-detail-modal,
+  #telemetry-detail-modal,
+  #saved-places-modal,
+  #help-modal,
+  #settings-modal,
+
+  /* Floating, Interactive & Real-time Transient UI */
+  #floating-ask-mausam-btn,
+  #global-severe-alert-surge-toast,
+  #network-status-banner,
+  #weather-sync-progress-bar,
+  .mausam-progress-indeterminate,
+  [role="alert"]:not(.print-keep-alert),
+  .toast,
+  .audio-alert-btn,
+  [aria-label="Toggle Alert Audio"],
+  #data-export-action-bar,
+  #btn-location-refresh,
+  #btn-location-change,
+  #btn-download-csv,
+  #btn-print-report,
+  #btn-print-weather-report,
+  #btn-print-forecast-report,
+  #btn-open-full-radar-scope,
+  .no-print,
+  .print-hidden,
+  [data-print="hidden"],
+  button:not(.print-keep),
+  input,
+  textarea,
+  select {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    width: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* 4. Display Print-Only Elements */
+  .print-only,
+  .print\:block,
+  .mausam-print-official-header {
+    display: block !important;
+    visibility: visible !important;
+    height: auto !important;
+    width: auto !important;
+  }
+
+  .print\:flex {
+    display: flex !important;
+    visibility: visible !important;
+  }
+
+  .print\:inline {
+    display: inline !important;
+    visibility: visible !important;
+  }
+
+  /* 5. Surface & Card Container Resets (Convert Dark Theme to Crisp Light Theme) */
+  .bg-\[\#061827\],
+  .bg-\[\#071018\],
+  .bg-\[\#071A2D\],
+  .bg-\[\#070C14\],
+  .bg-\[\#0B141E\],
+  .bg-\[\#0B2239\],
+  .bg-\[\#0F141A\],
+  .bg-\[\#101E2C\],
+  .bg-\[\#131B26\],
+  .bg-\[\#151D26\],
+  .bg-\[\#162331\],
+  .bg-\[\#17212B\],
+  .bg-\[\#172738\],
+  .bg-\[\#1E2733\],
+  .bg-\[\#1E3852\],
+  .bg-\[\#1F2937\],
+  .surface,
+  .surface-card,
+  .mausam-glass-card,
+  .telemetry-card,
+  .weather-card,
+  .forecast-card,
+  .warning-card,
+  [class*="bg-[#0"],
+  [class*="bg-[#1"] {
+    background-color: #FFFFFF !important;
+    background: #FFFFFF !important;
+    color: #0F172A !important;
+    border-color: #CBD5E1 !important;
+  }
+
+  /* Crisp light fills for emphasis containers */
+  .bg-\[\#0B72B9\]\/10,
+  .bg-\[\#0B72B9\]\/15,
+  .bg-\[\#0B72B9\]\/20,
+  .bg-\[\#1499E8\]\/10,
+  .bg-\[\#1499E8\]\/15,
+  .bg-\[\#1499E8\]\/20 {
+    background-color: #F1F5F9 !important;
+    color: #0B3D91 !important;
+    border-color: #94A3B8 !important;
+  }
+
+  /* 6. Text Color & Contrast Normalization */
+  .text-white,
+  .text-\[\#FFFFFF\],
+  .text-\[\#F5F9FC\],
+  .text-\[\#F8FAFC\],
+  .text-\[\#F4F7FA\],
+  .text-\[\#E3F2FD\],
+  .text-\[\#D7DEE8\],
+  .text-\[\#D1DCE8\],
+  .text-\[\#B8C7D9\],
+  .text-\[\#B2BDCD\],
+  .text-\[\#8A94A6\],
+  .text-\[\#93A4B8\],
+  .text-\[\#8EA3B8\] {
+    color: #0F172A !important;
+  }
+
+  .text-\[\#64748B\],
+  .text-\[\#94A3B8\],
+  .text-slate-400,
+  .text-slate-500,
+  .text-gray-400 {
+    color: #475569 !important;
+  }
+
+  h1, h2, h3, h4, h5, h6, strong, b {
+    color: #0B2545 !important;
+    font-weight: 700 !important;
+  }
+
+  /* 7. Meteorological Indicator High-Contrast Badges */
+  .text-\[\#EF4444\],
+  .text-\[\#E74C3C\],
+  .text-\[\#FF8A80\],
+  .text-\[\#EF5350\],
+  .text-red-500 {
+    color: #B91C1C !important;
+  }
+
+  .text-\[\#F59E0B\],
+  .text-\[\#F97316\],
+  .text-\[\#FF9F43\],
+  .text-\[\#FFC857\],
+  .text-amber-500,
+  .text-orange-500 {
+    color: #B45309 !important;
+  }
+
+  .text-\[\#2ECC71\],
+  .text-\[\#22C7A0\],
+  .text-\[\#00C897\],
+  .text-\[\#10B981\],
+  .text-emerald-600,
+  .text-green-600 {
+    color: #047857 !important;
+  }
+
+  .text-\[\#1499E8\],
+  .text-\[\#0B72B9\],
+  .text-\[\#38BDF8\],
+  .text-\[\#4FA8E0\],
+  .text-\[\#1565C0\] {
+    color: #0369A1 !important;
+  }
+
+  /* Crisp borders */
+  .border,
+  .border-t,
+  .border-b,
+  .border-l,
+  .border-r,
+  [class*="border-\[\#"],
+  [class*="border-slate-"] {
+    border-color: #CBD5E1 !important;
+  }
+
+  /* 8. Full Width Layout & Container Constraints */
+  main,
+  #main-content,
+  #mausam-main-page-container,
+  #weather-comprehensive-view-container,
+  #forecast-view-container,
+  .max-w-7xl,
+  .max-w-\[1440px\],
+  .max-w-\[1520px\] {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Remove max-height restrictions and horizontal overflows */
+  .max-h-\[460px\],
+  .max-h-\[600px\],
+  .max-h-\[92vh\],
+  .overflow-y-auto,
+  .overflow-x-auto,
+  .overflow-hidden,
+  .overflow-x-hidden {
+    max-height: none !important;
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  /* Expand hidden desktop tables for print */
+  .hidden.md\:block {
+    display: block !important;
+  }
+  .md\:hidden {
+    display: none !important;
+  }
+
+  /* 9. Page Break Avoidance & Document Flow */
+  article,
+  section,
+  table,
+  tr,
+  td,
+  th,
+  figure,
+  .weather-card,
+  .forecast-card,
+  .telemetry-card,
+  .timeline-item,
+  [id^="daily-forecast-card-"],
+  [id^="hourly-card-"],
+  #weather-page-header-banner,
+  #forecast-command-header,
+  #forecast-synoptic-matrix-card,
+  .grid > div {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    break-after: avoid !important;
+    page-break-after: avoid !important;
+  }
+
+  /* 10. Table Precision */
+  table {
+    border-collapse: collapse !important;
+    width: 100% !important;
+    margin: 8px 0 !important;
+  }
+
+  th, td {
+    border: 1px solid #CBD5E1 !important;
+    padding: 6px 8px !important;
+    color: #0F172A !important;
+  }
+
+  th {
+    background-color: #F1F5F9 !important;
+    font-weight: 700 !important;
+  }
+
+  /* 11. Wrap Horizontal Timeline Cards in Print */
+  #hourly-forecast-cards-scroll {
+    overflow: visible !important;
+  }
+
+  #hourly-forecast-cards-scroll > div {
+    flex-wrap: wrap !important;
+    min-width: 0 !important;
+    justify-content: flex-start !important;
+    gap: 8px !important;
+  }
+
+  #hourly-forecast-cards-scroll [id^="hourly-card-"] {
+    min-width: 90px !important;
+    width: 96px !important;
+    break-inside: avoid !important;
+  }
+}
+
 
 

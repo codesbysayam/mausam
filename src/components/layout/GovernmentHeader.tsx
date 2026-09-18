@@ -83,8 +83,13 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
 
   const handleMyLocationClick = async () => {
     if (onDetectLocation) {
-      await onDetectLocation(true);
-      setIsSearchOpen(false);
+      try {
+        await onDetectLocation(true);
+      } catch (err) {
+        console.debug('[GovernmentHeader] Location detect handled error:', err);
+      } finally {
+        setIsSearchOpen(false);
+      }
     }
   };
 

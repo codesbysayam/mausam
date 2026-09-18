@@ -24,7 +24,26 @@ if (typeof window !== 'undefined') {
   });
 
   window.addEventListener('unhandledrejection', (e) => {
-    console.error('[MAUSAM Unhandled Promise Rejection]:', e.reason);
+    const reason = e.reason;
+    const isAbort =
+      reason?.name === 'AbortError' ||
+      reason?.message?.includes?.('aborted') ||
+      reason?.message?.includes?.('The user aborted a request') ||
+      reason === 'AbortError';
+
+    const isAudioPermission =
+      reason?.name === 'NotAllowedError' ||
+      reason?.message?.includes?.('user didn\'t interact with the document first');
+
+    if (isAbort || isAudioPermission) {
+      e.stopImmediatePropagation();
+      e.preventDefault();
+      return;
+    }
+
+    // Call preventDefault to mark the rejection as handled
+    e.preventDefault();
+    console.warn('[MAUSAM Unhandled Promise Rejection Prevented]:', reason);
   });
 }
 

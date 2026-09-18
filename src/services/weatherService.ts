@@ -235,7 +235,12 @@ class WeatherService {
         return bundle;
       } catch (err: any) {
         if (err?.name === 'AbortError') {
-          throw err;
+          // Graceful handling of aborted requests - return stale cache or fallback without throwing unhandled rejection
+          const stale = this.cache.get(cacheKey);
+          if (stale) {
+            return stale.data;
+          }
+          return this.generateFallbackBundle(location);
         }
         console.warn(`[WeatherService] Live fetch failed for ${location.displayName}:`, err);
 
@@ -263,6 +268,10 @@ class WeatherService {
     this.inFlightFetches.set(cacheKey, fetchPromise);
 
     if (shouldBackgroundRefresh && existingStale) {
+      // Guard background revalidation promise so it never leaves unhandled rejections
+      fetchPromise.catch((e) => {
+        console.debug('[WeatherService] Background refresh suppressed error:', e);
+      });
       // Return stale immediately, let fetchPromise refresh silently in background
       return existingStale.data;
     }

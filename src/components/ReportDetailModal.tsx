@@ -387,10 +387,15 @@ export const ReportDetailModal: React.FC<ReportDetailModalProps> = ({
 
   const handleCopyCitation = () => {
     const citation = `India Meteorological Department (${publication.date.slice(-4)}). "${publication.title}". ${publication.issuingAuthority}, Government of India. Doc Ref: ${publication.documentNumber}.`;
-    navigator.clipboard.writeText(citation).then(() => {
-      setCopiedCitation(true);
-      setTimeout(() => setCopiedCitation(false), 2500);
-    });
+    if (navigator?.clipboard?.writeText) {
+      navigator.clipboard
+        .writeText(citation)
+        .then(() => {
+          setCopiedCitation(true);
+          setTimeout(() => setCopiedCitation(false), 2500);
+        })
+        .catch(() => {});
+    }
   };
 
   return (

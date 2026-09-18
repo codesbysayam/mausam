@@ -21,6 +21,7 @@ import {
   ShieldCheck,
   Server,
   X,
+  Printer,
 } from 'lucide-react';
 
 interface ForecastControlHeaderProps {
@@ -223,6 +224,17 @@ export const ForecastControlHeader: React.FC<ForecastControlHeaderProps> = ({
           >
             <Download className="w-4 h-4" />
             <span className="hidden sm:inline">CSV</span>
+          </button>
+
+          <button
+            type="button"
+            id="btn-print-forecast-report"
+            onClick={() => window.print()}
+            className="p-2.5 bg-[#071018] hover:bg-[#111F30] text-[#43C7F4] hover:text-[#F4F7FA] rounded-xl border border-[#162331] transition-colors flex items-center gap-1.5 text-xs font-semibold cursor-pointer"
+            title="Print NWP forecast bulletin"
+          >
+            <Printer className="w-4 h-4" />
+            <span className="hidden sm:inline">Print</span>
           </button>
         </div>
       </div>

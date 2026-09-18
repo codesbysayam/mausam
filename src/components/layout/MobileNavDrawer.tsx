@@ -99,7 +99,11 @@ export const MobileNavDrawer: React.FC<MobileNavDrawerProps> = ({
 
   const handleDetect = async () => {
     if (onDetectLocation) {
-      await onDetectLocation(true);
+      try {
+        await onDetectLocation(true);
+      } catch (err) {
+        console.debug('[MobileNavDrawer] Location detect handled error:', err);
+      }
     }
   };
 

@@ -12,6 +12,7 @@ import {
   X,
   Sun,
   Globe2,
+  Printer,
 } from 'lucide-react';
 
 interface WeatherPageHeaderProps {
@@ -289,6 +290,18 @@ export const WeatherPageHeader: React.FC<WeatherPageHeaderProps> = ({
           >
             <RefreshCw className={`w-3.5 h-3.5 text-[#4FA8E0] ${isLoading ? 'animate-spin' : ''}`} />
             <span>{isLoading ? 'Updating...' : refreshSuccess ? 'Updated' : 'Refresh Data'}</span>
+          </button>
+
+          {/* Print Report Button */}
+          <button
+            id="btn-print-weather-report"
+            type="button"
+            onClick={() => window.print()}
+            className="px-3 py-1.5 bg-[#1E2733] hover:bg-[#314255] border border-[#314255] hover:border-[#4FA8E0] text-white rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all shrink-0 cursor-pointer"
+            title="Print current weather observation report"
+          >
+            <Printer className="w-3.5 h-3.5 text-[#4FA8E0]" />
+            <span className="hidden sm:inline">Print Report</span>
           </button>
         </div>
       </div>
