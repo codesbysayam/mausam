@@ -10,16 +10,20 @@ import { FooterNavigation, FooterView } from './components/layout/FooterNavigati
 import { StateWeatherData } from './components/map/IndiaWeatherMap';
 import { HomePage } from './pages/Home';
 import { WeatherPage } from './pages/Weather';
-import { ForecastPage } from './pages/Forecast';
-import { RadarPage } from './pages/Radar';
-import { AirQualityPage } from './pages/AirQuality';
-import { AlertsPage } from './pages/Alerts';
-import { AgrometPage } from './pages/Agromet';
-import { ReportsPage } from './pages/Reports';
-import { PrivacyPolicy } from './pages/PrivacyPolicy';
-import { OpenDataApi } from './pages/OpenDataApi';
-import { TermsOfObservation } from './pages/TermsOfObservation';
-import { ApiDebugPage } from './pages/ApiDebug';
+import { SkeletonPage } from './components/common/Skeletons';
+
+// Lazy-load non-home pages to ensure instant initial shell rendering and minimize initial bundle size
+const ForecastPage = React.lazy(() => import('./pages/Forecast').then((m) => ({ default: m.ForecastPage })));
+const RadarPage = React.lazy(() => import('./pages/Radar').then((m) => ({ default: m.RadarPage })));
+const AirQualityPage = React.lazy(() => import('./pages/AirQuality').then((m) => ({ default: m.AirQualityPage })));
+const AlertsPage = React.lazy(() => import('./pages/Alerts').then((m) => ({ default: m.AlertsPage })));
+const AgrometPage = React.lazy(() => import('./pages/Agromet').then((m) => ({ default: m.AgrometPage })));
+const ReportsPage = React.lazy(() => import('./pages/Reports').then((m) => ({ default: m.ReportsPage })));
+const PrivacyPolicy = React.lazy(() => import('./pages/PrivacyPolicy').then((m) => ({ default: m.PrivacyPolicy })));
+const OpenDataApi = React.lazy(() => import('./pages/OpenDataApi').then((m) => ({ default: m.OpenDataApi })));
+const TermsOfObservation = React.lazy(() => import('./pages/TermsOfObservation').then((m) => ({ default: m.TermsOfObservation })));
+const ApiDebugPage = React.lazy(() => import('./pages/ApiDebug').then((m) => ({ default: m.ApiDebugPage })));
+
 import { AskMausamDrawer } from './components/AskMausamDrawer';
 import { ReportDetailModal } from './components/ReportDetailModal';
 import { OFFICIAL_PUBLICATIONS, MeteorologicalPublication } from './data/reportsAndArticles';
@@ -89,6 +93,12 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<AppView>(() =>
     getTabFromPathname(window.location.pathname)
   );
+
+  console.log('[MAUSAM] App component executing / rendering, activeTab:', activeTab);
+
+  useEffect(() => {
+    console.log('[MAUSAM] App component mounted successfully to DOM');
+  }, []);
 
   // Single source of truth for location & geolocation state via LocationContext
   const {
@@ -328,97 +338,100 @@ export default function App() {
             />
           )}
 
-          {/* FORECAST: Medium-Range Numerical Weather Forecast */}
-          {activeTab === 'forecast' && (
-            <ForecastPage
-              weatherBundle={weatherBundle}
-              selectedLocation={selectedLocation}
-              onRefresh={() => loadWeatherData(selectedLocation, true)}
-              onSelectLocation={handleSelectLocation}
-              onNavigateToTab={(tab) => navigateToTab(tab as AppView)}
-              isLoadingWeather={isLoadingWeather}
-              onDetectLocation={detectLocation}
-              isLocating={isLocating}
-              locatePhase={locatePhase}
-              locationSource={locationSource}
-              onOpenLocationCenter={() => setIsLocationCenterOpen(true)}
-            />
-          )}
+          {/* LAZY LOADED ROUTED MODULES (Suspense boundary with zero-layout-shift SkeletonPage) */}
+          <React.Suspense fallback={<SkeletonPage />}>
+            {/* FORECAST: Medium-Range Numerical Weather Forecast */}
+            {activeTab === 'forecast' && (
+              <ForecastPage
+                weatherBundle={weatherBundle}
+                selectedLocation={selectedLocation}
+                onRefresh={() => loadWeatherData(selectedLocation, true)}
+                onSelectLocation={handleSelectLocation}
+                onNavigateToTab={(tab) => navigateToTab(tab as AppView)}
+                isLoadingWeather={isLoadingWeather}
+                onDetectLocation={detectLocation}
+                isLocating={isLocating}
+                locatePhase={locatePhase}
+                locationSource={locationSource}
+                onOpenLocationCenter={() => setIsLocationCenterOpen(true)}
+              />
+            )}
 
-          {/* WARNINGS: Multi-Hazard Severe Weather Warnings & Matrix */}
-          {activeTab === 'warnings' && (
-            <AlertsPage
-              weatherBundle={weatherBundle}
-              selectedLocation={selectedLocation}
-            />
-          )}
+            {/* WARNINGS: Multi-Hazard Severe Weather Warnings & Matrix */}
+            {activeTab === 'warnings' && (
+              <AlertsPage
+                weatherBundle={weatherBundle}
+                selectedLocation={selectedLocation}
+              />
+            )}
 
-          {/* RADAR & MAPS: Doppler Weather Radar & Satellite Imagery */}
-          {activeTab === 'radar' && (
-            <RadarPage
-              selectedLocation={selectedLocation}
-              onDetectLocation={detectLocation}
-              isLocating={isLocating}
-              locatePhase={locatePhase}
-              locationSource={locationSource}
-              onOpenLocationCenter={() => setIsLocationCenterOpen(true)}
-            />
-          )}
+            {/* RADAR & MAPS: Doppler Weather Radar & Satellite Imagery */}
+            {activeTab === 'radar' && (
+              <RadarPage
+                selectedLocation={selectedLocation}
+                onDetectLocation={detectLocation}
+                isLocating={isLocating}
+                locatePhase={locatePhase}
+                locationSource={locationSource}
+                onOpenLocationCenter={() => setIsLocationCenterOpen(true)}
+              />
+            )}
 
-          {/* AQI & AIR: National Air Quality Index & Aero-Allergen Pollen */}
-          {activeTab === 'aqi' && (
-            <AirQualityPage
-              weatherBundle={weatherBundle}
-              selectedLocation={selectedLocation}
-              onSelectLocation={handleSelectLocation}
-              onStateSelect={handleStateSelect}
-              onDetectLocation={detectLocation}
-              isLocating={isLocating}
-              locatePhase={locatePhase}
-              locationSource={locationSource}
-              onOpenLocationCenter={() => setIsLocationCenterOpen(true)}
-            />
-          )}
+            {/* AQI & AIR: National Air Quality Index & Aero-Allergen Pollen */}
+            {activeTab === 'aqi' && (
+              <AirQualityPage
+                weatherBundle={weatherBundle}
+                selectedLocation={selectedLocation}
+                onSelectLocation={handleSelectLocation}
+                onStateSelect={handleStateSelect}
+                onDetectLocation={detectLocation}
+                isLocating={isLocating}
+                locatePhase={locatePhase}
+                locationSource={locationSource}
+                onOpenLocationCenter={() => setIsLocationCenterOpen(true)}
+              />
+            )}
 
-          {/* AGROMET: Gramin Krishi Mausam Sewa Agricultural Bulletins */}
-          {activeTab === 'agromet' && (
-            <AgrometPage
-              weatherBundle={weatherBundle}
-              selectedLocation={selectedLocation}
-              onNavigateToTab={(tab) => navigateToTab(tab as AppView)}
-              onDetectLocation={detectLocation}
-              isLocating={isLocating}
-              locatePhase={locatePhase}
-              locationSource={locationSource}
-              onOpenLocationCenter={() => setIsLocationCenterOpen(true)}
-            />
-          )}
+            {/* AGROMET: Gramin Krishi Mausam Sewa Agricultural Bulletins */}
+            {activeTab === 'agromet' && (
+              <AgrometPage
+                weatherBundle={weatherBundle}
+                selectedLocation={selectedLocation}
+                onNavigateToTab={(tab) => navigateToTab(tab as AppView)}
+                onDetectLocation={detectLocation}
+                isLocating={isLocating}
+                locatePhase={locatePhase}
+                locationSource={locationSource}
+                onOpenLocationCenter={() => setIsLocationCenterOpen(true)}
+              />
+            )}
 
-          {/* REPORTS: Citizen Meteorological Reports & Observation Feeds */}
-          {activeTab === 'reports' && (
-            <ReportsPage
-              weatherBundle={weatherBundle}
-              selectedLocation={selectedLocation}
-            />
-          )}
+            {/* REPORTS: Citizen Meteorological Reports & Observation Feeds */}
+            {activeTab === 'reports' && (
+              <ReportsPage
+                weatherBundle={weatherBundle}
+                selectedLocation={selectedLocation}
+              />
+            )}
 
-          {/* PRIVACY POLICY */}
-          {activeTab === 'privacy' && (
-            <PrivacyPolicy onNavigateHome={() => navigateToTab('home')} />
-          )}
+            {/* PRIVACY POLICY */}
+            {activeTab === 'privacy' && (
+              <PrivacyPolicy onNavigateHome={() => navigateToTab('home')} />
+            )}
 
-          {/* OPEN DATA API */}
-          {activeTab === 'api' && (
-            <OpenDataApi onNavigateHome={() => navigateToTab('home')} />
-          )}
+            {/* OPEN DATA API */}
+            {activeTab === 'api' && (
+              <OpenDataApi onNavigateHome={() => navigateToTab('home')} />
+            )}
 
-          {/* TERMS OF OBSERVATION */}
-          {activeTab === 'terms' && (
-            <TermsOfObservation onNavigateHome={() => navigateToTab('home')} />
-          )}
+            {/* TERMS OF OBSERVATION */}
+            {activeTab === 'terms' && (
+              <TermsOfObservation onNavigateHome={() => navigateToTab('home')} />
+            )}
 
-          {/* IMD API INTEGRATION DIAGNOSTICS */}
-          {activeTab === 'debug' && <ApiDebugPage />}
+            {/* IMD API INTEGRATION DIAGNOSTICS */}
+            {activeTab === 'debug' && <ApiDebugPage />}
+          </React.Suspense>
         </PageContainer>
       </main>
 

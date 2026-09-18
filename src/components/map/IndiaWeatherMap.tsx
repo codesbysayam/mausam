@@ -752,11 +752,16 @@ export const IndiaWeatherMap: React.FC<IndiaWeatherMapProps> = ({
             <svg
               ref={mapSvgRef}
               xmlns="http://www.w3.org/2000/svg"
-              viewBox={India.viewBox}
+              viewBox={((India as any)?.viewBox || (India as any)?.default?.viewBox || '0 0 612 696')}
               className="w-full max-h-[460px] select-none"
               aria-label="National Meteorological Map of India"
             >
-              {India.locations.map((loc: any) => {
+              {(Array.isArray((India as any)?.locations)
+                ? (India as any).locations
+                : Array.isArray((India as any)?.default?.locations)
+                ? (India as any).default.locations
+                : []
+              ).map((loc: any) => {
                 const stateData = findStateData(loc);
                 const isSelected = isStateSelected(loc);
                 const inRegion = isStateInActiveRegion(loc);

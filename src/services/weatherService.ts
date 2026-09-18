@@ -11,6 +11,7 @@ import {
 import { resolveWeatherCondition } from './weatherResolver';
 import { getWeatherCondition } from './weatherConditions';
 import { calculateLunarEphemeris, calculateNightDuration } from '../utils/astronomyCalculator';
+import { crossTabSync } from './crossTabSync';
 
 export interface WeatherDataBundle {
   current: CurrentWeather;
@@ -34,8 +35,55 @@ export type DemoWeatherOverride =
 
 class WeatherService {
   private cache: Map<string, { data: WeatherDataBundle; timestamp: number }> = new Map();
-  private cacheTtlMs = 5 * 60 * 1000; // 5 minutes TTL
+  private cacheTtlMs = 8 * 60 * 1000; // 8 minutes TTL
   private demoOverride: DemoWeatherOverride = 'LIVE'; // Disabled by default per Part 22
+  private inFlightFetches: Map<string, Promise<WeatherDataBundle>> = new Map();
+  private abortControllers: Map<string, AbortController> = new Map();
+
+  constructor() {
+    // Ingest data broadcasted from other tabs to eliminate redundant network fetches
+    crossTabSync.subscribe((msg) => {
+      if (msg.type === 'WEATHER_UPDATE' && msg.payload?.locationId && msg.payload?.bundle) {
+        const { locationId, bundle } = msg.payload;
+        // Revive Date object
+        if (bundle.lastFetchedAt && !(bundle.lastFetchedAt instanceof Date)) {
+          bundle.lastFetchedAt = new Date(bundle.lastFetchedAt);
+        }
+        this.cache.set(locationId, { data: bundle, timestamp: Date.now() });
+      }
+    });
+
+    // Hydrate from localStorage for instantaneous startup
+    this.hydrateFromStorage();
+  }
+
+  private hydrateFromStorage() {
+    if (typeof window === 'undefined') return;
+    try {
+      const stored = localStorage.getItem('mausam_weather_cache_v1');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        const now = Date.now();
+        // Keep entries newer than 2 hours
+        Object.entries(parsed).forEach(([key, val]: [string, any]) => {
+          if (val && val.timestamp && now - val.timestamp < 2 * 3600 * 1000) {
+            val.data.lastFetchedAt = new Date(val.data.lastFetchedAt);
+            this.cache.set(key, val);
+          }
+        });
+      }
+    } catch {}
+  }
+
+  private persistToStorage(key: string, data: WeatherDataBundle, timestamp: number) {
+    if (typeof window === 'undefined') return;
+    try {
+      const stored = localStorage.getItem('mausam_weather_cache_v1');
+      const parsed = stored ? JSON.parse(stored) : {};
+      parsed[key] = { data, timestamp };
+      localStorage.setItem('mausam_weather_cache_v1', JSON.stringify(parsed));
+    } catch {}
+  }
 
   setDemoOverride(override: DemoWeatherOverride) {
     this.demoOverride = override;
@@ -69,6 +117,21 @@ class WeatherService {
   }
 
   /**
+   * Cancel ongoing request for a specific location
+   */
+  abortOngoingRequest(locationId?: string) {
+    if (locationId && this.abortControllers.has(locationId)) {
+      this.abortControllers.get(locationId)?.abort();
+      this.abortControllers.delete(locationId);
+      this.inFlightFetches.delete(locationId);
+    } else if (!locationId) {
+      this.abortControllers.forEach((c) => c.abort());
+      this.abortControllers.clear();
+      this.inFlightFetches.clear();
+    }
+  }
+
+  /**
    * Fetches real-time normalized weather for a given LocationRecord
    */
   async getWeatherData(
@@ -99,75 +162,112 @@ class WeatherService {
       return demoData;
     }
 
-    try {
-      const weatherQuery = `latitude=${location.lat}&longitude=${location.lng}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,showers,snowfall,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m,dew_point_2m,visibility&hourly=temperature_2m,relative_humidity_2m,dew_point_2m,apparent_temperature,precipitation_probability,precipitation,rain,weather_code,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m,uv_index,visibility,cloud_cover,direct_normal_irradiance,soil_moisture_0_to_1cm,soil_temperature_0cm,et0_fao_evapotranspiration&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant&timezone=Asia%2FKolkata&forecast_days=7`;
-      const airQuery = `latitude=${location.lat}&longitude=${location.lng}&current=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone,european_aqi,us_aqi,dust,alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen,ammonia&timezone=Asia%2FKolkata`;
+    // Request Deduplication: join in-flight promise if one already exists
+    const inFlight = this.inFlightFetches.get(cacheKey);
+    if (inFlight && !forceRefresh) {
+      return inFlight;
+    }
 
-      let weatherData: any = null;
-      let airData: any = null;
+    // Abort previous in-flight request for this location
+    this.abortOngoingRequest(cacheKey);
+    const controller = new AbortController();
+    this.abortControllers.set(cacheKey, controller);
 
-      // Try local same-origin proxy first (guaranteed no CORS or sandbox blocking)
+    // Stale-While-Revalidate: If we have stale cache, return it immediately while refreshing in background
+    const existingStale = this.cache.get(cacheKey);
+    const shouldBackgroundRefresh = !forceRefresh && existingStale && (now - existingStale.timestamp >= this.cacheTtlMs);
+
+    const fetchPromise = (async () => {
       try {
-        const [wRes, aRes] = await Promise.all([
-          fetch(`/api/proxy/open-meteo?${weatherQuery}`),
-          fetch(`/api/proxy/air-quality?${airQuery}`),
-        ]);
-        if (wRes.ok) weatherData = await wRes.json();
-        if (aRes.ok) airData = await aRes.json();
-      } catch (proxyErr) {
-        console.warn('[WeatherService] Proxy fetch attempt failed, trying direct Open-Meteo:', proxyErr);
-      }
+        const weatherQuery = `latitude=${location.lat}&longitude=${location.lng}&current=temperature_2m,relative_humidity_2m,apparent_temperature,is_day,precipitation,rain,showers,snowfall,weather_code,cloud_cover,pressure_msl,surface_pressure,wind_speed_10m,wind_direction_10m,wind_gusts_10m,dew_point_2m,visibility&hourly=temperature_2m,relative_humidity_2m,dew_point_2m,apparent_temperature,precipitation_probability,precipitation,rain,weather_code,pressure_msl,wind_speed_10m,wind_direction_10m,wind_gusts_10m,uv_index,visibility,cloud_cover,direct_normal_irradiance,soil_moisture_0_to_1cm,soil_temperature_0cm,et0_fao_evapotranspiration&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max,precipitation_sum,precipitation_probability_max,wind_speed_10m_max,wind_gusts_10m_max,wind_direction_10m_dominant&timezone=Asia%2FKolkata&forecast_days=7`;
+        const airQuery = `latitude=${location.lat}&longitude=${location.lng}&current=pm10,pm2_5,carbon_monoxide,nitrogen_dioxide,sulphur_dioxide,ozone,european_aqi,us_aqi,dust,alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen,ammonia&timezone=Asia%2FKolkata`;
 
-      // If proxy didn't succeed, try direct Open-Meteo
-      if (!weatherData) {
-        const weatherUrl = `https://api.open-meteo.com/v1/forecast?${weatherQuery}`;
-        const airQualityUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?${airQuery}`;
-        const [weatherRes, airRes] = await Promise.allSettled([
-          fetch(weatherUrl),
-          fetch(airQualityUrl),
-        ]);
+        let weatherData: any = null;
+        let airData: any = null;
 
-        if (weatherRes.status === 'fulfilled' && weatherRes.value.ok) {
-          weatherData = await weatherRes.value.json();
+        // Try local same-origin proxy first (guaranteed no CORS or sandbox blocking)
+        try {
+          const [wRes, aRes] = await Promise.all([
+            fetch(`/api/proxy/open-meteo?${weatherQuery}`, { signal: controller.signal }),
+            fetch(`/api/proxy/air-quality?${airQuery}`, { signal: controller.signal }),
+          ]);
+          if (wRes.ok) weatherData = await wRes.json();
+          if (aRes.ok) airData = await aRes.json();
+        } catch (proxyErr: any) {
+          if (proxyErr.name === 'AbortError') throw proxyErr;
+          console.warn('[WeatherService] Proxy fetch attempt failed, trying direct Open-Meteo:', proxyErr);
         }
-        if (airRes.status === 'fulfilled' && airRes.value.ok) {
-          try {
-            airData = await airRes.value.json();
-          } catch (e) {
-            console.warn('[WeatherService] Direct Air quality JSON parse error:', e);
+
+        // If proxy didn't succeed, try direct Open-Meteo
+        if (!weatherData) {
+          const weatherUrl = `https://api.open-meteo.com/v1/forecast?${weatherQuery}`;
+          const airQualityUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?${airQuery}`;
+          const [weatherRes, airRes] = await Promise.allSettled([
+            fetch(weatherUrl, { signal: controller.signal }),
+            fetch(airQualityUrl, { signal: controller.signal }),
+          ]);
+
+          if (weatherRes.status === 'fulfilled' && weatherRes.value.ok) {
+            weatherData = await weatherRes.value.json();
+          }
+          if (airRes.status === 'fulfilled' && airRes.value.ok) {
+            try {
+              airData = await airRes.value.json();
+            } catch (e) {
+              console.warn('[WeatherService] Direct Air quality JSON parse error:', e);
+            }
           }
         }
+
+        if (!weatherData) {
+          throw new Error(`Weather API connection failed`);
+        }
+
+        const bundle = this.transformOpenMeteoResponse(location, weatherData, airData);
+
+        // Cache successful response
+        this.cache.set(cacheKey, { data: bundle, timestamp: Date.now() });
+        this.persistToStorage(cacheKey, bundle, Date.now());
+
+        // Broadcast to other open browser tabs
+        crossTabSync.broadcastWeather(cacheKey, bundle);
+
+        return bundle;
+      } catch (err: any) {
+        if (err?.name === 'AbortError') {
+          throw err;
+        }
+        console.warn(`[WeatherService] Live fetch failed for ${location.displayName}:`, err);
+
+        // Check if we have stale cache
+        const stale = this.cache.get(cacheKey);
+        if (stale) {
+          return {
+            ...stale.data,
+            isLive: false,
+            error: `Live telemetry connection offline. Displaying cached observation from ${this.formatIstTime(
+              stale.data.lastFetchedAt
+            )} IST.`,
+          };
+        }
+
+        // Generate accurate seasonal synthetic data as clean fallback
+        const fallback = this.generateFallbackBundle(location);
+        return fallback;
+      } finally {
+        this.inFlightFetches.delete(cacheKey);
+        this.abortControllers.delete(cacheKey);
       }
+    })();
 
-      if (!weatherData) {
-        throw new Error(`Weather API connection failed`);
-      }
+    this.inFlightFetches.set(cacheKey, fetchPromise);
 
-      const bundle = this.transformOpenMeteoResponse(location, weatherData, airData);
-
-      // Cache successful response
-      this.cache.set(cacheKey, { data: bundle, timestamp: now });
-
-      return bundle;
-    } catch (err: any) {
-      console.warn(`[WeatherService] Live fetch failed for ${location.displayName}:`, err);
-
-      // Check if we have stale cache
-      const stale = this.cache.get(cacheKey);
-      if (stale) {
-        return {
-          ...stale.data,
-          isLive: false,
-          error: `Live telemetry connection offline. Displaying cached observation from ${this.formatIstTime(
-            stale.data.lastFetchedAt
-          )} IST.`,
-        };
-      }
-
-      // Generate accurate seasonal synthetic data as clean fallback
-      const fallback = this.generateFallbackBundle(location);
-      return fallback;
+    if (shouldBackgroundRefresh && existingStale) {
+      // Return stale immediately, let fetchPromise refresh silently in background
+      return existingStale.data;
     }
+
+    return fetchPromise;
   }
 
   /**

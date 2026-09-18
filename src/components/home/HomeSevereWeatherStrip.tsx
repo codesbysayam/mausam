@@ -31,6 +31,7 @@ import {
   ParsedAlertCenterData,
   HazardType,
 } from '../../services/alertParser';
+import { SkeletonAlertCenter } from '../common/Skeletons';
 
 export interface HomeSevereWeatherStripProps {
   alerts?: WeatherAlert[];
@@ -182,28 +183,7 @@ export const HomeSevereWeatherStrip: React.FC<HomeSevereWeatherStripProps> = ({
 
   // Loading skeleton state
   if (isLoading && !data) {
-    return (
-      <section
-        id="severe-weather-alert-center"
-        aria-label="National Weather Alert Center"
-        className="w-full rounded-xl border border-[#1E2E40] bg-[#0A1018] p-4 sm:p-5 animate-pulse"
-      >
-        <div className="flex items-center justify-between pb-3 border-b border-[#1E2E40]">
-          <div className="h-4 w-44 bg-[#1E2E40] rounded" />
-          <div className="h-5 w-24 bg-[#1E2E40] rounded" />
-        </div>
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="md:col-span-2 space-y-2">
-            <div className="h-6 w-3/4 bg-[#1E2E40] rounded" />
-            <div className="h-4 w-1/2 bg-[#1E2E40] rounded" />
-            <div className="h-10 w-full bg-[#1E2E40] rounded" />
-          </div>
-          <div className="space-y-2">
-            <div className="h-16 w-full bg-[#1E2E40] rounded" />
-          </div>
-        </div>
-      </section>
-    );
+    return <SkeletonAlertCenter />;
   }
 
   // Fallback safe reference

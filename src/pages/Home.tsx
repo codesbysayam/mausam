@@ -32,6 +32,7 @@ import { HomeAtmosphericChangeDetector } from '../components/home/HomeAtmospheri
 import { HomeLiveTimeline } from '../components/home/HomeLiveTimeline';
 import { MausamDataHealth } from '../components/common/MausamDataHealth';
 import { DataExportActions } from '../components/common/DataExportActions';
+import { ErrorBoundary } from '../components/common/ErrorBoundary';
 
 import {
   Table,
@@ -286,15 +287,19 @@ export const HomePage: React.FC<HomePageProps> = ({
       </div>
 
       {/* 8. DOPPLER RADAR PREVIEW */}
-      <HomeRadarPreview
-        location={selectedLocation}
-        onNavigateToRadar={() => onNavigateToTab('radar')}
-      />
+      <ErrorBoundary fallbackTitle="Doppler Radar Preview">
+        <HomeRadarPreview
+          location={selectedLocation}
+          onNavigateToRadar={() => onNavigateToTab('radar')}
+        />
+      </ErrorBoundary>
 
       {/* 8B. HISTORICAL CLIMATE TRENDS & IMD NORMALS */}
-      <HomeHistoricalClimateTrends
-        location={selectedLocation}
-      />
+      <ErrorBoundary fallbackTitle="Historical Climate Trends">
+        <HomeHistoricalClimateTrends
+          location={selectedLocation}
+        />
+      </ErrorBoundary>
 
       {/* 9. NATIONAL WEATHER SNAPSHOT (36 STATES & UNION TERRITORIES) */}
       <section className="flex flex-col gap-3">
@@ -398,13 +403,15 @@ export const HomePage: React.FC<HomePageProps> = ({
 
       {/* 10. ALL-INDIA INTERACTIVE MAP */}
       <section className="flex flex-col gap-3">
-        <IndiaWeatherMap
-          data={INDIA_WEATHER_DATA}
-          metric={mapMetric}
-          onMetricChange={setMapMetric}
-          selectedState={selectedLocation.state || selectedLocation.name}
-          onStateSelect={handleStateClick}
-        />
+        <ErrorBoundary fallbackTitle="National Weather Observation Map">
+          <IndiaWeatherMap
+            data={INDIA_WEATHER_DATA}
+            metric={mapMetric}
+            onMetricChange={setMapMetric}
+            selectedState={selectedLocation.state || selectedLocation.name}
+            onStateSelect={handleStateClick}
+          />
+        </ErrorBoundary>
       </section>
 
       {/* 11. STATE-WISE OBSERVATIONS TABLE */}

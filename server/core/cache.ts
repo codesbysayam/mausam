@@ -12,6 +12,7 @@ export interface CacheEntry<T> {
 
 export interface CacheMetadata {
   cacheHit: boolean;
+  isStale: boolean;
   cachedAt: string | null;
   ageSeconds: number;
   cacheType: 'REDIS' | 'IN_MEMORY';
@@ -25,6 +26,7 @@ export interface CacheResult<T> {
 export class CacheLayer {
   private memoryStore = new Map<string, CacheEntry<any>>();
   private redisConnected: boolean = false;
+  private staleGraceMs = 2 * 60 * 60 * 1000; // 2 hours stale tolerance
 
   constructor() {
     this.redisConnected = Boolean(process.env.REDIS_URL || process.env.UPSTASH_REDIS_REST_URL);
@@ -34,7 +36,7 @@ export class CacheLayer {
     return this.redisConnected ? 'REDIS' : 'IN_MEMORY';
   }
 
-  public async get<T>(key: string): Promise<CacheResult<T>> {
+  public async get<T>(key: string, allowStale = false): Promise<CacheResult<T>> {
     const now = Date.now();
     const entry = this.memoryStore.get(key);
 
@@ -43,6 +45,7 @@ export class CacheLayer {
         data: null,
         metadata: {
           cacheHit: false,
+          isStale: false,
           cachedAt: null,
           ageSeconds: 0,
           cacheType: this.getCacheType(),
@@ -50,12 +53,28 @@ export class CacheLayer {
       };
     }
 
-    if (now - entry.storedAt > entry.ttlMs) {
+    const ageMs = now - entry.storedAt;
+    const isExpired = ageMs > entry.ttlMs;
+
+    if (isExpired) {
+      if (allowStale && ageMs <= entry.ttlMs + this.staleGraceMs) {
+        return {
+          data: entry.data as T,
+          metadata: {
+            cacheHit: true,
+            isStale: true,
+            cachedAt: new Date(entry.storedAt).toISOString(),
+            ageSeconds: Math.round(ageMs / 1000),
+            cacheType: this.getCacheType(),
+          },
+        };
+      }
       this.memoryStore.delete(key);
       return {
         data: null,
         metadata: {
           cacheHit: false,
+          isStale: false,
           cachedAt: null,
           ageSeconds: 0,
           cacheType: this.getCacheType(),
@@ -63,11 +82,12 @@ export class CacheLayer {
       };
     }
 
-    const ageSeconds = Math.max(0, Math.round((now - entry.storedAt) / 1000));
+    const ageSeconds = Math.max(0, Math.round(ageMs / 1000));
     return {
       data: entry.data as T,
       metadata: {
         cacheHit: true,
+        isStale: false,
         cachedAt: new Date(entry.storedAt).toISOString(),
         ageSeconds,
         cacheType: this.getCacheType(),

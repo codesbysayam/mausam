@@ -249,50 +249,60 @@ function MapViewController({
   return null;
 }
 
-// Custom clean SVG marker for the DWR Station pin on the map
-const stationDivIcon = L.divIcon({
-  className: 'custom-radar-station-pin',
-  html: `
-    <div style="position: relative; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;">
-      <div style="position: absolute; width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid rgba(67, 199, 244, 0.85); background: rgba(20, 153, 232, 0.25);"></div>
-      <div style="width: 10px; height: 10px; border-radius: 50%; background: #1499E8; border: 2px solid #FFFFFF; box-shadow: 0 0 8px rgba(20,153,232,0.9);"></div>
-    </div>
-  `,
-  iconSize: [26, 26],
-  iconAnchor: [13, 13],
-});
+// Custom clean SVG markers for map pins
+const getStationDivIcon = () =>
+  typeof window !== 'undefined' && L?.divIcon
+    ? L.divIcon({
+        className: 'custom-radar-station-pin',
+        html: `
+          <div style="position: relative; width: 26px; height: 26px; display: flex; align-items: center; justify-content: center;">
+            <div style="position: absolute; width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid rgba(67, 199, 244, 0.85); background: rgba(20, 153, 232, 0.25);"></div>
+            <div style="width: 10px; height: 10px; border-radius: 50%; background: #1499E8; border: 2px solid #FFFFFF; box-shadow: 0 0 8px rgba(20,153,232,0.9);"></div>
+          </div>
+        `,
+        iconSize: [26, 26],
+        iconAnchor: [13, 13],
+      })
+    : undefined;
 
-// Custom animated reticle for the active convective echo target
-const echoTargetDivIcon = L.divIcon({
-  className: 'custom-echo-target-pin',
-  html: `
-    <div style="position: relative; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;">
-      <div style="position: absolute; width: 32px; height: 32px; border-radius: 50%; border: 2px dashed #FF8C42; animation: spin 5s linear infinite;"></div>
-      <div style="position: absolute; width: 18px; height: 18px; border-radius: 50%; background: rgba(255, 140, 66, 0.3); border: 1.5px solid #FF8C42;"></div>
-      <div style="width: 8px; height: 8px; border-radius: 50%; background: #FF8C42; box-shadow: 0 0 10px #FF8C42;"></div>
-    </div>
-  `,
-  iconSize: [34, 34],
-  iconAnchor: [17, 17],
-});
+const getEchoTargetDivIcon = () =>
+  typeof window !== 'undefined' && L?.divIcon
+    ? L.divIcon({
+        className: 'custom-echo-target-pin',
+        html: `
+          <div style="position: relative; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;">
+            <div style="position: absolute; width: 32px; height: 32px; border-radius: 50%; border: 2px dashed #FF8C42; animation: spin 5s linear infinite;"></div>
+            <div style="position: absolute; width: 18px; height: 18px; border-radius: 50%; background: rgba(255, 140, 66, 0.3); border: 1.5px solid #FF8C42;"></div>
+            <div style="width: 8px; height: 8px; border-radius: 50%; background: #FF8C42; box-shadow: 0 0 10px #FF8C42;"></div>
+          </div>
+        `,
+        iconSize: [34, 34],
+        iconAnchor: [17, 17],
+      })
+    : undefined;
 
-// Custom pin for map user clicks (echo probe)
-const probeDivIcon = L.divIcon({
-  className: 'custom-probe-pin',
-  html: `
-    <div style="position: relative; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;">
-      <div style="position: absolute; width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid #22C7A0; background: rgba(34, 199, 160, 0.25);"></div>
-      <div style="width: 8px; height: 8px; border-radius: 50%; background: #22C7A0; border: 1.5px solid #FFFFFF; box-shadow: 0 0 8px rgba(34,199,160,0.85);"></div>
-    </div>
-  `,
-  iconSize: [28, 28],
-  iconAnchor: [14, 14],
-});
+const getProbeDivIcon = () =>
+  typeof window !== 'undefined' && L?.divIcon
+    ? L.divIcon({
+        className: 'custom-probe-pin',
+        html: `
+          <div style="position: relative; width: 28px; height: 28px; display: flex; align-items: center; justify-content: center;">
+            <div style="position: absolute; width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid #22C7A0; background: rgba(34, 199, 160, 0.25);"></div>
+            <div style="width: 8px; height: 8px; border-radius: 50%; background: #22C7A0; border: 1.5px solid #FFFFFF; box-shadow: 0 0 8px rgba(34,199,160,0.85);"></div>
+          </div>
+        `,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14],
+      })
+    : undefined;
 
 export const HomeRadarPreview: React.FC<HomeRadarPreviewProps> = ({
   location,
   onNavigateToRadar,
 }) => {
+  const stationDivIcon = useMemo(() => getStationDivIcon(), []);
+  const echoTargetDivIcon = useMemo(() => getEchoTargetDivIcon(), []);
+  const probeDivIcon = useMemo(() => getProbeDivIcon(), []);
   const lat = typeof location.lat === 'number' ? location.lat : 20.2961;
   const lng = typeof location.lng === 'number' ? location.lng : 85.8245;
 

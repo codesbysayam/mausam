@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { LocationRecord } from '../../../types';
 import { WeatherDataBundle } from '../../../services/weatherService';
 import { authoritativeClient, PersonaDataBundle } from '../../../services/authoritativeService';
@@ -10,6 +10,7 @@ import { FamilyCommuteCard } from './FamilyCommuteCard';
 import { AgriGardenCard } from './AgriGardenCard';
 import { CommuterCard } from './CommuterCard';
 import { EventPlannerCard } from './EventPlannerCard';
+import { SkeletonMetricCard } from '../../common/Skeletons';
 
 interface PersonaWeatherHubProps {
   selectedLocation: LocationRecord;
@@ -36,11 +37,21 @@ export const PersonaWeatherHub: React.FC<PersonaWeatherHubProps> = ({
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [lastRefreshedAt, setLastRefreshedAt] = useState<Date>(new Date());
+  const bootTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadPersonaData = useCallback(
     async (forceRefresh = false) => {
       if (forceRefresh) setIsRefreshing(true);
-      else setIsLoading(true);
+      else if (!bundle) setIsLoading(true);
+
+      // Clear any prior boot timeout
+      if (bootTimeoutRef.current) clearTimeout(bootTimeoutRef.current);
+
+      // Enforce 8000ms maximum boot timeout to guarantee user never faces infinite spinner
+      bootTimeoutRef.current = setTimeout(() => {
+        setIsLoading(false);
+        setIsRefreshing(false);
+      }, 8000);
 
       try {
         const data = await authoritativeClient.getPersonaBundle(
@@ -61,6 +72,7 @@ export const PersonaWeatherHub: React.FC<PersonaWeatherHubProps> = ({
           },
           forceRefresh
         );
+        if (bootTimeoutRef.current) clearTimeout(bootTimeoutRef.current);
         setBundle(data);
         setLastRefreshedAt(new Date());
       } catch (err) {
@@ -70,13 +82,16 @@ export const PersonaWeatherHub: React.FC<PersonaWeatherHubProps> = ({
         setIsRefreshing(false);
       }
     },
-    [selectedLocation, weatherBundle]
+    [selectedLocation, weatherBundle, bundle]
   );
 
   // Automatically refresh when station changes or telemetry updates
   useEffect(() => {
     loadPersonaData();
-  }, [loadPersonaData]);
+    return () => {
+      if (bootTimeoutRef.current) clearTimeout(bootTimeoutRef.current);
+    };
+  }, [selectedLocation.id]);
 
   const filterTabs: Array<{ id: PersonaFilter; label: string; icon: string; count?: number }> = [
     { id: 'all', label: 'All Personas', icon: 'dashboard_customize' },
@@ -105,11 +120,11 @@ export const PersonaWeatherHub: React.FC<PersonaWeatherHubProps> = ({
               <span className="material-symbols-outlined text-[#4FA8E0] text-[22px]">
                 verified_user
               </span>
-              Authoritative Personalized Weather Intelligence
+              Personalized Atmospheric Intelligence
             </h2>
           </div>
           <p className="text-xs text-[#8A94A6] mt-1">
-            Official CPCB AQI, WorldTides, Azure Maps Severe Alerts, Open-Meteo Marine &amp; Agromet feeds for{' '}
+            Indian Standard Air Quality, Open Marine, Atmospheric &amp; Agromet feeds for{' '}
             <strong className="text-white">{selectedLocation.displayName || selectedLocation.city}</strong>
           </p>
         </div>
@@ -159,13 +174,13 @@ export const PersonaWeatherHub: React.FC<PersonaWeatherHubProps> = ({
         })}
       </div>
 
-      {/* Loading Skeleton */}
+      {/* High-fidelity Skeleton Grid during initial fetch */}
       {isLoading && !bundle ? (
-        <div className="py-12 flex flex-col items-center justify-center text-center">
-          <div className="w-10 h-10 border-2 border-[#0B72B9] border-t-transparent rounded-full animate-spin mb-3" />
-          <p className="text-xs text-[#8A94A6]">
-            Connecting to CPCB, WorldTides, Marine &amp; Meteorological feeds for {selectedLocation.city}...
-          </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-5">
+          <SkeletonMetricCard />
+          <SkeletonMetricCard />
+          <SkeletonMetricCard />
+          <SkeletonMetricCard />
         </div>
       ) : bundle ? (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 mt-5">

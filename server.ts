@@ -552,38 +552,100 @@ Synoptic atmospheric conditions are normal across the meteorological sub-divisio
   });
 
   // Open-Meteo and Air Quality server-side proxy routes to bypass browser cross-origin blocks
+  // In-memory cache with stale-on-error fallback for rate-limit resilience on shared networks (e.g. college Wi-Fi)
+  const proxyCache = new Map<string, { data: any; expiresAt: number; savedAt: number }>();
+  const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes fresh
+  const STALE_TTL_MS = 60 * 60 * 1000; // 60 minutes stale tolerance
+
   app.get('/api/proxy/open-meteo', async (req, res) => {
+    const queryString = new URLSearchParams(req.query as any).toString();
+    const cacheKey = `meteo:${queryString}`;
+    const now = Date.now();
+    const cached = proxyCache.get(cacheKey);
+
+    // Return fresh cache if available
+    if (cached && now < cached.expiresAt) {
+      res.setHeader('X-Mausam-Cache', 'HIT');
+      return res.json(cached.data);
+    }
+
     try {
-      const queryString = new URLSearchParams(req.query as any).toString();
       const targetUrl = `https://api.open-meteo.com/v1/forecast?${queryString}`;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 6000); // 6s network timeout
+
       const response = await fetch(targetUrl, {
+        signal: controller.signal,
         headers: { 'User-Agent': 'Mausam-Intelligence-Proxy/1.0' }
       });
-      if (!response.ok) {
-        return res.status(response.status).json({ error: `Upstream error HTTP ${response.status}` });
+      clearTimeout(timeout);
+
+      if (response.ok) {
+        const data = await response.json();
+        proxyCache.set(cacheKey, { data, expiresAt: now + CACHE_TTL_MS, savedAt: now });
+        res.setHeader('X-Mausam-Cache', 'MISS');
+        return res.json(data);
       }
-      const data = await response.json();
-      return res.json(data);
+
+      // Upstream failed or rate-limited (e.g. 429 on college Wi-Fi)
+      if (cached && now - cached.savedAt < STALE_TTL_MS) {
+        console.warn(`[Open-Meteo Proxy] Upstream HTTP ${response.status}. Serving stale cache.`);
+        res.setHeader('X-Mausam-Cache', 'STALE');
+        return res.json(cached.data);
+      }
+
+      return res.status(response.status).json({ error: `Upstream error HTTP ${response.status}` });
     } catch (err: any) {
       console.error('[Open-Meteo Proxy Error]', err?.message);
+      if (cached) {
+        res.setHeader('X-Mausam-Cache', 'STALE_FALLBACK');
+        return res.json(cached.data);
+      }
       return res.status(502).json({ error: err?.message || 'Proxy upstream fetch failed' });
     }
   });
 
   app.get('/api/proxy/air-quality', async (req, res) => {
+    const queryString = new URLSearchParams(req.query as any).toString();
+    const cacheKey = `aqi:${queryString}`;
+    const now = Date.now();
+    const cached = proxyCache.get(cacheKey);
+
+    if (cached && now < cached.expiresAt) {
+      res.setHeader('X-Mausam-Cache', 'HIT');
+      return res.json(cached.data);
+    }
+
     try {
-      const queryString = new URLSearchParams(req.query as any).toString();
       const targetUrl = `https://air-quality-api.open-meteo.com/v1/air-quality?${queryString}`;
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 6000);
+
       const response = await fetch(targetUrl, {
+        signal: controller.signal,
         headers: { 'User-Agent': 'Mausam-Intelligence-Proxy/1.0' }
       });
-      if (!response.ok) {
-        return res.status(response.status).json({ error: `Upstream error HTTP ${response.status}` });
+      clearTimeout(timeout);
+
+      if (response.ok) {
+        const data = await response.json();
+        proxyCache.set(cacheKey, { data, expiresAt: now + CACHE_TTL_MS, savedAt: now });
+        res.setHeader('X-Mausam-Cache', 'MISS');
+        return res.json(data);
       }
-      const data = await response.json();
-      return res.json(data);
+
+      if (cached && now - cached.savedAt < STALE_TTL_MS) {
+        res.setHeader('X-Mausam-Cache', 'STALE');
+        return res.json(cached.data);
+      }
+
+      return res.status(response.status).json({ error: `Upstream error HTTP ${response.status}` });
     } catch (err: any) {
       console.error('[Air-Quality Proxy Error]', err?.message);
+      if (cached) {
+        res.setHeader('X-Mausam-Cache', 'STALE_FALLBACK');
+        return res.json(cached.data);
+      }
       return res.status(502).json({ error: err?.message || 'Proxy upstream fetch failed' });
     }
   });
