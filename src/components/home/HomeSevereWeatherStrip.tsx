@@ -421,7 +421,7 @@ export const HomeSevereWeatherStrip: React.FC<HomeSevereWeatherStripProps> = ({
               Weather telemetry remains operational.
             </div>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#94A3B8] mt-0.5">
-              <span>Last official warning sync: <strong className="text-[#CBD5E1] font-mono">{currentData.trust.updatedAt || 'Recent'}</strong></span>
+              <span>Last official warning sync: <strong className="text-[#CBD5E1] font-mono">{(!currentData.trust.updatedAt || currentData.trust.updatedAt === 'Recent' || currentData.trust.updatedAt === 'Live') ? 'Never successfully synced' : currentData.trust.updatedAt}</strong></span>
               <span>•</span>
               <span>Source: <strong className="text-[#CBD5E1]">{currentData.trust.source || 'SACHET/NDMA'}</strong></span>
               <span>•</span>

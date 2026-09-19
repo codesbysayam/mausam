@@ -16,22 +16,30 @@ export interface WeatherWarning {
   severity: 'GREEN' | 'YELLOW' | 'ORANGE' | 'RED' | 'UNKNOWN';
   urgency?: string;
   certainty?: string;
+  sentAt?: string;
   effective?: string;
   onset?: string;
   expires?: string;
   areas: string[];
+  affectedStates?: string[];
+  affectedDistricts?: string[];
   latitude?: number;
   longitude?: number;
+  geometry?: any;
   issuedAt: string;
   sourceUrl?: string;
   rawSeverityColor?: string;
+  status?: string;
+  msgType?: string;
 }
 
 export interface RawCapAlert {
   identifier?: number | string;
   alert_id?: string;
+  alert_id_sdma_autoinc?: number | string;
   sender?: string;
   sent?: string;
+  msgType?: string;
   disaster_type?: string;
   severity?: string;
   severity_color?: string;
@@ -42,6 +50,8 @@ export interface RawCapAlert {
   effective_end_time?: string;
   alert_source?: string;
   centroid?: string;
+  area_covered?: string;
+  sender_org_id?: string;
   [key: string]: any;
 }
 
@@ -53,6 +63,22 @@ export interface CanonicalRegion {
   lat: number;
   lng: number;
   aliases: string[];
+}
+
+export interface SachetDiagnostics {
+  provider: string;
+  endpointStatus: 'REACHABLE' | 'UNREACHABLE' | 'UNKNOWN';
+  fetchStatus: 'SUCCESS' | 'FAILED' | 'STALE' | 'IDLE';
+  httpStatus: number | null;
+  parserStatus: 'OPERATIONAL' | 'FAILED' | 'IDLE';
+  alertsReceived: number;
+  alertsParsed: number;
+  activeAlerts: number;
+  lastAttemptAt: string | null;
+  lastSuccessfulFetchAt: string | null;
+  lastSuccessfulParsedAt: string | null;
+  dataAgeSeconds: number | null;
+  error: string | null;
 }
 
 export const CANONICAL_INDIA_REGIONS: CanonicalRegion[] = [
@@ -106,6 +132,19 @@ export class SachetService {
   private inFlightFetch: Promise<WeatherWarning[]> | null = null;
   private readonly CACHE_TTL_MS = 60 * 1000; // 60 seconds
 
+  // Comprehensive Pipeline Telemetry
+  public lastAttemptAt: string | null = null;
+  public lastSuccessfulFetchAt: string | null = null;
+  public lastSuccessfulParsedAt: string | null = null;
+  public endpointStatus: 'REACHABLE' | 'UNREACHABLE' | 'UNKNOWN' = 'UNKNOWN';
+  public fetchStatus: 'SUCCESS' | 'FAILED' | 'STALE' | 'IDLE' = 'IDLE';
+  public httpStatus: number | null = null;
+  public parserStatus: 'OPERATIONAL' | 'FAILED' | 'IDLE' = 'IDLE';
+  public alertsReceived: number = 0;
+  public alertsParsed: number = 0;
+  public activeAlerts: number = 0;
+  public lastError: string | null = null;
+
   public static getInstance(): SachetService {
     if (!SachetService.instance) {
       SachetService.instance = new SachetService();
@@ -117,10 +156,11 @@ export class SachetService {
    * Helper: Performs an authenticated fetch against SACHET endpoints,
    * negotiating the WAF session cookie when required.
    */
-  private async fetchWithCookie(url: string, timeoutMs = 7000): Promise<Response> {
+  private async fetchWithCookie(url: string, timeoutMs = 8000): Promise<Response> {
     const headers: Record<string, string> = {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/120.0.0.0 Safari/537.36',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
       Accept: 'application/json, application/xml, text/xml, */*',
+      'Cache-Control': 'no-cache',
     };
     if (this.cookie) {
       headers['Cookie'] = this.cookie;
@@ -137,7 +177,6 @@ export class SachetService {
       signal: AbortSignal.timeout(timeoutMs),
     });
 
-    // Capture set-cookie
     const setCookie = res.headers.get('set-cookie');
     if (setCookie) {
       this.cookie = setCookie.split(';')[0];
@@ -173,14 +212,27 @@ export class SachetService {
   }
 
   /**
-   * Check if an alert has expired.
-   * If expires exists: expires <= current time -> remove from active warnings.
+   * Parse Indian Standard Time (IST) date string or standard ISO timestamp.
+   * Node Date.parse fails on 'Sat Sep 19 08:00:00 IST 2026'; replace IST with +0530.
    */
-  public isExpired(alert: { expires?: string; effective_end_time?: string }): boolean {
+  public parseCapTimestamp(timeStr?: string): number | null {
+    if (!timeStr) return null;
+    const sanitized = timeStr.trim().replace(/\bIST\b/g, '+0530');
+    const ms = Date.parse(sanitized);
+    return isNaN(ms) ? null : ms;
+  }
+
+  /**
+   * Check if an alert has expired or was cancelled.
+   */
+  public isExpired(alert: { expires?: string; effective_end_time?: string; msgType?: string }): boolean {
+    if (alert.msgType && alert.msgType.toLowerCase() === 'cancel') {
+      return true;
+    }
     const timeStr = alert.expires || alert.effective_end_time;
     if (!timeStr) return false;
-    const expMs = Date.parse(timeStr);
-    if (isNaN(expMs)) return false;
+    const expMs = this.parseCapTimestamp(timeStr);
+    if (expMs === null) return false;
     return Date.now() >= expMs;
   }
 
@@ -191,9 +243,13 @@ export class SachetService {
    */
   public async fetchAllActiveWarnings(forceRefresh = false): Promise<WeatherWarning[]> {
     const now = Date.now();
+    this.lastAttemptAt = new Date().toISOString();
+
     if (!forceRefresh && this.cachedAlerts.length > 0 && now - this.lastFetchTime < this.CACHE_TTL_MS) {
       // Filter out any that expired while in memory
-      return this.cachedAlerts.filter((a) => !this.isExpired(a));
+      const active = this.cachedAlerts.filter((a) => !this.isExpired(a));
+      this.activeAlerts = active.length;
+      return active;
     }
 
     if (this.inFlightFetch && !forceRefresh) {
@@ -202,14 +258,26 @@ export class SachetService {
 
     this.inFlightFetch = (async () => {
       try {
+        console.log('[MAUSAM][SACHET] Request started');
         let warnings: WeatherWarning[] = [];
+        let fetchSuccess = false;
+        let lastErr: any = null;
 
         // Attempt 1: FetchAllAlertDetails (JSON)
         try {
-          const res = await this.fetchWithCookie('https://sachet.ndma.gov.in/cap_public_website/FetchAllAlertDetails', 6000);
+          const res = await this.fetchWithCookie('https://sachet.ndma.gov.in/cap_public_website/FetchAllAlertDetails', 8000);
+          this.httpStatus = res.status;
+          this.endpointStatus = 'REACHABLE';
+
+          const contentType = res.headers.get('content-type') || '';
+          console.log(`[MAUSAM][SACHET] HTTP status: ${res.status}, Content-Type: ${contentType}`);
+
           if (res.status === 304 && this.cachedAlerts.length > 0) {
             this.lastFetchTime = Date.now();
-            return this.cachedAlerts.filter((a) => !this.isExpired(a));
+            this.fetchStatus = 'SUCCESS';
+            const active = this.cachedAlerts.filter((a) => !this.isExpired(a));
+            this.activeAlerts = active.length;
+            return active;
           }
 
           if (res.ok) {
@@ -219,125 +287,188 @@ export class SachetService {
             if (lm) this.cachedLastModified = lm;
 
             const text = await res.text();
-            if (text && text.trim().startsWith('[')) {
+            console.log(`[MAUSAM][SACHET] Response bytes: ${text.length}`);
+
+            // Validate that content is actually JSON or array, not an HTML error page
+            if (text && (text.trim().startsWith('[') || text.trim().startsWith('{'))) {
               let json: RawCapAlert[] = [];
               try {
-                json = JSON.parse(text);
+                const parsed = JSON.parse(text);
+                json = Array.isArray(parsed) ? parsed : [parsed];
               } catch {
                 const lastObj = text.lastIndexOf('}');
                 if (lastObj > 0) {
                   try {
-                    json = JSON.parse(text.slice(0, lastObj + 1) + ']');
+                    const recovered = JSON.parse(text.slice(0, lastObj + 1) + ']');
+                    json = Array.isArray(recovered) ? recovered : [];
                   } catch {
                     json = [];
                   }
                 }
               }
 
-              for (const item of json) {
-                if (this.isExpired(item)) continue;
+              this.alertsReceived = json.length;
+              console.log(`[MAUSAM][SACHET] Parser started: Discovered ${json.length} raw alerts`);
 
-                const sev = this.normalizeSeverity(item.severity_color || item.severity || item.severity_level);
-                let lat: number | undefined = undefined;
-                let lon: number | undefined = undefined;
-                if (item.centroid) {
-                  const parts = item.centroid.split(',').map((p: string) => parseFloat(p.trim()));
-                  if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
-                    lon = parts[0];
-                    lat = parts[1];
+              for (const item of json) {
+                try {
+                  if (this.isExpired(item)) continue;
+
+                  const sev = this.normalizeSeverity(item.severity_color || item.severity || item.severity_level);
+                  let lat: number | undefined = undefined;
+                  let lon: number | undefined = undefined;
+                  if (item.centroid) {
+                    const parts = item.centroid.split(',').map((p: string) => parseFloat(p.trim()));
+                    if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+                      lon = parts[0];
+                      lat = parts[1];
+                    }
+                  }
+
+                  const areaText = item.area_description || '';
+                  const areaParts = areaText.split(',').map((s: string) => s.trim()).filter(Boolean);
+
+                  warnings.push({
+                    id: String(item.identifier || item.alert_id_sdma_autoinc || item.alert_id || Math.random()),
+                    source: 'NDMA / SACHET',
+                    sender: item.alert_source || item.sender || 'NDMA',
+                    event: item.disaster_type || 'Severe Weather',
+                    headline: (item.disaster_type || 'Disaster Alert').toUpperCase(),
+                    description: item.warning_message || item.area_description || '',
+                    instruction: 'Follow SDMA instructions. Avoid exposed locations and inundation zones.',
+                    severity: sev,
+                    urgency: 'Immediate',
+                    certainty: item.severity_level || 'Observed',
+                    effective: item.effective_start_time,
+                    expires: item.effective_end_time,
+                    areas: areaText ? [areaText] : [],
+                    affectedDistricts: areaParts.length >= 2 ? [areaParts[areaParts.length - 2]] : [],
+                    affectedStates: areaParts.length >= 1 ? [areaParts[areaParts.length - 1]] : [],
+                    latitude: lat,
+                    longitude: lon,
+                    issuedAt: item.effective_start_time || new Date().toISOString(),
+                    rawSeverityColor: (item.severity_color || 'orange').toLowerCase(),
+                    msgType: item.msgType || 'Alert',
+                  });
+                } catch (parseErr) {
+                  console.warn('[MAUSAM][SACHET] Failed to parse single alert item:', parseErr);
+                }
+              }
+
+              this.alertsParsed = warnings.length;
+              this.parserStatus = 'OPERATIONAL';
+              fetchSuccess = true;
+            } else {
+              console.warn('[MAUSAM][SACHET] Feed response was not JSON array (possibly HTML block)');
+            }
+          }
+        } catch (err: any) {
+          lastErr = err;
+          console.warn('[MAUSAM][SACHET] JSON feed attempt error:', err?.message || err);
+        }
+
+        // Attempt 2: If JSON feed was not successful, try official RSS feed
+        if (!fetchSuccess) {
+          try {
+            console.log('[MAUSAM][SACHET] Attempting official RSS feed fallback');
+            const res = await this.fetchWithCookie('https://sachet.ndma.gov.in/cap_public_website/rss/rss_india.xml', 8000);
+            this.httpStatus = res.status;
+            this.endpointStatus = 'REACHABLE';
+
+            if (res.ok) {
+              const xml = await res.text();
+              console.log(`[MAUSAM][SACHET] RSS response bytes: ${xml.length}`);
+
+              if (xml && xml.includes('<rss')) {
+                const items = xml.match(/<item>[\s\S]*?<\/item>/g) || [];
+                this.alertsReceived = items.length;
+                console.log(`[MAUSAM][SACHET] RSS discovered ${items.length} items`);
+
+                for (const itemXml of items) {
+                  try {
+                    const titleMatch = itemXml.match(/<title>([\s\S]*?)<\/title>/);
+                    const linkMatch = itemXml.match(/<link>([\s\S]*?)<\/link>/);
+                    const authorMatch = itemXml.match(/<author>([\s\S]*?)<\/author>/);
+                    const guidMatch = itemXml.match(/<guid[^>]*>([\s\S]*?)<\/guid>/);
+                    const pubDateMatch = itemXml.match(/<pubDate>([\s\S]*?)<\/pubDate>/);
+
+                    const title = titleMatch ? titleMatch[1].trim() : '';
+                    const author = authorMatch ? authorMatch[1].trim() : 'NDMA / IMD';
+                    const guid = guidMatch ? guidMatch[1].trim() : String(Math.random());
+                    const pubDate = pubDateMatch ? pubDateMatch[1].trim() : new Date().toISOString();
+
+                    let sev: 'GREEN' | 'YELLOW' | 'ORANGE' | 'RED' | 'UNKNOWN' = 'ORANGE';
+                    const lower = (title + ' ' + author).toLowerCase();
+                    if (lower.includes('red') || lower.includes('heavy to very heavy') || lower.includes('extreme')) {
+                      sev = 'RED';
+                    } else if (lower.includes('yellow') || lower.includes('light to moderate') || lower.includes('watch')) {
+                      sev = 'YELLOW';
+                    }
+
+                    warnings.push({
+                      id: guid,
+                      source: 'NDMA / SACHET',
+                      sender: author,
+                      event: 'Meteorological Warning',
+                      headline: title.slice(0, 120),
+                      description: title,
+                      instruction: 'Stay updated with local disaster management authorities.',
+                      severity: sev,
+                      urgency: 'Expected',
+                      certainty: 'Likely',
+                      areas: [author],
+                      issuedAt: pubDate,
+                      sourceUrl: linkMatch ? linkMatch[1].trim() : undefined,
+                      rawSeverityColor: sev.toLowerCase(),
+                    });
+                  } catch (itemErr) {
+                    console.warn('[MAUSAM][SACHET] Error parsing RSS item:', itemErr);
                   }
                 }
 
-                warnings.push({
-                  id: String(item.identifier || item.alert_id_sdma_autoinc || Math.random()),
-                  source: 'NDMA / SACHET',
-                  sender: item.alert_source || 'NDMA',
-                  event: item.disaster_type || 'Severe Weather',
-                  headline: (item.disaster_type || 'Disaster Alert').toUpperCase(),
-                  description: item.warning_message || item.area_description || '',
-                  instruction: 'Follow SDMA instructions. Avoid exposed locations and inundation zones.',
-                  severity: sev,
-                  urgency: 'Immediate',
-                  certainty: item.severity_level || 'Observed',
-                  effective: item.effective_start_time,
-                  expires: item.effective_end_time,
-                  areas: item.area_description ? [item.area_description] : [],
-                  latitude: lat,
-                  longitude: lon,
-                  issuedAt: item.effective_start_time || new Date().toISOString(),
-                  rawSeverityColor: item.severity_color || 'orange',
-                });
+                this.alertsParsed = warnings.length;
+                this.parserStatus = 'OPERATIONAL';
+                fetchSuccess = true;
               }
             }
-          }
-        } catch (err) {
-          console.warn('[SACHET] JSON feed attempt failed, trying RSS feed:', err);
-        }
-
-        // Attempt 2: If JSON feed gave no alerts or failed, try official RSS feed
-        if (warnings.length === 0) {
-          try {
-            const res = await this.fetchWithCookie('https://sachet.ndma.gov.in/cap_public_website/rss/rss_india.xml', 6000);
-            if (res.ok) {
-              const xml = await res.text();
-              const items = xml.match(/<item>[\s\S]*?<\/item>/g) || [];
-              for (const itemXml of items) {
-                const titleMatch = itemXml.match(/<title>([\s\S]*?)<\/title>/);
-                const linkMatch = itemXml.match(/<link>([\s\S]*?)<\/link>/);
-                const authorMatch = itemXml.match(/<author>([\s\S]*?)<\/author>/);
-                const guidMatch = itemXml.match(/<guid[^>]*>([\s\S]*?)<\/guid>/);
-                const pubDateMatch = itemXml.match(/<pubDate>([\s\S]*?)<\/pubDate>/);
-
-                const title = titleMatch ? titleMatch[1].trim() : '';
-                const author = authorMatch ? authorMatch[1].trim() : 'NDMA / IMD';
-                const guid = guidMatch ? guidMatch[1].trim() : String(Math.random());
-                const pubDate = pubDateMatch ? pubDateMatch[1].trim() : new Date().toISOString();
-
-                // Differentiate severity from author / title keywords
-                let sev: 'GREEN' | 'YELLOW' | 'ORANGE' | 'RED' | 'UNKNOWN' = 'ORANGE';
-                const lower = (title + ' ' + author).toLowerCase();
-                if (lower.includes('red') || lower.includes('heavy to very heavy') || lower.includes('extreme')) {
-                  sev = 'RED';
-                } else if (lower.includes('yellow') || lower.includes('light to moderate') || lower.includes('watch')) {
-                  sev = 'YELLOW';
-                }
-
-                warnings.push({
-                  id: guid,
-                  source: 'NDMA / SACHET',
-                  sender: author,
-                  event: 'Meteorological Warning',
-                  headline: title.slice(0, 100),
-                  description: title,
-                  instruction: 'Stay updated with local disaster management authorities.',
-                  severity: sev,
-                  urgency: 'Expected',
-                  certainty: 'Likely',
-                  areas: [author],
-                  issuedAt: pubDate,
-                  sourceUrl: linkMatch ? linkMatch[1].trim() : undefined,
-                  rawSeverityColor: sev.toLowerCase(),
-                });
-              }
-            }
-          } catch (rssErr) {
-            console.warn('[SACHET] RSS feed attempt failed:', rssErr);
+          } catch (rssErr: any) {
+            lastErr = rssErr;
+            console.warn('[MAUSAM][SACHET] RSS feed attempt error:', rssErr?.message || rssErr);
           }
         }
 
-        if (warnings.length > 0) {
+        // Evaluation of Success
+        if (fetchSuccess) {
+          const nowIso = new Date().toISOString();
+          this.lastSuccessfulFetchAt = nowIso;
+          this.lastSuccessfulParsedAt = nowIso;
+          this.fetchStatus = 'SUCCESS';
+          this.lastError = null;
+          this.activeAlerts = warnings.length;
           this.cachedAlerts = warnings;
           this.lastFetchTime = Date.now();
+
+          console.log(`[MAUSAM][SACHET] Success: ${warnings.length} active alerts normalized`);
           return warnings;
         }
 
-        // If fetch returned 0 due to network failure, return existing cache if available
+        // If fetch failed, mark telemetry
+        this.fetchStatus = 'FAILED';
+        this.parserStatus = 'FAILED';
+        this.lastError = lastErr?.message || 'SACHET alert feeds temporarily unreachable';
+        console.error(`[MAUSAM][SACHET] Failure: ${this.lastError}`);
+
+        // If stale cache exists, return it with STALE status
         if (this.cachedAlerts.length > 0) {
-          return this.cachedAlerts.filter((a) => !this.isExpired(a));
+          this.fetchStatus = 'STALE';
+          const active = this.cachedAlerts.filter((a) => !this.isExpired(a));
+          console.log(`[MAUSAM][SACHET] Serving ${active.length} alerts from stale cache`);
+          return active;
         }
 
         // Provider failure and no cache
-        throw new Error('SACHET alert feeds temporarily unreachable');
+        this.endpointStatus = 'UNREACHABLE';
+        throw new Error(this.lastError);
       } finally {
         this.inFlightFetch = null;
       }
@@ -362,40 +493,110 @@ export class SachetService {
     highestSeverity: 'GREEN' | 'YELLOW' | 'ORANGE' | 'RED';
     matchedWarnings: WeatherWarning[];
     totalNationalActive: number;
-    lastSync: string;
+    lastAttemptAt: string | null;
+    lastSuccessfulFetchAt: string | null;
+    lastSuccessfulParsedAt: string | null;
+    isCached?: boolean;
     error?: string;
   }> {
     try {
       const all = await this.fetchAllActiveWarnings();
       const matched: WeatherWarning[] = [];
 
-      const searchTerms: string[] = [];
-      if (loc.district) searchTerms.push(loc.district.toLowerCase());
-      if (loc.city) searchTerms.push(loc.city.toLowerCase());
-      if (loc.state) searchTerms.push(loc.state.toLowerCase());
+      const targetDistrict = (loc.district || '').trim().toLowerCase();
+      const targetCity = (loc.city || '').trim().toLowerCase();
+      const targetState = (loc.state || '').trim().toLowerCase();
 
-      // If location is Chandaka, Odisha -> Khordha district
-      if (loc.city?.toLowerCase().includes('chandaka') || loc.district?.toLowerCase().includes('chandaka')) {
-        searchTerms.push('khordha', 'khurda', 'bhubaneswar', 'odisha');
+      // Known district aliases (e.g. Khordha / Khurda)
+      const districtAliases: string[] = [];
+      if (targetDistrict) districtAliases.push(targetDistrict);
+      if (
+        targetDistrict.includes('khordha') ||
+        targetDistrict.includes('khurda') ||
+        targetCity.includes('chandaka') ||
+        targetCity.includes('bhubaneswar')
+      ) {
+        if (!districtAliases.includes('khordha')) districtAliases.push('khordha');
+        if (!districtAliases.includes('khurda')) districtAliases.push('khurda');
+      }
+      if (
+        targetDistrict.includes('balasore') ||
+        targetDistrict.includes('baleshwar') ||
+        targetDistrict.includes('baleswar') ||
+        targetCity.includes('balasore') ||
+        targetCity.includes('baleswar')
+      ) {
+        if (!districtAliases.includes('balasore')) districtAliases.push('balasore');
+        if (!districtAliases.includes('baleswar')) districtAliases.push('baleswar');
+        if (!districtAliases.includes('baleshwar')) districtAliases.push('baleshwar');
       }
 
       for (const w of all) {
         let isMatch = false;
-        const text = `${w.headline || ''} ${w.description || ''} ${w.sender || ''} ${w.areas.join(' ')}`.toLowerCase();
 
-        // 1. Keyword / District / State matching
-        for (const term of searchTerms) {
-          if (term.length >= 3 && text.includes(term)) {
+        // 1. Proximity check via centroid coordinates (within 50 km)
+        if (
+          loc.lat !== undefined &&
+          loc.lng !== undefined &&
+          w.latitude !== undefined &&
+          w.longitude !== undefined
+        ) {
+          const distKm = this.calculateDistanceKm(loc.lat, loc.lng, w.latitude, w.longitude);
+          if (distKm <= 50) {
             isMatch = true;
-            break;
           }
         }
 
-        // 2. Coordinate proximity check (if centroid available and within 60km)
-        if (!isMatch && loc.lat !== undefined && loc.lng !== undefined && w.latitude !== undefined && w.longitude !== undefined) {
-          const distKm = this.calculateDistanceKm(loc.lat, loc.lng, w.latitude, w.longitude);
-          if (distKm <= 60) {
-            isMatch = true;
+        // 2. Specific District or Area match in designated areas (DO NOT match sender!)
+        if (!isMatch) {
+          const designatedAreas = [...(w.areas || []), ...(w.affectedDistricts || [])].map((a) =>
+            a.toLowerCase().trim()
+          );
+
+          for (const area of designatedAreas) {
+            for (const alias of districtAliases) {
+              if (alias.length >= 3 && (area === alias || area.includes(alias) || alias.includes(area))) {
+                isMatch = true;
+                break;
+              }
+            }
+            if (isMatch) break;
+
+            if (targetCity && targetCity.length >= 4 && (area === targetCity || area.includes(targetCity))) {
+              isMatch = true;
+              break;
+            }
+          }
+        }
+
+        // 3. Check headline or description specifically targeting the district (strictly excluding sender name!)
+        if (!isMatch && districtAliases.length > 0) {
+          const textWithoutSender = `${w.headline || ''} ${w.description || ''}`.toLowerCase();
+          for (const alias of districtAliases) {
+            if (
+              alias.length >= 4 &&
+              (textWithoutSender.includes(` ${alias}`) ||
+                textWithoutSender.includes(`over ${alias}`) ||
+                textWithoutSender.includes(`of ${alias}`))
+            ) {
+              isMatch = true;
+              break;
+            }
+          }
+        }
+
+        // 4. State-wide check: ONLY if the alert has NO specific district boundaries and applies state-wide
+        if (!isMatch && targetState && targetState.length >= 4) {
+          const hasSpecificDistricts =
+            (w.areas || []).length > 0 &&
+            !(w.areas || []).some((a) => a.toLowerCase() === targetState);
+          if (!hasSpecificDistricts) {
+            const stateMatches =
+              (w.affectedStates || []).some((s) => s.toLowerCase() === targetState) ||
+              (w.areas || []).some((a) => a.toLowerCase() === targetState);
+            if (stateMatches) {
+              isMatch = true;
+            }
           }
         }
 
@@ -420,7 +621,10 @@ export class SachetService {
         highestSeverity,
         matchedWarnings: matched,
         totalNationalActive: all.length,
-        lastSync: new Date().toISOString(),
+        lastAttemptAt: this.lastAttemptAt,
+        lastSuccessfulFetchAt: this.lastSuccessfulFetchAt,
+        lastSuccessfulParsedAt: this.lastSuccessfulParsedAt,
+        isCached: this.fetchStatus === 'STALE',
       };
     } catch (err: any) {
       return {
@@ -429,7 +633,9 @@ export class SachetService {
         highestSeverity: 'GREEN',
         matchedWarnings: [],
         totalNationalActive: 0,
-        lastSync: new Date().toISOString(),
+        lastAttemptAt: this.lastAttemptAt,
+        lastSuccessfulFetchAt: this.lastSuccessfulFetchAt,
+        lastSuccessfulParsedAt: this.lastSuccessfulParsedAt,
         error: err?.message || 'SACHET unavailable',
       };
     }
@@ -437,12 +643,11 @@ export class SachetService {
 
   /**
    * Resolves national warning status for all 28 States and 8 Union Territories.
-   * Every region resolves to ACTIVE WARNING, ALL CLEAR, or DATA UNAVAILABLE.
-   * NEVER defaults missing regions to GREEN on provider failure.
    */
   public async getNationalRegionWarnings(): Promise<{
     status: 'SUCCESS' | 'UNAVAILABLE';
     timestamp: string;
+    lastSuccessfulParsedAt: string | null;
     regions: Array<{
       region: CanonicalRegion;
       status: 'ACTIVE_WARNING' | 'ALL_CLEAR' | 'DATA_UNAVAILABLE';
@@ -492,10 +697,10 @@ export class SachetService {
       return {
         status: 'SUCCESS',
         timestamp: new Date().toISOString(),
+        lastSuccessfulParsedAt: this.lastSuccessfulParsedAt,
         regions,
       };
     } catch {
-      // In case of provider failure, every region must resolve to DATA_UNAVAILABLE
       const regions = CANONICAL_INDIA_REGIONS.map((reg) => ({
         region: reg,
         status: 'DATA_UNAVAILABLE' as const,
@@ -507,9 +712,40 @@ export class SachetService {
       return {
         status: 'UNAVAILABLE',
         timestamp: new Date().toISOString(),
+        lastSuccessfulParsedAt: this.lastSuccessfulParsedAt,
         regions,
       };
     }
+  }
+
+  /**
+   * Return deep diagnostics for system health reporting.
+   */
+  public getDiagnostics(): SachetDiagnostics {
+    const now = Date.now();
+    let dataAgeSeconds: number | null = null;
+    if (this.lastSuccessfulParsedAt) {
+      const parsedMs = Date.parse(this.lastSuccessfulParsedAt);
+      if (!isNaN(parsedMs)) {
+        dataAgeSeconds = Math.max(0, Math.round((now - parsedMs) / 1000));
+      }
+    }
+
+    return {
+      provider: 'SACHET/NDMA',
+      endpointStatus: this.endpointStatus,
+      fetchStatus: this.fetchStatus,
+      httpStatus: this.httpStatus,
+      parserStatus: this.parserStatus,
+      alertsReceived: this.alertsReceived,
+      alertsParsed: this.alertsParsed,
+      activeAlerts: this.activeAlerts,
+      lastAttemptAt: this.lastAttemptAt,
+      lastSuccessfulFetchAt: this.lastSuccessfulFetchAt,
+      lastSuccessfulParsedAt: this.lastSuccessfulParsedAt,
+      dataAgeSeconds,
+      error: this.lastError,
+    };
   }
 
   private calculateDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -525,3 +761,4 @@ export class SachetService {
 }
 
 export const sachetService = SachetService.getInstance();
+

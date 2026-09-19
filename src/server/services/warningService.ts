@@ -20,17 +20,44 @@ export class WarningService {
   }
 
   public async getCurrent(query: Record<string, any>): Promise<StandardizedWarningResponse> {
+    // Support debug diagnostics mode
+    if (query.mode === 'debug' || query.debug === 'true') {
+      const diag = sachetService.getDiagnostics();
+      return {
+        state: 'DATA_UNAVAILABLE',
+        severity: 'neutral',
+        severityLabel: 'DIAGNOSTICS',
+        hazardHeadline: 'PROVIDER DIAGNOSTICS TELEMETRY',
+        affectedAreasHeadline: 'Diagnostics',
+        affectedDistricts: [],
+        description: `Endpoint: ${diag.endpointStatus}, Fetch: ${diag.fetchStatus}, HTTP: ${diag.httpStatus}, Parser: ${diag.parserStatus}, Active: ${diag.activeAlerts}`,
+        validUntil: 'N/A',
+        issuedAt: diag.lastSuccessfulFetchAt || 'N/A',
+        source: 'NDMA/SACHET',
+        updatedAt: diag.lastSuccessfulParsedAt || 'Never successfully synced',
+        lastAttemptAt: diag.lastAttemptAt,
+        lastSuccessfulFetchAt: diag.lastSuccessfulFetchAt,
+        lastSuccessfulParsedAt: diag.lastSuccessfulParsedAt,
+        status: diag.fetchStatus === 'SUCCESS' ? 'LIVE' : 'UNAVAILABLE',
+        isLocal: false,
+        diagnostics: diag,
+      };
+    }
+
     const lat = query.lat ? parseFloat(query.lat) : undefined;
     const lng = query.lon ?? query.lng ? parseFloat(query.lon ?? query.lng) : undefined;
     const city = (query.city ?? query.q ?? '').toString();
     const district = (query.district ?? '').toString();
     const state = (query.state ?? '').toString();
     const country = (query.country ?? 'India').toString();
+    const forceRefresh = query.refresh === 'true';
 
     const cacheKey = `warning:current:${city}:${district}:${state}:${lat ?? ''}:${lng ?? ''}`;
-    const cached = serverCache.get<StandardizedWarningResponse>(cacheKey);
-    if (cached.data && !cached.isStale) {
-      return cached.data;
+    if (!forceRefresh) {
+      const cached = serverCache.get<StandardizedWarningResponse>(cacheKey);
+      if (cached.data && !cached.isStale) {
+        return cached.data;
+      }
     }
 
     try {
@@ -40,11 +67,17 @@ export class WarningService {
       }
       return result;
     } catch (error: any) {
+      const diag = sachetService.getDiagnostics();
+      const lastSync = diag.lastSuccessfulParsedAt || 'Never successfully synced';
+
+      const cached = serverCache.get<StandardizedWarningResponse>(cacheKey);
       if (cached.data) {
         return {
           ...cached.data,
           status: 'STALE',
           severityLabel: 'STALE DATA',
+          lastAttemptAt: diag.lastAttemptAt,
+          diagnostics: diag,
         };
       }
       // Never fabricate green / all-clear on error!
@@ -57,11 +90,15 @@ export class WarningService {
         affectedDistricts: [],
         description: 'Official warning feed from NDMA / SACHET is temporarily unreachable.',
         validUntil: 'N/A',
-        issuedAt: new Date().toISOString(),
+        issuedAt: 'Unavailable',
         source: 'NDMA/SACHET',
-        updatedAt: new Date().toISOString(),
+        updatedAt: lastSync,
+        lastAttemptAt: diag.lastAttemptAt,
+        lastSuccessfulFetchAt: diag.lastSuccessfulFetchAt,
+        lastSuccessfulParsedAt: diag.lastSuccessfulParsedAt,
         status: 'UNAVAILABLE',
         isLocal: false,
+        diagnostics: diag,
       };
     }
   }

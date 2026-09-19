@@ -30,6 +30,9 @@ export interface StandardizedWarningResponse {
   issuedAt: string;
   source: 'IMD' | 'NDMA/SACHET' | 'None';
   updatedAt: string;
+  lastAttemptAt?: string | null;
+  lastSuccessfulFetchAt?: string | null;
+  lastSuccessfulParsedAt?: string | null;
   status: 'LIVE' | 'RECENT' | 'STALE' | 'UNAVAILABLE' | 'Routine';
   isLocal: boolean;
   recommendedActions?: string[];
@@ -38,6 +41,7 @@ export interface StandardizedWarningResponse {
     number: string;
   };
   additionalActiveCount?: number;
+  diagnostics?: any;
   metadata?: {
     lat?: number;
     lng?: number;
@@ -507,6 +511,10 @@ export async function resolveLocationWarning(params: {
 
   if (sachetResult.status === 'SUCCESS') {
     const isCachedFeed = !!(sachetResult as any).isCached;
+    const parsedTime = sachetResult.lastSuccessfulParsedAt
+      ? formatCleanTime(new Date(sachetResult.lastSuccessfulParsedAt))
+      : updatedTimestamp;
+
     if (sachetResult.matchedWarnings.length > 0) {
       const highest = sachetResult.matchedWarnings[0];
       const sev = (highest.severity || 'ORANGE').toLowerCase() as 'yellow' | 'orange' | 'red';
@@ -526,9 +534,12 @@ export async function resolveLocationWarning(params: {
         affectedDistricts: [area.district],
         description: highest.description || `Official ${severityLabel.toLowerCase()} active for ${area.district}.`,
         validUntil: highest.expires || 'Next 24 Hours',
-        issuedAt: highest.issuedAt || updatedTimestamp,
+        issuedAt: highest.issuedAt || parsedTime,
         source: 'NDMA/SACHET',
-        updatedAt: isCachedFeed && sachetResult.lastSync ? `CACHED / LAST UPDATED ${sachetResult.lastSync}` : updatedTimestamp,
+        updatedAt: parsedTime,
+        lastAttemptAt: sachetResult.lastAttemptAt,
+        lastSuccessfulFetchAt: sachetResult.lastSuccessfulFetchAt,
+        lastSuccessfulParsedAt: sachetResult.lastSuccessfulParsedAt,
         status: isCachedFeed ? 'STALE' : 'LIVE',
         isLocal: true,
         recommendedActions: [
@@ -540,6 +551,7 @@ export async function resolveLocationWarning(params: {
           number: '1070',
         },
         additionalActiveCount: sachetResult.matchedWarnings.length - 1,
+        diagnostics: sachetService.getDiagnostics(),
         metadata: {
           lat,
           lng,
@@ -562,11 +574,15 @@ export async function resolveLocationWarning(params: {
       affectedDistricts: [],
       description: `Verified official NDMA / SACHET disaster bulletin reports 0 active severe weather warnings for ${locationLabel}. Atmospheric conditions and synoptic parameters are within seasonal routine limits across this division.`,
       validUntil: 'Next 24 Hours',
-      issuedAt: sachetResult.lastSync || updatedTimestamp,
+      issuedAt: parsedTime,
       source: 'NDMA/SACHET',
-      updatedAt: isCachedFeed && sachetResult.lastSync ? `CACHED / LAST UPDATED ${sachetResult.lastSync}` : updatedTimestamp,
+      updatedAt: parsedTime,
+      lastAttemptAt: sachetResult.lastAttemptAt,
+      lastSuccessfulFetchAt: sachetResult.lastSuccessfulFetchAt,
+      lastSuccessfulParsedAt: sachetResult.lastSuccessfulParsedAt,
       status: isCachedFeed ? 'STALE' : 'LIVE',
       isLocal: true,
+      diagnostics: sachetService.getDiagnostics(),
       metadata: {
         lat,
         lng,
@@ -580,6 +596,10 @@ export async function resolveLocationWarning(params: {
   }
 
   // Official feed unreachable: Return truthful PROVIDER_UNAVAILABLE state (NEVER GREEN, NEVER CLAIM NO WARNINGS)
+  const lastSyncDisplay = sachetResult.lastSuccessfulParsedAt
+    ? formatCleanTime(new Date(sachetResult.lastSuccessfulParsedAt))
+    : 'Never successfully synced';
+
   return {
     state: 'DATA_UNAVAILABLE',
     severity: 'neutral',
@@ -589,11 +609,15 @@ export async function resolveLocationWarning(params: {
     affectedDistricts: [area.district],
     description: 'Weather telemetry remains operational. Official real-time warning feed from NDMA / SACHET is temporarily unreachable.',
     validUntil: 'N/A',
-    issuedAt: updatedTimestamp,
+    issuedAt: 'Unavailable',
     source: 'NDMA/SACHET',
-    updatedAt: updatedTimestamp,
+    updatedAt: lastSyncDisplay,
+    lastAttemptAt: sachetResult.lastAttemptAt,
+    lastSuccessfulFetchAt: sachetResult.lastSuccessfulFetchAt,
+    lastSuccessfulParsedAt: sachetResult.lastSuccessfulParsedAt,
     status: 'UNAVAILABLE',
     isLocal: true,
+    diagnostics: sachetService.getDiagnostics(),
     metadata: {
       lat,
       lng,
@@ -619,6 +643,14 @@ const handleWarningRequest = async (req: Request, res: Response) => {
     const state = (req.query.state as string) || '';
     const country = (req.query.country as string) || '';
     const forceRefresh = req.query.refresh === 'true';
+
+    // Support safe diagnostics debug mode
+    if (req.query.mode === 'debug' || req.query.debug === 'true') {
+      return res.json({
+        diagnostics: sachetService.getDiagnostics(),
+        timestamp: new Date().toISOString(),
+      });
+    }
 
     // Build unique cache key for this location
     const cacheKey = `${city}|${district}|${state}|${country}|${lat?.toFixed(2) || ''}|${lng?.toFixed(2) || ''}`.toLowerCase();
