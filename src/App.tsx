@@ -620,7 +620,7 @@ export default function App() {
         id="floating-ask-mausam-btn"
         type="button"
         onClick={() => setIsAskMausamOpen(true)}
-        className="ask-mausam-cursor fixed bottom-4 sm:bottom-5 right-4 sm:right-5 z-40 flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full bg-[#0B72B9] hover:bg-[#0A5A94] text-white text-xs font-bold shadow-xl border border-[#4FA8E0] transition-all hover:scale-105"
+        className="ask-mausam-cursor ask-mausam-pulse-shadow fixed bottom-4 sm:bottom-5 right-4 sm:right-5 z-40 flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full bg-[#0B72B9] hover:bg-[#0A5A94] text-white text-xs font-bold border border-[#4FA8E0] transition-all hover:scale-105"
         title="Ask MAUSAM AI Weather & Advisory"
         aria-label="Open Ask MAUSAM AI Assistant"
       >

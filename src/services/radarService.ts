@@ -340,7 +340,10 @@ export async function fetchLiveRadarData(
   try {
     let data: any = null;
     try {
-      const serverRes = await fetch('/api/radar');
+      let serverRes = await fetch('/api/proxy/rainviewer');
+      if (!serverRes.ok) {
+        serverRes = await fetch('/api/radar');
+      }
       if (serverRes.ok) {
         const json = await serverRes.json();
         if (json?.data?.host || json?.host) {

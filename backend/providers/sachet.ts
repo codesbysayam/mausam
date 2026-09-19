@@ -20,21 +20,44 @@ export class SachetProvider {
   private static cachedLastModified: string | null = null;
   private static CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes
 
+  private static sessionCookie: string = '';
+
+  private static async fetchWithCookie(url: string, timeoutMs = 6500): Promise<Response> {
+    const headers: Record<string, string> = {
+      Accept: 'application/json, application/xml, text/plain, */*',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    };
+    if (this.sessionCookie) headers['Cookie'] = this.sessionCookie;
+    if (this.cachedEtag) headers['If-None-Match'] = this.cachedEtag;
+    if (this.cachedLastModified) headers['If-Modified-Since'] = this.cachedLastModified;
+
+    let res = await fetch(url, {
+      headers,
+      signal: AbortSignal.timeout(timeoutMs),
+    });
+
+    const setCookie = res.headers.get('set-cookie');
+    if (setCookie) {
+      this.sessionCookie = setCookie.split(';')[0];
+    }
+
+    if (res.status === 403 && this.sessionCookie) {
+      headers['Cookie'] = this.sessionCookie;
+      res = await fetch(url, {
+        headers,
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+      const nextCookie = res.headers.get('set-cookie');
+      if (nextCookie) this.sessionCookie = nextCookie.split(';')[0];
+    }
+
+    return res;
+  }
+
   public static async checkHealth(): Promise<{ operational: boolean; latencyMs: number; error?: string }> {
     const start = Date.now();
     try {
-      const headers: Record<string, string> = {
-        Accept: 'application/json, text/plain, */*',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      };
-      if (this.cachedEtag) headers['If-None-Match'] = this.cachedEtag;
-      if (this.cachedLastModified) headers['If-Modified-Since'] = this.cachedLastModified;
-
-      const res = await fetch(this.feedUrl, {
-        headers,
-        signal: AbortSignal.timeout(6500),
-      });
-
+      const res = await this.fetchWithCookie(this.feedUrl, 6500);
       const latencyMs = Date.now() - start;
       const isOperational = res.ok || res.status === 304;
 
@@ -95,17 +118,7 @@ export class SachetProvider {
     }
 
     try {
-      const headers: Record<string, string> = {
-        Accept: 'application/json, text/plain, */*',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      };
-      if (this.cachedEtag) headers['If-None-Match'] = this.cachedEtag;
-      if (this.cachedLastModified) headers['If-Modified-Since'] = this.cachedLastModified;
-
-      const res = await fetch(this.feedUrl, {
-        headers,
-        signal: AbortSignal.timeout(8500),
-      });
+      const res = await this.fetchWithCookie(this.feedUrl, 8500);
 
       // If Not Modified (304), return cached payload and update timestamp
       if (res.status === 304 && this.alertCache) {

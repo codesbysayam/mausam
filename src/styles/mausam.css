@@ -1521,5 +1521,19 @@ img, svg, canvas, video {
   }
 }
 
+/* Subtle Pulsing Shadow Animation for Ask MAUSAM trigger when idle */
+@keyframes ask-mausam-pulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(56, 189, 248, 0.4), 0 8px 20px -4px rgba(11, 114, 185, 0.35);
+  }
+  50% {
+    box-shadow: 0 0 16px 4px rgba(56, 189, 248, 0.3), 0 12px 28px -4px rgba(11, 114, 185, 0.55);
+  }
+}
+
+.ask-mausam-pulse-shadow {
+  animation: ask-mausam-pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
 
 

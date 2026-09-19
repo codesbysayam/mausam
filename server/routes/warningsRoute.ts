@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { getIMDWarningColor, getIMDHazardCode } from '../imd/imdWarningCodes';
+import { sachetService, WeatherWarning } from '../services/sachetService';
 
 export const warningsRouter = Router();
 
@@ -490,73 +491,49 @@ export async function resolveLocationWarning(params: {
     };
   }
 
-  // 3. Query Official IMD Warning Service (or NDMA SACHET fallback)
-  const imdResult = await fetchFromOfficialIMD(area.district);
+  // 3. Query Official NDMA SACHET CAP Warning Service (Primary zero-key provider)
+  const sachetResult = await sachetService.getWarningsForLocation({
+    city,
+    district: area.district,
+    state: area.state,
+    lat,
+    lng,
+  });
 
-  // If IMD API is not configured or fails, fallback to official NDMA SACHET CAP public feed
-  if (!imdResult.success) {
-    const ndmaResult = await fetchFromNDMASachet(area.district, area.state);
+  if (sachetResult.status === 'SUCCESS') {
+    if (sachetResult.matchedWarnings.length > 0) {
+      const highest = sachetResult.matchedWarnings[0];
+      const sev = (highest.severity || 'ORANGE').toLowerCase() as 'yellow' | 'orange' | 'red';
+      const isRed = sev === 'red';
+      const isOrange = sev === 'orange';
 
-    if (ndmaResult.success) {
-      if (ndmaResult.matchedAlert) {
-        const item = ndmaResult.matchedAlert;
-        const sevColor = (item.severity_color || item.severity || 'orange').toLowerCase();
-        const isRed = sevColor === 'red';
-        const isOrange = sevColor === 'orange';
+      const uiState: WarningUIState = isRed ? 'RED_ALERT' : isOrange ? 'ORANGE_ALERT' : 'WATCH_ADVISORY';
+      const severityLabel = isRed ? 'RED ALERT' : isOrange ? 'ORANGE ALERT' : 'YELLOW WATCH';
 
-        const uiState: WarningUIState = isRed ? 'RED_ALERT' : isOrange ? 'ORANGE_ALERT' : 'WATCH_ADVISORY';
-        const severity = isRed ? 'red' : isOrange ? 'orange' : 'yellow';
-        const severityLabel = isRed ? 'RED ALERT' : isOrange ? 'ORANGE ALERT' : 'YELLOW WATCH';
-
-        return {
-          state: uiState,
-          severity,
-          severityLabel,
-          hazardHeadline: (item.disaster_type || 'SEVERE WEATHER').toUpperCase(),
-          hazardLabel: item.disaster_type || 'Severe Weather',
-          affectedAreasHeadline: item.area_description || locationLabel,
-          affectedDistricts: [area.district],
-          description: item.warning_message || `Official ${severityLabel.toLowerCase()} active for ${area.district}.`,
-          validUntil: item.effective_end_time || 'Next 24 Hours',
-          issuedAt: item.effective_start_time || updatedTimestamp,
-          source: 'NDMA/SACHET',
-          updatedAt: updatedTimestamp,
-          status: 'LIVE',
-          isLocal: true,
-          recommendedActions: [
-            'Stay indoors and avoid travel through inundation zones or exposed terrain.',
-            'Keep communication devices charged and monitor district bulletins.',
-          ],
-          emergencyContact: {
-            title: item.alert_source || 'State Disaster Management Authority',
-            number: '1070',
-          },
-          metadata: {
-            lat,
-            lng,
-            resolvedDistrict: area.district,
-            resolvedState: area.state,
-            subdivision: area.subdivision,
-            isInternational: false,
-          },
-        };
-      }
-
-      // NDMA feed is live and verified, but this location has NO active warning!
       return {
-        state: 'NO_ACTIVE_WARNING',
-        severity: 'green',
-        severityLabel: 'NO ACTIVE WARNING',
-        hazardHeadline: 'NO ACTIVE SEVERE WEATHER WARNING',
-        affectedAreasHeadline: locationLabel,
-        affectedDistricts: [],
-        description: `No official severe weather warning is currently reported for ${locationLabel}. Atmospheric conditions and synoptic parameters are within seasonal routine limits across this division.`,
-        validUntil: 'Next 24 Hours',
-        issuedAt: updatedTimestamp,
-        source: 'IMD',
+        state: uiState,
+        severity: sev,
+        severityLabel,
+        hazardHeadline: (highest.headline || highest.event || 'SEVERE WEATHER ALERT').toUpperCase(),
+        hazardLabel: highest.event || 'Severe Weather',
+        affectedAreasHeadline: highest.areas.join(', ') || locationLabel,
+        affectedDistricts: [area.district],
+        description: highest.description || `Official ${severityLabel.toLowerCase()} active for ${area.district}.`,
+        validUntil: highest.expires || 'Next 24 Hours',
+        issuedAt: highest.issuedAt || updatedTimestamp,
+        source: 'NDMA/SACHET',
         updatedAt: updatedTimestamp,
-        status: 'Routine',
+        status: 'LIVE',
         isLocal: true,
+        recommendedActions: [
+          highest.instruction || 'Stay indoors and avoid travel through inundation zones or exposed terrain.',
+          'Keep communication devices charged and monitor district bulletins.',
+        ],
+        emergencyContact: {
+          title: highest.sender || 'State Disaster Management Authority',
+          number: '1070',
+        },
+        additionalActiveCount: sachetResult.matchedWarnings.length - 1,
         metadata: {
           lat,
           lng,
@@ -568,49 +545,20 @@ export async function resolveLocationWarning(params: {
       };
     }
 
-    // Both IMD and NDMA unreachable
-    return {
-      state: 'DATA_UNAVAILABLE',
-      severity: 'neutral',
-      severityLabel: 'DATA UNAVAILABLE',
-      hazardHeadline: 'WARNING DATA TEMPORARILY UNAVAILABLE',
-      affectedAreasHeadline: locationLabel,
-      affectedDistricts: [area.district],
-      description: 'Official real-time warning feed is temporarily unreachable.',
-      validUntil: 'Routine Cycle',
-      issuedAt: updatedTimestamp,
-      source: 'IMD',
-      updatedAt: updatedTimestamp,
-      status: 'UNAVAILABLE',
-      isLocal: true,
-      metadata: {
-        lat,
-        lng,
-        resolvedDistrict: area.district,
-        resolvedState: area.state,
-        subdivision: area.subdivision,
-        isInternational: false,
-      },
-    };
-  }
-
-  const raw = imdResult.warningItem;
-
-  // If no warning record was found for this district, or raw item indicates No Warning (Day_1 = 1 / Day1_Color = 1)
-  if (!raw) {
+    // NDMA SACHET feed is live and verified, but this location has NO active warning!
     return {
       state: 'NO_ACTIVE_WARNING',
       severity: 'green',
-      severityLabel: 'NO ACTIVE WARNING',
-      hazardHeadline: 'NO ACTIVE SEVERE WEATHER WARNING',
+      severityLabel: 'ALL CLEAR',
+      hazardHeadline: 'WEATHER ALERT CENTER: ALL CLEAR',
       affectedAreasHeadline: locationLabel,
       affectedDistricts: [],
-      description: `No official severe weather warning is currently reported for ${locationLabel}. Atmospheric conditions and synoptic parameters are within seasonal routine limits across this division.`,
+      description: `No active meteorological or disaster alerts issued by NDMA / SACHET for ${locationLabel}. Atmospheric conditions and synoptic parameters are within seasonal routine limits across this division.`,
       validUntil: 'Next 24 Hours',
-      issuedAt: updatedTimestamp,
-      source: 'IMD',
+      issuedAt: sachetResult.lastSync || updatedTimestamp,
+      source: 'NDMA/SACHET',
       updatedAt: updatedTimestamp,
-      status: 'Routine',
+      status: 'LIVE',
       isLocal: true,
       metadata: {
         lat,
@@ -623,113 +571,21 @@ export async function resolveLocationWarning(params: {
     };
   }
 
-  // 4. Validate Warning Date & Forecast Day
-  const warningDateStr = raw.Date || raw.date;
-  if (warningDateStr) {
-    const warningDate = new Date(warningDateStr);
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-
-    // If warning date is strictly in the past (before today), discard expired alert
-    if (!isNaN(warningDate.getTime()) && warningDate.getTime() < todayStart.getTime() - 24 * 3600 * 1000) {
-      return {
-        state: 'NO_ACTIVE_WARNING',
-        severity: 'green',
-        severityLabel: 'NO ACTIVE WARNING',
-        hazardHeadline: 'NO ACTIVE SEVERE WEATHER WARNING',
-        affectedAreasHeadline: locationLabel,
-        affectedDistricts: [],
-        description: `Previous bulletins for ${locationLabel} have concluded. No active severe weather warning is currently in effect for today.`,
-        validUntil: 'Next 24 Hours',
-        issuedAt: updatedTimestamp,
-        source: 'IMD',
-        updatedAt: updatedTimestamp,
-        status: 'Routine',
-        isLocal: true,
-      };
-    }
-  }
-
-  // 5. Interpret Day_1 Color and Hazard Codes
-  const colorCode = raw.Day1_Color || raw.Day_1_Color || 1;
-  const colorInfo = getIMDWarningColor(colorCode);
-
-  const hazardCode = raw.Day_1 || raw.Day1 || 1;
-  const hazardInfo = getIMDHazardCode(hazardCode);
-
-  // If Color is Green or Hazard is No Warning -> State A
-  if (colorInfo.code === 1 || hazardInfo.code === 1) {
-    return {
-      state: 'NO_ACTIVE_WARNING',
-      severity: 'green',
-      severityLabel: 'NO ACTIVE WARNING',
-      hazardHeadline: 'NO ACTIVE SEVERE WEATHER WARNING',
-      affectedAreasHeadline: locationLabel,
-      affectedDistricts: [],
-      description: `No official severe weather warning is currently reported for ${locationLabel}. Atmospheric conditions and synoptic parameters are within seasonal routine limits across this division.`,
-      validUntil: 'Next 24 Hours',
-      issuedAt: updatedTimestamp,
-      source: 'IMD',
-      updatedAt: updatedTimestamp,
-      status: 'Routine',
-      isLocal: true,
-      metadata: {
-        lat,
-        lng,
-        resolvedDistrict: area.district,
-        resolvedState: area.state,
-        subdivision: area.subdivision,
-        isInternational: false,
-      },
-    };
-  }
-
-  // Map to Yellow (State B), Orange (State C), or Red (State D)
-  let uiState: WarningUIState = 'WATCH_ADVISORY';
-  let severity: 'yellow' | 'orange' | 'red' = 'yellow';
-  let severityLabel = 'YELLOW WATCH';
-
-  if (colorInfo.code === 4) {
-    uiState = 'RED_ALERT';
-    severity = 'red';
-    severityLabel = 'RED ALERT';
-  } else if (colorInfo.code === 3) {
-    uiState = 'ORANGE_ALERT';
-    severity = 'orange';
-    severityLabel = 'ORANGE ALERT';
-  } else {
-    uiState = 'WATCH_ADVISORY';
-    severity = 'yellow';
-    severityLabel = 'YELLOW WATCH';
-  }
-
-  const headline = hazardInfo.label.toUpperCase();
-  const desc =
-    raw.description ||
-    raw.Description ||
-    `Official ${severityLabel.toLowerCase()} issued by IMD for ${hazardInfo.label} over ${area.district} and adjoining sector.`;
-
+  // SACHET unreachable and no valid cache exists
   return {
-    state: uiState,
-    severity,
-    severityLabel,
-    hazardHeadline: headline,
-    hazardCode: hazardInfo.code,
-    hazardLabel: hazardInfo.label,
-    affectedAreasHeadline: `${area.district} and applicable districts`,
+    state: 'DATA_UNAVAILABLE',
+    severity: 'neutral',
+    severityLabel: 'DATA UNAVAILABLE',
+    hazardHeadline: 'WARNING DATA TEMPORARILY UNAVAILABLE',
+    affectedAreasHeadline: locationLabel,
     affectedDistricts: [area.district],
-    description: desc,
-    validUntil: 'Next 24 Hours',
+    description: 'Official real-time warning feed is temporarily unreachable. Surface telemetry and NWP forecasts remain active.',
+    validUntil: 'Routine Cycle',
     issuedAt: updatedTimestamp,
-    source: 'IMD',
+    source: 'NDMA/SACHET',
     updatedAt: updatedTimestamp,
-    status: 'LIVE',
+    status: 'UNAVAILABLE',
     isLocal: true,
-    recommendedActions: [colorInfo.actionText],
-    emergencyContact: {
-      title: 'State Disaster Management Helpline',
-      number: '1070',
-    },
     metadata: {
       lat,
       lng,
@@ -745,7 +601,8 @@ export async function resolveLocationWarning(params: {
 // Express Route Handler with Deduplication & Cache
 // ==========================================
 
-warningsRouter.get('/', async (req: Request, res: Response) => {
+const handleWarningRequest = async (req: Request, res: Response) => {
+  res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
   try {
     const lat = req.query.lat ? parseFloat(req.query.lat as string) : undefined;
     const lng = req.query.lng ? parseFloat(req.query.lng as string) : undefined;
@@ -799,11 +656,30 @@ warningsRouter.get('/', async (req: Request, res: Response) => {
       description: 'Unable to communicate with the meteorological warning service at this moment.',
       validUntil: 'N/A',
       issuedAt: formatCleanTime(new Date()),
-      source: 'IMD',
+      source: 'NDMA/SACHET',
       updatedAt: formatCleanTime(new Date()),
       status: 'UNAVAILABLE',
       isLocal: false,
     };
     return res.status(200).json(fallback);
+  }
+};
+
+warningsRouter.get('/current', handleWarningRequest);
+warningsRouter.get('/', handleWarningRequest);
+
+warningsRouter.get('/national', async (req: Request, res: Response) => {
+  res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+  try {
+    const national = await sachetService.getNationalRegionWarnings();
+    return res.json(national);
+  } catch (error: any) {
+    console.error('[Warnings National API Error]', error);
+    return res.status(200).json({
+      status: 'UNAVAILABLE',
+      timestamp: new Date().toISOString(),
+      regions: [],
+      error: error?.message || 'National feed unavailable',
+    });
   }
 });

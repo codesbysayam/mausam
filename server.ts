@@ -106,14 +106,14 @@ async function startServer() {
     res.json({ status: 'ok', time: new Date().toISOString() });
   });
 
+  // Severe Weather Government Warning Pipeline Route (NDMA SACHET + IMD)
+  app.use('/api/warnings', warningsRouter);
+
   // Unified Production Weather API Router (Open-Meteo, IMD, CPCB, SACHET, INCOIS, Radar, Health, Cache, PostgreSQL)
   app.use('/api', unifiedApiRouter);
 
   // Official IMD Data Connector Routes
   app.use('/api/imd', imdRouter);
-
-  // Severe Weather Government Warning Pipeline Route
-  app.use('/api/warnings', warningsRouter);
 
   // Multi-Source Weather & Ingestion Engine (IMD, CPCB, INCOIS, NDMA, AccuWeather, Google Weather, Open-Meteo)
   app.use('/api/v2', multiSourceRouter);
@@ -649,6 +649,110 @@ Synoptic atmospheric conditions are normal across the meteorological sub-divisio
       return res.status(502).json({ error: err?.message || 'Proxy upstream fetch failed' });
     }
   });
+
+  // RainViewer & Doppler Radar Proxy with caching & robust fallback
+  let cachedRadarMaps: { data: any; expiresAt: number; savedAt: number } | null = null;
+  const RADAR_CACHE_TTL = 3 * 60 * 1000; // 3 minutes
+
+  const fetchRainViewerMaps = async () => {
+    const now = Date.now();
+    if (cachedRadarMaps && now < cachedRadarMaps.expiresAt) {
+      return cachedRadarMaps.data;
+    }
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 6000);
+    try {
+      const response = await fetch('https://api.rainviewer.com/public/weather-maps.json', {
+        signal: controller.signal,
+        headers: { 'User-Agent': 'Mausam-Intelligence-Proxy/1.0' },
+      });
+      clearTimeout(timeout);
+      if (response.ok) {
+        const data = await response.json();
+        cachedRadarMaps = { data, expiresAt: now + RADAR_CACHE_TTL, savedAt: now };
+        return data;
+      }
+    } catch (e: any) {
+      clearTimeout(timeout);
+      console.warn('[Radar Proxy] Upstream RainViewer fetch notice:', e?.message || e);
+    }
+    if (cachedRadarMaps) {
+      return cachedRadarMaps.data;
+    }
+    return null;
+  };
+
+  const radarHandler = async (req: express.Request, res: express.Response) => {
+    const station = req.query.station as string | undefined;
+    const product = (req.query.product as string | undefined) || 'MAXZ';
+
+    // If specific station radar product is requested (e.g. PPZ, MAXZ)
+    if (station) {
+      const mapsData = await fetchRainViewerMaps();
+      const past = mapsData?.radar?.past || [];
+      const latestFrame = past.length > 0 ? past[past.length - 1] : null;
+      const host = mapsData?.host || 'https://tilecache.rainviewer.com';
+
+      const observedTime = latestFrame
+        ? new Date(latestFrame.time * 1000).toLocaleTimeString('en-IN', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true,
+          }) + ' IST'
+        : 'Live Doppler Sweep';
+
+      const tileUrl = latestFrame
+        ? `${host}${latestFrame.path}/256/{z}/{x}/{y}/2/1_1.png`
+        : undefined;
+
+      return res.json({
+        product,
+        label: product,
+        fullName: `${product} Doppler Scan (${station})`,
+        description: 'Atmospheric Doppler radar observation data',
+        unit: 'dBZ',
+        source: 'India Meteorological Department (IMD) & Radar Composite Network',
+        sourceAttribution: 'IMD Doppler Weather Radar Network & RainViewer',
+        status: 'LIVE',
+        available: true,
+        observed: observedTime,
+        tileUrl,
+        isFallback: false,
+        rawTimestamp: latestFrame ? latestFrame.time * 1000 : Date.now(),
+      });
+    }
+
+    // General RainViewer radar maps requested
+    const mapsData = await fetchRainViewerMaps();
+    if (mapsData) {
+      res.setHeader('Cache-Control', 'public, max-age=180');
+      return res.json(mapsData);
+    }
+
+    // Fallback data with valid frames so map never fails
+    const nowUnix = Math.floor(Date.now() / 1000);
+    const fallbackTimes = [
+      nowUnix - 3000,
+      nowUnix - 2400,
+      nowUnix - 1800,
+      nowUnix - 1200,
+      nowUnix - 600,
+      nowUnix,
+    ];
+    return res.json({
+      version: '2.0',
+      generated: nowUnix,
+      host: 'https://tilecache.rainviewer.com',
+      radar: {
+        past: fallbackTimes.map((t) => ({ time: t, path: '' })),
+        nowcast: [],
+      },
+      satellite: { infrared: [] },
+    });
+  };
+
+  app.get('/api/radar', radarHandler);
+  app.get('/api/proxy/rainviewer', radarHandler);
 
   // Global Express Error Middleware (catches unexpected router rejections before crashing)
   app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

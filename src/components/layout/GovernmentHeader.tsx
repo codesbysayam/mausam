@@ -284,7 +284,7 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
                   type="button"
                   id="header-ask-mausam-button"
                   onClick={onOpenAskMausam}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#0B2239] hover:bg-[#102D47] border border-[#1565C0]/50 hover:border-[#1565C0] text-white text-xs font-semibold transition-all shadow-sm shadow-[#1565C0]/10 shrink-0 cursor-pointer"
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-[#0B2239] hover:bg-[#102D47] border border-[#1565C0]/50 hover:border-[#1565C0] text-white text-xs font-semibold transition-all shadow-sm shrink-0 cursor-pointer ask-mausam-pulse-shadow"
                   title={t('askMausam', 'Ask MAUSAM AI Assistant')}
                 >
                   <span className="material-symbols-outlined text-[17px] text-[#38BDF8]">

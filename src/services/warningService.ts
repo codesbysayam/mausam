@@ -311,13 +311,47 @@ class WarningService {
     }
   }
 
+  private broadcastChannel: BroadcastChannel | null = null;
+  private memoryCache: Map<string, { data: StandardizedWarningResponse; timestamp: number }> = new Map();
+  private nationalCache: { data: any; timestamp: number } | null = null;
+  private readonly CACHE_TTL_MS = 60 * 1000; // 60s cache
+
+  constructor() {
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      try {
+        this.broadcastChannel = new BroadcastChannel('mausam-data');
+        this.broadcastChannel.onmessage = (event) => {
+          if (event.data?.type === 'WARNING_DATA' && event.data.cacheKey && event.data.data) {
+            this.memoryCache.set(event.data.cacheKey, {
+              data: event.data.data,
+              timestamp: event.data.timestamp || Date.now(),
+            });
+          }
+        };
+      } catch (err) {
+        console.warn('[WarningService] BroadcastChannel init error:', err);
+      }
+    }
+  }
+
   /**
-   * Fetch verified real-time warning data for a specific location from /api/warnings
+   * Fetch verified real-time warning data for a specific location from /api/warnings or /api/warnings/current
    */
   async fetchLocationWarning(
     location?: LocationRecord,
     forceRefresh = false
   ): Promise<StandardizedWarningResponse> {
+    const cacheKey = `${location?.city || ''}|${location?.district || ''}|${location?.state || ''}|${location?.coordinates?.lat || ''}|${location?.coordinates?.lng || ''}`.toLowerCase();
+    const now = Date.now();
+
+    // Check cross-tab / in-memory cache
+    if (!forceRefresh) {
+      const cached = this.memoryCache.get(cacheKey);
+      if (cached && now - cached.timestamp < this.CACHE_TTL_MS) {
+        return cached.data;
+      }
+    }
+
     try {
       const query = new URLSearchParams();
       if (location?.city) query.set('city', location.city);
@@ -328,11 +362,31 @@ class WarningService {
       if (location?.coordinates?.lng) query.set('lng', String(location.coordinates.lng));
       if (forceRefresh) query.set('refresh', 'true');
 
-      const res = await fetch(`/api/warnings?${query.toString()}`);
+      let res = await fetch(`/api/warnings/current?${query.toString()}`);
+      if (!res.ok) {
+        res = await fetch(`/api/warnings?${query.toString()}`);
+      }
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`);
       }
-      return await res.json();
+      const data: StandardizedWarningResponse = await res.json();
+
+      // Store in cache
+      this.memoryCache.set(cacheKey, { data, timestamp: now });
+
+      // Broadcast to other tabs
+      try {
+        this.broadcastChannel?.postMessage({
+          type: 'WARNING_DATA',
+          cacheKey,
+          data,
+          timestamp: now,
+        });
+      } catch {
+        // ignore broadcast errors
+      }
+
+      return data;
     } catch (err: any) {
       return {
         state: 'DATA_UNAVAILABLE',
@@ -341,13 +395,37 @@ class WarningService {
         hazardHeadline: 'WARNING DATA TEMPORARILY UNAVAILABLE',
         affectedAreasHeadline: location?.city || location?.district || 'Selected Location',
         affectedDistricts: [],
-        description: 'Official real-time warning feed is currently unreachable.',
+        description: 'Official real-time warning feed is currently unreachable. Surface telemetry and NWP forecasts remain active.',
         validUntil: 'N/A',
         issuedAt: new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }),
-        source: 'IMD',
+        source: 'NDMA/SACHET',
         updatedAt: new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }),
         status: 'UNAVAILABLE',
         isLocal: false,
+      };
+    }
+  }
+
+  /**
+   * Fetch nationwide warning summary across all 28 states and 8 UTs
+   */
+  async fetchNationalWarnings(forceRefresh = false): Promise<any> {
+    const now = Date.now();
+    if (!forceRefresh && this.nationalCache && now - this.nationalCache.timestamp < this.CACHE_TTL_MS) {
+      return this.nationalCache.data;
+    }
+    try {
+      const res = await fetch('/api/warnings/national');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const data = await res.json();
+      this.nationalCache = { data, timestamp: now };
+      return data;
+    } catch (err: any) {
+      return {
+        status: 'UNAVAILABLE',
+        timestamp: new Date().toISOString(),
+        regions: [],
+        error: err.message,
       };
     }
   }

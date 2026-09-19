@@ -5,6 +5,9 @@ export default async function handler(req: any, res: any) {
   if (req.method === 'OPTIONS') {
     return sendJson(res, 200, {});
   }
+  if (res.setHeader) {
+    res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+  }
   try {
     const loc = extractLocationFromReq(req);
     const result = await weatherService.getCurrentWeather(loc);
