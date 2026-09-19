@@ -1233,9 +1233,9 @@ export function generateMausamGroundedFallback(
   const rawQ = (prompt || '').trim();
   const q = rawQ.toLowerCase();
   const loc = context.location || { country: 'India', state: 'Odisha', city: 'Bhubaneswar', station: 'Bhubaneswar Observatory' };
-  const obs = context.observation || { temperatureC: 27, feelsLikeC: 28, condition: 'Clear', relativeHumidity: 97, windSpeedKmh: 8, windDirection: 'WSW', pressureHpa: 1003.7 };
-  const aq = context.airQuality || { aqi: 63, pm25: 42, pm10: 58, category: 'Satisfactory' };
-  const pol = context.pollen || { index: 8, category: 'Moderate Risk' };
+  const obs = context.observation || null;
+  const aq = context.airQuality || null;
+  const pol = context.pollen || null;
   const now = new Date();
   const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 
@@ -1554,6 +1554,18 @@ India Meteorological Department (IMD)`,
 
   // 11. Air Quality & Pollen inquiries
   if (q.includes('air quality') || q.includes('aqi') || q.includes('pollution') || q.includes('pm2.5') || q.includes('pm10') || q.includes('pollen') || q.includes('smog')) {
+    const aqiBlock = aq && typeof aq.aqi === 'number'
+      ? `• AQI: ${aq.aqi}\n• Category: ${aq.category || 'Monitored'}\n• PM2.5: ${aq.pm25 !== undefined ? `${aq.pm25} µg/m³` : 'N/A'}\n• PM10: ${aq.pm10 !== undefined ? `${aq.pm10} µg/m³` : 'N/A'}`
+      : '• Air Quality data currently unavailable for this station.';
+
+    const pollenBlock = pol && typeof pol.index === 'number'
+      ? `• Pollen Index: ${pol.index} / 12\n• Risk Category: ${pol.category || 'Monitored'}`
+      : '• Botanical pollen telemetry currently unavailable.';
+
+    const windInfo = obs && typeof obs.windSpeedKmh === 'number'
+      ? `Wind speeds of ${obs.windSpeedKmh} km/h from ${obs.windDirection || 'variable'} influence dispersion conditions.`
+      : 'Surface wind telemetry currently unavailable.';
+
     return {
       text: `AIR QUALITY & ENVIRONMENTAL INTELLIGENCE
 Central Pollution Control Board (CPCB) & SAFAR Network
@@ -1561,19 +1573,13 @@ Central Pollution Control Board (CPCB) & SAFAR Network
 Location: ${loc.city}, ${loc.state} (${loc.station || 'Monitoring Station'})
 
 1. Current Air Quality:
-• AQI: ${aq.aqi ?? 63}
-• Category: ${aq.category ?? 'Satisfactory'}
-• PM2.5: ${aq.pm25 ?? 42} µg/m³
-• PM10: ${aq.pm10 ?? 58} µg/m³
-• Health Impact: Minor breathing discomfort may occur to sensitive individuals; satisfactory for the general public.
+${aqiBlock}
 
 2. Bio-Aerosol & Pollen Status:
-• Pollen Index: ${pol.index ?? 8} / 12
-• Risk Category: ${pol.category ?? 'Moderate Risk'} (Predominantly Grass & Weed Pollen)
-• Recommendation: Individuals with allergic rhinitis or asthma should carry necessary antihistamines/inhalers when outdoors in morning hours.
+${pollenBlock}
 
-3. 48-Hour Dispersion Outlook:
-• Wind speeds of ${obs.windSpeedKmh ?? 8} km/h from ${obs.windDirection ?? 'WSW'} ensure adequate ventilation and pollutant dispersion over the next 48 hours.
+3. Dispersion Conditions:
+${windInfo}
 
 Updated:
 ${timeStr} IST
@@ -1595,18 +1601,17 @@ CPCB / SAFAR / India Meteorological Department`,
     return {
       text: `IMD OBSERVATIONAL NETWORK & DOPPLER WEATHER RADARS
 
-Selected Station: ${loc.station || loc.city} (ID: ${loc.stationId || '42971'}, ${loc.state})
+Selected Station: ${loc.station || loc.city} (ID: ${loc.stationId || 'Observatory'}, ${loc.state})
 Coordinates: ${loc.latitude?.toFixed(4) || '20.3000'}°N, ${loc.longitude?.toFixed(4) || '85.8200'}°E
 
 1. Primary Doppler Weather Radar (DWR) Coverage:
-• Radar Station: Paradip DWR (S-Band / Dual Polarization) & Gopalpur DWR (X-Band)
+• Radar Stations: Operational coastal and inland DWR network (S-Band / X-Band)
 • Operational Range: 250 km (Surveillance) / 500 km (Reflectivity & Velocity)
-• Purpose: Real-time tracking of thunderstorms, convective cloud tops, cyclonic vortex rotation, and instantaneous rain rate.
+• Purpose: Real-time tracking of precipitation, thunderstorms, convective cells, and cyclonic systems.
 
 2. Regional Surface Meteorological Observatories:
-• Bhubaneswar Airport Observatory (WMO: 42971) — Continuous METAR / SYNOP
-• Cuttack Agromet Field Station — Micro-climate & soil moisture
-• Puri Coastal Observatory — Marine boundary layer & wave data
+• Continuous METAR / SYNOP automated weather stations
+• Micro-climate & agromet field stations
 
 Updated:
 ${timeStr} IST
@@ -1625,6 +1630,10 @@ India Meteorological Department (IMD) — Instruments Division`,
 
   // 13. Farmer / Agromet Advisory
   if (q.includes('farmer') || q.includes('agromet') || q.includes('crop') || q.includes('agriculture') || q.includes('farming') || q.includes('irrigation') || q.includes('kisan') || q.includes('meghdoot')) {
+    const agroObs = obs && typeof obs.temperatureC === 'number'
+      ? `• Temperature: ${obs.temperatureC}°C | Relative Humidity: ${obs.relativeHumidity ?? 'N/A'}%`
+      : '• Local surface temperature/humidity telemetry unavailable.';
+
     return {
       text: `GRAMIN KRISHI MAUSAM SEWA (GKMS)
 District Agromet Advisory Bulletin
@@ -1632,15 +1641,13 @@ District Agromet Advisory Bulletin
 District: ${loc.city || loc.state}, State: ${loc.state}
 
 1. Agrometeorological Snapshot:
-• Temperature: ${obs.temperatureC}°C | Relative Humidity: ${obs.relativeHumidity}%
-• Rainfall Status: Isolated convective showers probable (Rain probability: ${obs.rainProbability ?? 20}%)
-• Soil Moisture Condition: Adequate for ongoing seasonal operations.
+${agroObs}
 
 2. Field Operations & Crop Advisory:
-• **Paddy (Kharif/Rabi)**: Maintain 3–5 cm standing water in nursery/transplanted fields. Drain excess water if thunderstorm showers occur.
-• **Vegetable Crops (Brinjal, Chilli, Tomato)**: Ensure proper drainage channels in low-lying plots to prevent root rot or fungal wilt.
-• **Spraying Advisory**: Postpone chemical spraying (insecticides/fungicides) during windy periods (>15 km/h) or impending rain.
-• **Livestock Protection**: Keep cattle sheltered in well-ventilated dry sheds during lightning warnings.
+• **Paddy (Kharif/Rabi)**: Maintain recommended standing water in nursery/transplanted fields. Ensure drainage during heavy showers.
+• **Vegetable Crops**: Ensure proper drainage channels in low-lying plots to prevent root rot.
+• **Spraying Advisory**: Postpone chemical spraying during windy periods (>15 km/h) or impending rain.
+• **Livestock Protection**: Keep cattle sheltered during severe weather or lightning alerts.
 
 Updated:
 ${timeStr} IST
@@ -1658,22 +1665,41 @@ IMD / ICAR — Agromet Advisory Service Division`,
   }
 
   // 14. Default Contextual Meteorological Observation & Summary
-  return {
-    text: `### Weather Report for ${loc.city}, ${loc.state}
-**Station**: ${loc.station || 'Observatory'} (Station ID: ${loc.stationId || '42971'})
+  if (!obs || typeof obs.temperatureC !== 'number') {
+    return {
+      text: `### Weather Status for ${loc.city}, ${loc.state}
+**Station**: ${loc.station || 'Observatory'}
 
 **Current Telemetry Observation**:
-• **Temperature**: ${obs.temperatureC}°C (Feels like: ${obs.feelsLikeC}°C)
-• **Condition**: ${obs.condition}
-• **Relative Humidity**: ${obs.relativeHumidity}%
-• **Wind Speed & Direction**: ${obs.windSpeedKmh} km/h from ${obs.windDirection}${obs.windDirectionDegrees ? ` (${obs.windDirectionDegrees}°)` : ''}
-• **Barometric Pressure**: ${obs.pressureHpa} hPa
-• **Dew Point**: ${obs.dewPointC ?? 26.4}°C
-• **Air Quality Index**: ${aq.aqi ?? 63} (${aq.category ?? 'Satisfactory'})
-• **Pollen Risk**: ${pol.category ?? 'Moderate'}
+Current weather observation data is temporarily unavailable from the upstream meteorological telemetry feed.
+
+Updated: ${timeStr} IST
+Source: ${context.metadata?.source || 'India Meteorological Department (IMD)'}`,
+      sources: [
+        {
+          title: 'IMD Official National Weather Portal',
+          url: 'https://mausam.imd.gov.in',
+          type: 'search',
+        },
+      ],
+    };
+  }
+
+  return {
+    text: `### Weather Report for ${loc.city}, ${loc.state}
+**Station**: ${loc.station || 'Observatory'} (Station ID: ${loc.stationId || 'Observatory'})
+
+**Current Telemetry Observation**:
+• **Temperature**: ${obs.temperatureC}°C ${obs.feelsLikeC !== undefined ? `(Feels like: ${obs.feelsLikeC}°C)` : ''}
+• **Condition**: ${obs.condition || 'Observed'}
+• **Relative Humidity**: ${obs.relativeHumidity ?? 'N/A'}%
+• **Wind Speed & Direction**: ${obs.windSpeedKmh ?? 'N/A'} km/h ${obs.windDirection ? `from ${obs.windDirection}` : ''}
+• **Barometric Pressure**: ${obs.pressureHpa ? `${obs.pressureHpa} hPa` : 'N/A'}
+• **Air Quality Index**: ${aq && typeof aq.aqi === 'number' ? `${aq.aqi} (${aq.category || 'Monitored'})` : 'Unavailable'}
+• **Pollen Risk**: ${pol && pol.category ? pol.category : 'Unavailable'}
 
 **Summary & Citizen Guidance**:
-Current weather in ${loc.city} indicates ${obs.condition?.toLowerCase() || 'stable'} conditions. No severe adverse alerts are in effect for the immediate hour. Stay hydrated and monitor regional bulletins if planning extended travel.
+Current observations in ${loc.city} indicate ${obs.condition?.toLowerCase() || 'stable'} conditions. Consult official local bulletins for updated advisories.
 
 Updated: ${timeStr} IST
 Source: ${context.metadata?.source || 'India Meteorological Department (IMD)'}`,

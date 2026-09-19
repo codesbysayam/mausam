@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { imdService, IMDCurrentWeather, IMDResponse } from '../services/imdService';
 
-export function useCurrentWeather(stationId?: string, pollIntervalMs: number = 60000) {
+export function useCurrentWeather(stationId?: string, pollIntervalMs: number = 300000) {
   const [data, setData] = useState<IMDCurrentWeather | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +44,7 @@ export function useCurrentWeather(stationId?: string, pollIntervalMs: number = 6
 
     if (pollIntervalMs > 0) {
       const interval = setInterval(() => {
+        if (typeof document !== 'undefined' && document.hidden) return;
         fetchData();
       }, pollIntervalMs);
       return () => {

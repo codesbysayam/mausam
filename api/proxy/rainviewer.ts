@@ -38,24 +38,18 @@ export default async function handler(req: any, res: any) {
     return sendJson(res, 200, data);
   } catch (err: any) {
     if (cachedData) {
+      if (res.setHeader) res.setHeader('X-Mausam-Cache', 'STALE');
       return sendJson(res, 200, cachedData);
     }
-    // Synthesize fallback frame object so client never fails
-    const nowUnix = Math.floor(Date.now() / 1000);
-    const fallbackTimes = [
-      nowUnix - 3000,
-      nowUnix - 2400,
-      nowUnix - 1800,
-      nowUnix - 1200,
-      nowUnix - 600,
-      nowUnix,
-    ];
+    // Truthful unavailable response - do not synthesize fake frames
     return sendJson(res, 200, {
+      status: 'UNAVAILABLE',
+      available: false,
+      message: 'Radar data currently unavailable from upstream provider',
       version: '2.0',
-      generated: nowUnix,
-      host: 'https://tilecache.rainviewer.com',
+      host: '',
       radar: {
-        past: fallbackTimes.map((t) => ({ time: t, path: '' })),
+        past: [],
         nowcast: [],
       },
       satellite: { infrared: [] },

@@ -693,17 +693,30 @@ Synoptic atmospheric conditions are normal across the meteorological sub-divisio
       const latestFrame = past.length > 0 ? past[past.length - 1] : null;
       const host = mapsData?.host || 'https://tilecache.rainviewer.com';
 
-      const observedTime = latestFrame
-        ? new Date(latestFrame.time * 1000).toLocaleTimeString('en-IN', {
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true,
-          }) + ' IST'
-        : 'Live Doppler Sweep';
+      if (!latestFrame) {
+        return res.json({
+          product,
+          label: product,
+          fullName: `${product} Doppler Scan (${station})`,
+          description: 'Atmospheric Doppler radar observation data',
+          unit: 'dBZ',
+          source: 'RainViewer',
+          sourceAttribution: 'Weather radar composite data by RainViewer',
+          status: 'UNAVAILABLE',
+          available: false,
+          observed: 'Unavailable',
+          tileUrl: undefined,
+          isFallback: false,
+        });
+      }
 
-      const tileUrl = latestFrame
-        ? `${host}${latestFrame.path}/256/{z}/{x}/{y}/2/1_1.png`
-        : undefined;
+      const observedTime = new Date(latestFrame.time * 1000).toLocaleTimeString('en-IN', {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true,
+      }) + ' IST';
+
+      const tileUrl = `${host}${latestFrame.path}/256/{z}/{x}/{y}/2/1_1.png`;
 
       return res.json({
         product,
@@ -711,14 +724,14 @@ Synoptic atmospheric conditions are normal across the meteorological sub-divisio
         fullName: `${product} Doppler Scan (${station})`,
         description: 'Atmospheric Doppler radar observation data',
         unit: 'dBZ',
-        source: 'India Meteorological Department (IMD) & Radar Composite Network',
-        sourceAttribution: 'IMD Doppler Weather Radar Network & RainViewer',
+        source: 'RainViewer',
+        sourceAttribution: 'Weather radar composite data by RainViewer',
         status: 'LIVE',
         available: true,
         observed: observedTime,
         tileUrl,
         isFallback: false,
-        rawTimestamp: latestFrame ? latestFrame.time * 1000 : Date.now(),
+        rawTimestamp: latestFrame.time * 1000,
       });
     }
 
@@ -729,22 +742,15 @@ Synoptic atmospheric conditions are normal across the meteorological sub-divisio
       return res.json(mapsData);
     }
 
-    // Fallback data with valid frames so map never fails
-    const nowUnix = Math.floor(Date.now() / 1000);
-    const fallbackTimes = [
-      nowUnix - 3000,
-      nowUnix - 2400,
-      nowUnix - 1800,
-      nowUnix - 1200,
-      nowUnix - 600,
-      nowUnix,
-    ];
-    return res.json({
+    // Upstream unavailable - return truthful UNAVAILABLE status without fabricating frames
+    return res.status(200).json({
+      status: 'UNAVAILABLE',
+      available: false,
+      message: 'Radar data currently unavailable from upstream provider',
       version: '2.0',
-      generated: nowUnix,
-      host: 'https://tilecache.rainviewer.com',
+      host: '',
       radar: {
-        past: fallbackTimes.map((t) => ({ time: t, path: '' })),
+        past: [],
         nowcast: [],
       },
       satellite: { infrared: [] },
@@ -753,6 +759,56 @@ Synoptic atmospheric conditions are normal across the meteorological sub-divisio
 
   app.get('/api/radar', radarHandler);
   app.get('/api/proxy/rainviewer', radarHandler);
+
+  app.get('/api/satellite/latest', async (req, res) => {
+    try {
+      const channel = ((req.query?.channel || req.query?.type || 'ir1') as string).toLowerCase();
+      const urls: Record<string, string> = {
+        ir1: 'https://mausam.imd.gov.in/Satellite/Converted/IR1.gif',
+        vis: 'https://mausam.imd.gov.in/Satellite/Converted/VIS.gif',
+        wv: 'https://mausam.imd.gov.in/Satellite/Converted/WV.gif',
+        rgb: 'https://mausam.imd.gov.in/Satellite/Converted/RGB.gif',
+      };
+      const targetUrl = urls[channel] || urls.ir1;
+      const headRes = await fetch(targetUrl, {
+        method: 'HEAD',
+        signal: AbortSignal.timeout(4000),
+      }).catch(() => null);
+
+      const isImage = headRes?.ok && (headRes.headers.get('content-type') || '').startsWith('image/');
+      if (isImage) {
+        return res.json({
+          ok: true,
+          channel,
+          satellite: 'INSAT-3D / INSAT-3DR',
+          source: 'India Meteorological Department (IMD)',
+          imageUrl: targetUrl,
+          status: 'LIVE',
+          observedAt: new Date().toISOString(),
+          fetchedAt: new Date().toISOString(),
+        });
+      }
+
+      return res.json({
+        ok: false,
+        channel,
+        satellite: 'INSAT-3D / INSAT-3DR',
+        source: 'India Meteorological Department (IMD)',
+        status: 'UNAVAILABLE',
+        imageUrl: null,
+        message: 'Official INSAT satellite feed is temporarily offline or inaccessible.',
+        errorCode: 'SATELLITE_FEED_UNAVAILABLE',
+      });
+    } catch (err: any) {
+      return res.json({
+        ok: false,
+        satellite: 'INSAT-3D / INSAT-3DR',
+        status: 'UNAVAILABLE',
+        imageUrl: null,
+        message: 'Satellite telemetry unreachable.',
+      });
+    }
+  });
 
   // Global Express Error Middleware (catches unexpected router rejections before crashing)
   app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {

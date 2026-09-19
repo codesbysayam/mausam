@@ -80,16 +80,19 @@ export class AIProvider {
     const resolvedSource = metadata?.source || (process.env.IMD_API_KEY ? 'India Meteorological Department (IMD)' : 'Open-Meteo');
 
     if (!this.isConfigured()) {
-      // High fidelity deterministic fallback
-      const temp = observation?.temperatureC ?? 27;
-      const condition = observation?.condition ?? 'Clear';
-      const humidity = observation?.relativeHumidity ?? 75;
-      const windSpeed = observation?.windSpeedKmh ?? 10;
-      const aqi = airQuality?.aqi ?? 65;
-      const aqiCat = airQuality?.category ?? 'Satisfactory';
+      // Truthful deterministic fallback when GEMINI_API_KEY is not configured
+      const hasObs = observation && typeof observation.temperatureC === 'number';
+      const obsText = hasObs
+        ? `• Current Observation: ${observation.temperatureC}°C — ${observation.condition || 'Reported'}\n• Relative Humidity: ${observation.relativeHumidity ?? 'N/A'}%\n• Wind Speed: ${observation.windSpeedKmh ?? 'N/A'} km/h`
+        : '• Current weather data unavailable.';
+
+      const hasAqi = airQuality && typeof airQuality.aqi === 'number';
+      const aqiText = hasAqi
+        ? `• Air Quality Index: ${airQuality.aqi} (${airQuality.category || 'Monitored'})`
+        : '• Air Quality data unavailable.';
 
       return {
-        response: `${city}, ${state}\n\n• Current Observation: ${temp}°C — ${condition}\n• Relative Humidity: ${humidity}%\n• Wind Speed: ${windSpeed} km/h\n• Air Quality Index: ${aqi} (${aqiCat})\n\nSource: ${resolvedSource}\nStatus: Operational deterministic feed (AI Assistant requires GEMINI_API_KEY).`,
+        response: `${city}, ${state}\n\n${obsText}\n${aqiText}\n\nSource: ${resolvedSource}\nStatus: Telemetry summary (AI Assistant operates with optional GEMINI_API_KEY).`,
         source: resolvedSource,
         groundingSources: [],
         modeUsed: 'offline',
@@ -98,12 +101,19 @@ export class AIProvider {
 
     try {
       const client = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
-      const systemInstruction = `You are MAUSAM AI, the official atmospheric intelligence assistant for India.
+      const obsSummary = observation && typeof observation.temperatureC === 'number'
+        ? `${observation.temperatureC}°C, ${observation.condition || 'Observed'}, Humidity ${observation.relativeHumidity ?? 'N/A'}%, Wind ${observation.windSpeedKmh ?? 'N/A'} km/h`
+        : 'Current weather data unavailable';
+      const aqiSummary = airQuality && typeof airQuality.aqi === 'number'
+        ? `AQI ${airQuality.aqi} (${airQuality.category || 'Monitored'})`
+        : 'Air Quality data unavailable';
+
+      const systemInstruction = `You are MAUSAM AI, the atmospheric intelligence assistant for India.
 Location: ${city}, ${state} (${lat}°N, ${lng}°E).
-Current weather: ${observation?.temperatureC ?? 27}°C, ${observation?.condition ?? 'Clear'}, Humidity ${observation?.relativeHumidity ?? 75}%, Wind ${observation?.windSpeedKmh ?? 10} km/h.
-Air Quality: AQI ${airQuality?.aqi ?? 65} (${airQuality?.category ?? 'Satisfactory'}).
+Current weather: ${obsSummary}.
+Air Quality: ${aqiSummary}.
 Data Source: ${resolvedSource}.
-Provide accurate, concise meteorological answers. Always attribute the official source.`;
+Provide accurate, concise meteorological answers. If data is unavailable, state that clearly without guessing or fabricating numbers. Always attribute the official source.`;
 
       let response: any = null;
       let usedMode = 'search-grounded';

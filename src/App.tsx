@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { LocationRecord, WeatherStation } from './types';
 import { locationService } from './services/locationService';
 import { weatherService, WeatherDataBundle } from './services/weatherService';
@@ -138,6 +138,45 @@ export default function App() {
   const [isAskMausamOpen, setIsAskMausamOpen] = useState(false);
   const [selectedFooterPublication, setSelectedFooterPublication] = useState<MeteorologicalPublication | null>(null);
   const [globalAlertSurge, setGlobalAlertSurge] = useState<{ newCount: number; oldCount: number } | null>(null);
+
+  // Floating Ask MAUSAM trigger visibility on scroll
+  const [isFloatingBtnVisible, setIsFloatingBtnVisible] = useState(true);
+  const lastScrollYRef = useRef(0);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY || document.documentElement.scrollTop;
+      const prevScrollY = lastScrollYRef.current;
+      const deltaY = currentScrollY - prevScrollY;
+
+      // When scrolling down by more than 10px and past top threshold, hide button to keep UI clean
+      if (deltaY > 10 && currentScrollY > 60) {
+        setIsFloatingBtnVisible(false);
+      } else if (deltaY < -5 || currentScrollY <= 60) {
+        // When scrolling back up or near top of page, show immediately
+        setIsFloatingBtnVisible(true);
+      }
+
+      lastScrollYRef.current = currentScrollY;
+
+      // Reappear once the user stops scrolling
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+      scrollTimeoutRef.current = setTimeout(() => {
+        setIsFloatingBtnVisible(true);
+      }, 750);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Optional audio alert monitor: triggers distinct audible chime when severe alert count increases
   const { isAudioAlertEnabled } = useAlertAudio({
@@ -620,7 +659,11 @@ export default function App() {
         id="floating-ask-mausam-btn"
         type="button"
         onClick={() => setIsAskMausamOpen(true)}
-        className="ask-mausam-cursor ask-mausam-pulse-shadow fixed bottom-4 sm:bottom-5 right-4 sm:right-5 z-40 flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full bg-[#0B72B9] hover:bg-[#0A5A94] text-white text-xs font-bold border border-[#4FA8E0] transition-all hover:scale-105"
+        className={`ask-mausam-cursor ask-mausam-pulse-shadow fixed bottom-4 sm:bottom-5 right-4 sm:right-5 z-40 flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full bg-[#0B72B9] hover:bg-[#0A5A94] text-white text-xs font-bold border border-[#4FA8E0] transition-all duration-300 ${
+          isFloatingBtnVisible
+            ? 'opacity-100 translate-y-0 pointer-events-auto hover:scale-105'
+            : 'opacity-0 translate-y-6 pointer-events-none'
+        }`}
         title="Ask MAUSAM AI Weather & Advisory"
         aria-label="Open Ask MAUSAM AI Assistant"
       >

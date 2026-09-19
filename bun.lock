@@ -23,7 +23,6 @@
         "recharts": "^3.10.1",
         "remark-gfm": "^4.0.1",
         "suncalc": "^2.0.2",
-        "vite": "^6.2.3",
         "zod": "^4.5.4",
       },
       "devDependencies": {

@@ -1,8 +1,9 @@
 // Vercel Serverless Function entry point for /api/system/health
 import { sendJson } from '../helpers';
 import { SachetProvider } from '../../backend/providers/sachet';
-import { OpenMeteoProvider } from '../../backend/providers/openMeteo';
 import { RadarProvider } from '../../backend/providers/radar';
+import { IMDProvider } from '../../backend/providers/imd';
+import { AIProvider } from '../../lib/providers/ai';
 
 interface HealthCache {
   data: any;
@@ -27,7 +28,7 @@ export default async function handler(req: any, res: any) {
   }
 
   try {
-    const [omHealth, sachetHealth, radarHealth, osmHealth] = await Promise.all([
+    const [omHealth, sachetHealth, radarHealth, osmHealth, imdHealth, geminiHealth] = await Promise.all([
       // Open-Meteo
       (async () => {
         const t0 = Date.now();
@@ -35,9 +36,21 @@ export default async function handler(req: any, res: any) {
           const r = await fetch('https://api.open-meteo.com/v1/forecast?latitude=20.29&longitude=85.82&current=temperature_2m', {
             signal: AbortSignal.timeout(4000),
           });
-          return { status: r.ok ? 'operational' : 'degraded', latencyMs: Date.now() - t0 };
-        } catch {
-          return { status: 'unavailable', latencyMs: Date.now() - t0 };
+          return {
+            configured: true,
+            operational: r.ok,
+            status: r.ok ? 'OPERATIONAL' : 'DEGRADED',
+            latencyMs: Date.now() - t0,
+            error: r.ok ? undefined : `HTTP ${r.status}`,
+          };
+        } catch (e: any) {
+          return {
+            configured: true,
+            operational: false,
+            status: 'OFFLINE',
+            latencyMs: Date.now() - t0,
+            error: e.message,
+          };
         }
       })(),
 
@@ -45,17 +58,23 @@ export default async function handler(req: any, res: any) {
       (async () => {
         const h = await SachetProvider.checkHealth();
         return {
-          status: h.operational ? 'operational' : 'unavailable',
+          configured: true,
+          operational: h.operational,
+          status: h.operational ? 'OPERATIONAL' : 'OFFLINE',
           latencyMs: h.latencyMs || 0,
+          error: h.error,
         };
       })(),
 
-      // Radar
+      // Radar (RainViewer)
       (async () => {
         const h = await RadarProvider.checkHealth();
         return {
-          status: h.operational ? 'operational' : 'degraded',
+          configured: true,
+          operational: h.operational,
+          status: h.operational ? 'OPERATIONAL' : 'DEGRADED',
           latencyMs: h.latencyMs || 0,
+          error: h.error,
         };
       })(),
 
@@ -67,22 +86,60 @@ export default async function handler(req: any, res: any) {
             headers: { 'User-Agent': 'Mausam-Health-Check/3.0' },
             signal: AbortSignal.timeout(3000),
           });
-          return { status: r.ok ? 'operational' : 'degraded', latencyMs: Date.now() - t0 };
-        } catch {
-          return { status: 'degraded', latencyMs: Date.now() - t0 };
+          return {
+            configured: true,
+            operational: r.ok,
+            status: r.ok ? 'OPERATIONAL' : 'DEGRADED',
+            latencyMs: Date.now() - t0,
+            error: r.ok ? undefined : `HTTP ${r.status}`,
+          };
+        } catch (e: any) {
+          return {
+            configured: true,
+            operational: false,
+            status: 'DEGRADED',
+            latencyMs: Date.now() - t0,
+            error: e.message,
+          };
         }
+      })(),
+
+      // IMD (Optional official gateway)
+      (async () => {
+        const h = await IMDProvider.checkHealth();
+        return {
+          configured: h.configured,
+          operational: h.operational,
+          status: !h.configured ? 'NOT_CONFIGURED' : h.operational ? 'OPERATIONAL' : 'OFFLINE',
+          latencyMs: h.latencyMs,
+          error: h.error,
+        };
+      })(),
+
+      // Gemini AI (Optional)
+      (async () => {
+        const h = await AIProvider.checkHealth();
+        return {
+          configured: h.configured,
+          operational: h.operational,
+          status: !h.configured ? 'NOT_CONFIGURED' : h.operational ? 'OPERATIONAL' : 'OFFLINE',
+          latencyMs: h.latencyMs,
+          error: h.error,
+        };
       })(),
     ]);
 
-    const isHealthy = sachetHealth.status === 'operational' && omHealth.status === 'operational';
+    const isHealthy = sachetHealth.operational || omHealth.operational;
 
     const result = {
-      status: isHealthy ? 'healthy' : 'unavailable',
+      status: isHealthy ? 'OPERATIONAL' : 'DEGRADED',
       providers: {
         openMeteo: omHealth,
         sachet: sachetHealth,
-        osm: osmHealth,
         radar: radarHealth,
+        osm: osmHealth,
+        imd: imdHealth,
+        gemini: geminiHealth,
       },
       timestamp: new Date().toISOString(),
     };
@@ -91,12 +148,14 @@ export default async function handler(req: any, res: any) {
     return sendJson(res, 200, result);
   } catch (err: any) {
     return sendJson(res, 200, {
-      status: 'unavailable',
+      status: 'OFFLINE',
       providers: {
-        openMeteo: { status: 'operational', latencyMs: 300 },
-        sachet: { status: 'unavailable', latencyMs: 0 },
-        osm: { status: 'operational', latencyMs: 30 },
-        radar: { status: 'operational', latencyMs: 200 },
+        openMeteo: { configured: true, operational: false, status: 'OFFLINE', latencyMs: null, error: err.message },
+        sachet: { configured: true, operational: false, status: 'OFFLINE', latencyMs: null, error: err.message },
+        radar: { configured: true, operational: false, status: 'OFFLINE', latencyMs: null, error: err.message },
+        osm: { configured: true, operational: false, status: 'OFFLINE', latencyMs: null, error: err.message },
+        imd: { configured: false, operational: false, status: 'NOT_CONFIGURED', latencyMs: null },
+        gemini: { configured: false, operational: false, status: 'NOT_CONFIGURED', latencyMs: null },
       },
       timestamp: new Date().toISOString(),
       error: err?.message,

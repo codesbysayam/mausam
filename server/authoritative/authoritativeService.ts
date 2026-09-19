@@ -255,8 +255,24 @@ export class AuthoritativeService {
       console.warn('[AuthoritativeService] Open-Meteo Air Quality fetch error:', err);
     }
 
-    // Default robust fallback
-    return this.buildAQIObject(68, 'PM2.5', stationName, 'CPCB NAQI Observation', false);
+    // Default truthful unavailable representation
+    return {
+      stationName,
+      source: 'Telemetry Feed Unavailable',
+      aqi: 0,
+      category: 'Good',
+      dominantPollutant: 'Unavailable',
+      pm25: 0,
+      pm10: 0,
+      no2: 0,
+      so2: 0,
+      co: 0,
+      o3: 0,
+      healthAdvice: 'Air quality observation is currently unavailable for this station.',
+      colorCode: '#94A3B8',
+      lastUpdated: new Date().toISOString(),
+      isOfficialFeed: false,
+    };
   }
 
   private static buildAQIObject(
@@ -327,12 +343,12 @@ export class AuthoritativeService {
         const cur = json.current || {};
         const alder = cur.alder_pollen ?? 0;
         const birch = cur.birch_pollen ?? 0;
-        const grass = cur.grass_pollen ?? 4;
-        const mugwort = cur.mugwort_pollen ?? 1;
+        const grass = cur.grass_pollen ?? 0;
+        const mugwort = cur.mugwort_pollen ?? 0;
         const olive = cur.olive_pollen ?? 0;
-        const ragweed = cur.ragweed_pollen ?? 2;
+        const ragweed = cur.ragweed_pollen ?? 0;
 
-        const total = Math.max(alder + birch + grass + mugwort + olive + ragweed, 6);
+        const total = alder + birch + grass + mugwort + olive + ragweed;
         let riskCategory: AuthoritativePollen['riskCategory'] = 'Low';
         let allergyTip = 'Aero-allergen levels are minimal. Safe for sensitive outdoor individuals.';
 
@@ -367,12 +383,12 @@ export class AuthoritativeService {
 
     return {
       source: 'Bio-Climatic Pollen Telemetry',
-      overallIndex: 8,
-      riskCategory: 'Moderate',
-      treePollen: 3,
-      grassPollen: 4,
-      weedPollen: 1,
-      allergyTip: 'Moderate botanical pollen count. Standard precautions for sensitive individuals.',
+      overallIndex: 0,
+      riskCategory: 'Low',
+      treePollen: 0,
+      grassPollen: 0,
+      weedPollen: 0,
+      allergyTip: 'Botanical pollen observations are currently unavailable for this region.',
       lastUpdated: new Date().toISOString(),
     };
   }

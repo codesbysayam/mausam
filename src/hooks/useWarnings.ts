@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { imdService, IMDDistrictWarning, IMDResponse } from '../services/imdService';
 
-export function useWarnings(districtId?: string, pollIntervalMs: number = 60000) {
+export function useWarnings(districtId?: string, pollIntervalMs: number = 180000) {
   const [warnings, setWarnings] = useState<IMDDistrictWarning[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +44,7 @@ export function useWarnings(districtId?: string, pollIntervalMs: number = 60000)
 
     if (pollIntervalMs > 0) {
       const interval = setInterval(() => {
+        if (typeof document !== 'undefined' && document.hidden) return;
         fetchData();
       }, pollIntervalMs);
       return () => {

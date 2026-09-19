@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { imdService, IMDAWSStation, IMDResponse } from '../services/imdService';
 
-export function useAWS(stationId?: string, stateId?: string, pollIntervalMs: number = 60000) {
+export function useAWS(stationId?: string, stateId?: string, pollIntervalMs: number = 300000) {
   const [stations, setStations] = useState<IMDAWSStation[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +44,7 @@ export function useAWS(stationId?: string, stateId?: string, pollIntervalMs: num
 
     if (pollIntervalMs > 0) {
       const interval = setInterval(() => {
+        if (typeof document !== 'undefined' && document.hidden) return;
         fetchData();
       }, pollIntervalMs);
       return () => {
