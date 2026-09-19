@@ -89,14 +89,12 @@ export interface SystemHealthResponse {
   };
 }
 
+import { apiFetch } from './apiClient';
+
 export class MultiSourceService {
   public static async fetchSystemHealth(): Promise<SystemHealthResponse | null> {
     try {
-      const res = await fetch('/api/system/health');
-      if (res.ok) return await res.json();
-      const fallback = await fetch('/api/v2/health/sources');
-      if (fallback.ok) return await fallback.json();
-      return null;
+      return await apiFetch<SystemHealthResponse>('/api/system?mode=health', { timeoutMs: 5000, ttlMs: 60000 });
     } catch {
       return null;
     }
@@ -104,9 +102,8 @@ export class MultiSourceService {
 
   public static async fetchSystemProviders(): Promise<any[] | null> {
     try {
-      const res = await fetch('/api/system/providers');
-      if (res.ok) return await res.json();
-      return null;
+      const data = await apiFetch<any>('/api/system?mode=providers', { timeoutMs: 6000, ttlMs: 60000 });
+      return data?.items || data?.providers || null;
     } catch {
       return null;
     }
@@ -114,9 +111,7 @@ export class MultiSourceService {
 
   public static async fetchSystemReadiness(): Promise<any | null> {
     try {
-      const res = await fetch('/api/system/readiness');
-      if (res.ok || res.status === 503) return await res.json();
-      return null;
+      return await apiFetch<any>('/api/system?mode=readiness', { timeoutMs: 5000, ttlMs: 30000 });
     } catch {
       return null;
     }

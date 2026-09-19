@@ -128,8 +128,8 @@ class MausamDataService {
 
       try {
         const [airRes, radarRes] = await Promise.allSettled([
-          fetch(`/api/air-quality?lat=${lat}&lon=${lng}`),
-          fetch(`/api/radar?lat=${lat}&lon=${lng}`),
+          fetch(`/api/weather?mode=air&lat=${lat}&lon=${lng}`),
+          fetch(`/api/radar?mode=metadata&lat=${lat}&lon=${lng}`),
         ]);
 
         if (airRes.status === 'fulfilled' && airRes.value.ok) {

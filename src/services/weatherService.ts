@@ -188,8 +188,8 @@ class WeatherService {
         // Try local same-origin proxy first (guaranteed no CORS or sandbox blocking)
         try {
           const [wRes, aRes] = await Promise.all([
-            fetch(`/api/proxy/open-meteo?${weatherQuery}`, { signal: controller.signal }),
-            fetch(`/api/proxy/air-quality?${airQuery}`, { signal: controller.signal }),
+            fetch(`/api/weather?mode=current&${weatherQuery}`, { signal: controller.signal }),
+            fetch(`/api/weather?mode=air&${airQuery}`, { signal: controller.signal }),
           ]);
           if (wRes.ok) weatherData = await wRes.json();
           if (aRes.ok) airData = await aRes.json();

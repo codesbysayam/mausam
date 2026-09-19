@@ -173,13 +173,13 @@ export const OpenDataApi: React.FC<OpenDataApiProps> = ({ onNavigateHome }) => {
 
           <div className="bg-[#0F141A] rounded border border-[#334155] p-3 font-mono text-xs mb-3 flex items-center justify-between">
             <span className="text-[#4FA8E0]">
-              GET /api/weather/current?state=Odisha&amp;city=Bhubaneswar
+              GET /api/weather?mode=current&amp;state=Odisha&amp;city=Bhubaneswar
             </span>
             <button
               type="button"
               onClick={() =>
                 handleCopy(
-                  'GET /api/weather/current?state=Odisha&city=Bhubaneswar',
+                  'GET /api/weather?mode=current&state=Odisha&city=Bhubaneswar',
                   'cur-ep'
                 )
               }
@@ -230,13 +230,13 @@ export const OpenDataApi: React.FC<OpenDataApiProps> = ({ onNavigateHome }) => {
 
           <div className="bg-[#0F141A] rounded border border-[#334155] p-3 font-mono text-xs mb-3 flex items-center justify-between">
             <span className="text-[#4FA8E0]">
-              GET /api/environment/aqi?state=Odisha&amp;city=Bhubaneswar
+              GET /api/weather?mode=air&amp;state=Odisha&amp;city=Bhubaneswar
             </span>
             <button
               type="button"
               onClick={() =>
                 handleCopy(
-                  'GET /api/environment/aqi?state=Odisha&city=Bhubaneswar',
+                  'GET /api/weather?mode=air&state=Odisha&city=Bhubaneswar',
                   'aqi-ep'
                 )
               }
@@ -321,13 +321,13 @@ export const OpenDataApi: React.FC<OpenDataApiProps> = ({ onNavigateHome }) => {
 
           <div className="bg-[#0F141A] rounded border border-[#334155] p-3 font-mono text-xs mb-2 flex items-center justify-between">
             <span className="text-[#4FA8E0]">
-              GET /api/weather/forecast?state=Odisha&amp;city=Bhubaneswar&amp;days=7
+              GET /api/weather?mode=forecast&amp;state=Odisha&amp;city=Bhubaneswar&amp;days=7
             </span>
             <button
               type="button"
               onClick={() =>
                 handleCopy(
-                  'GET /api/weather/forecast?state=Odisha&city=Bhubaneswar&days=7',
+                  'GET /api/weather?mode=forecast&state=Odisha&city=Bhubaneswar&days=7',
                   'fc-ep'
                 )
               }
@@ -349,13 +349,13 @@ export const OpenDataApi: React.FC<OpenDataApiProps> = ({ onNavigateHome }) => {
 
           <div className="bg-[#0F141A] rounded border border-[#334155] p-3 font-mono text-xs mb-3 flex items-center justify-between">
             <span className="text-[#4FA8E0]">
-              GET /api/weather/warnings?state=Odisha&amp;city=Bhubaneswar
+              GET /api/warnings?mode=current&amp;state=Odisha&amp;city=Bhubaneswar
             </span>
             <button
               type="button"
               onClick={() =>
                 handleCopy(
-                  'GET /api/weather/warnings?state=Odisha&city=Bhubaneswar',
+                  'GET /api/warnings?mode=current&state=Odisha&city=Bhubaneswar',
                   'warn-ep'
                 )
               }

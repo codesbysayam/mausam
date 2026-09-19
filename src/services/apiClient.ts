@@ -2,7 +2,8 @@
 // MAUSAM - Atmospheric Intelligence Platform
 // Centralized Resilient API Client
 // Handles fetch, timeout, AbortController, HTTP errors, JSON validation,
-// 429 cooldowns, 50x handling, network offline status, and in-flight deduplication
+// 429 cooldowns, 50x handling, network offline status, multi-tab coordination,
+// and in-flight request deduplication
 // ====================================================================
 
 export interface ApiFetchOptions extends RequestInit {
@@ -22,12 +23,33 @@ export interface ApiError {
   isTimeout: boolean;
 }
 
-// In-memory short client cache
+// In-memory client cache
 const clientCache = new Map<string, { data: any; expiresAt: number; savedAt: number }>();
 // In-flight request deduplication map
 const inFlightRequests = new Map<string, Promise<any>>();
 // 429 rate limit cooldown tracking
 let rateLimitCooldownUntil = 0;
+
+// Multi-tab coordination via BroadcastChannel when available in browser
+let tabChannel: BroadcastChannel | null = null;
+if (typeof window !== 'undefined' && typeof BroadcastChannel !== 'undefined') {
+  try {
+    tabChannel = new BroadcastChannel('mausam_tab_sync');
+    tabChannel.onmessage = (event) => {
+      if (event.data?.type === 'CACHE_SET' && event.data?.key && event.data?.value) {
+        clientCache.set(event.data.key, {
+          data: event.data.value,
+          expiresAt: Date.now() + (event.data.ttlMs || 30000),
+          savedAt: Date.now(),
+        });
+      } else if (event.data?.type === 'RATE_LIMITED') {
+        rateLimitCooldownUntil = Math.max(rateLimitCooldownUntil, event.data.until || (Date.now() + 30000));
+      }
+    };
+  } catch {
+    // Gracefully ignore if BroadcastChannel fails in restricted environments
+  }
+}
 
 export function isApiError(err: any): err is ApiError {
   return Boolean(err && err.isApiError);
@@ -111,6 +133,7 @@ export async function apiFetch<T = any>(
       if (!response.ok) {
         if (response.status === 429) {
           rateLimitCooldownUntil = Date.now() + 30000; // 30s cooldown
+          tabChannel?.postMessage({ type: 'RATE_LIMITED', until: rateLimitCooldownUntil });
         }
 
         // Try to serve stale cache if server error or rate limited
@@ -140,6 +163,13 @@ export async function apiFetch<T = any>(
           data,
           expiresAt: Date.now() + ttlMs,
           savedAt: Date.now(),
+        });
+
+        tabChannel?.postMessage({
+          type: 'CACHE_SET',
+          key: urlKey,
+          value: data,
+          ttlMs,
         });
       }
 

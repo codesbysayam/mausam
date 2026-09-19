@@ -393,7 +393,7 @@ export const HomeRadarPreview: React.FC<HomeRadarPreviewProps> = ({
 
       // 1. Try local same-origin proxy first (avoids browser CORS, rate limits, and network sandbox blocks)
       try {
-        const proxyRes = await fetch('/api/proxy/rainviewer', { signal });
+        const proxyRes = await fetch('/api/radar?mode=metadata', { signal });
         if (proxyRes.ok) {
           const json = await proxyRes.json();
           if (json?.radar?.past?.length) {

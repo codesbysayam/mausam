@@ -362,10 +362,8 @@ class WarningService {
       if (location?.coordinates?.lng) query.set('lng', String(location.coordinates.lng));
       if (forceRefresh) query.set('refresh', 'true');
 
-      let res = await fetch(`/api/warnings/current?${query.toString()}`);
-      if (!res.ok) {
-        res = await fetch(`/api/warnings?${query.toString()}`);
-      }
+      query.set('mode', 'current');
+      const res = await fetch(`/api/warnings?${query.toString()}`);
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`);
       }
@@ -415,7 +413,7 @@ class WarningService {
       return this.nationalCache.data;
     }
     try {
-      const res = await fetch('/api/warnings/national');
+      const res = await fetch('/api/warnings?mode=national');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       this.nationalCache = { data, timestamp: now };

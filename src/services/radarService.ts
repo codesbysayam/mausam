@@ -340,10 +340,7 @@ export async function fetchLiveRadarData(
   try {
     let data: any = null;
     try {
-      let serverRes = await fetch('/api/proxy/rainviewer');
-      if (!serverRes.ok) {
-        serverRes = await fetch('/api/radar');
-      }
+      let serverRes = await fetch('/api/radar?mode=metadata');
       if (serverRes.ok) {
         const json = await serverRes.json();
         if (json?.data?.host || json?.host) {
@@ -498,7 +495,7 @@ export async function loadRadarProduct(
 
   try {
     const res = await fetch(
-      `/api/radar?station=${encodeURIComponent(stationId)}&product=${encodeURIComponent(product)}`,
+      `/api/radar?mode=stations&station=${encodeURIComponent(stationId)}&product=${encodeURIComponent(product)}`,
       { signal }
     );
     if (!res.ok) {

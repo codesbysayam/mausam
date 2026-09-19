@@ -315,7 +315,7 @@ Ask any question below or tap a quick action to analyze rain risk, workout windo
       const timeoutId = setTimeout(() => controller.abort(), 10000);
 
       // Attempt server-side API call
-      const response = await fetch('/api/mausam/chat', {
+      const response = await fetch('/api/ai?mode=ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: controller.signal,

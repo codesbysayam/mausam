@@ -61,7 +61,7 @@ export class FrontendIMDClient {
 
     const fetchPromise = (async (): Promise<IMDResponse<T>> => {
       try {
-        const url = `/api/imd/${cleanEndpoint}${queryString ? `?${queryString}` : ''}`;
+        const url = `/api/weather?mode=imd&route=${cleanEndpoint}${queryString ? `&${queryString}` : ''}`;
         const res = await fetch(url, { signal: controller.signal });
         const json = await res.json();
 

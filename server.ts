@@ -9,6 +9,11 @@ import { realMausamRouter } from './server/routes/realMausamRoutes';
 import { warningsRouter } from './server/routes/warningsRoute';
 import { multiSourceRouter } from './server/routes/multiSourceRoutes';
 import { unifiedApiRouter } from './server/routes/unifiedApiRoutes';
+import weatherHandler from './api/weather';
+import warningsHandler from './api/warnings';
+import radarHandler from './api/radar';
+import systemHandler from './api/system';
+import aiHandler from './api/ai';
 import {
   buildMausamSystemInstruction,
   generateMausamGroundedFallback,
@@ -105,6 +110,13 @@ async function startServer() {
   app.get('/api/health', (req, res) => {
     res.json({ status: 'ok', time: new Date().toISOString() });
   });
+
+  // Consolidated Vercel Serverless Gateways (5-function architecture)
+  app.all('/api/weather', (req, res) => weatherHandler(req, res));
+  app.all('/api/warnings', (req, res) => warningsHandler(req, res));
+  app.all('/api/radar', (req, res) => radarHandler(req, res));
+  app.all('/api/system', (req, res) => systemHandler(req, res));
+  app.all('/api/ai', (req, res) => aiHandler(req, res));
 
   // Severe Weather Government Warning Pipeline Route (NDMA SACHET + IMD)
   app.use('/api/warnings', warningsRouter);

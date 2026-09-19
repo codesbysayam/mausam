@@ -30,7 +30,7 @@ export function useNetworkStatus() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 4000);
       
-      const response = await fetch('/api/weather/current?city=Delhi&state=Delhi', {
+      const response = await fetch('/api/weather?mode=current&city=Delhi&state=Delhi', {
         method: 'HEAD',
         signal: controller.signal,
         cache: 'no-store',

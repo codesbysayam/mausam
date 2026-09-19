@@ -222,7 +222,8 @@ class ClientAuthoritativeService {
       if (currentTelemetry?.sunrise) params.append('sunrise', currentTelemetry.sunrise);
       if (currentTelemetry?.sunset) params.append('sunset', currentTelemetry.sunset);
 
-      const res = await fetch(`/api/authoritative/persona-bundle?${params.toString()}`);
+      params.append('mode', 'bundle');
+      const res = await fetch(`/api/weather?${params.toString()}`);
       if (!res.ok) {
         throw new Error(`Authoritative server endpoint responded with status ${res.status}`);
       }

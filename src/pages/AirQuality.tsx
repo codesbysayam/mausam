@@ -250,7 +250,7 @@ export const AirQualityPage: React.FC<AirQualityPageProps> = ({
     const fetchHistory = async () => {
       try {
         const response = await fetch(
-          `/api/air-quality/history?stationId=${encodeURIComponent(stationId)}&location=${encodeURIComponent(activeLoc)}&lat=${lat}&lon=${lon}&date=${selectedDate}`,
+          `/api/weather?mode=air&stationId=${encodeURIComponent(stationId)}&location=${encodeURIComponent(activeLoc)}&lat=${lat}&lon=${lon}&date=${selectedDate}`,
           { signal: controller.signal }
         );
 

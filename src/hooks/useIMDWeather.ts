@@ -90,7 +90,7 @@ export function useIMDWeather(targetLocation?: Partial<IMDLocationInfo>): IMDWea
       const [currentRes, forecastRes, warningsRes] = await Promise.allSettled([
         imdClient.getCurrentWeather(station.id),
         imdClient.getCityForecast(station.id),
-        fetch(`/api/imd/district-warning?id=${station.id}`).then((r) => r.json()),
+        fetch(`/api/weather?mode=imd&route=district-warning&id=${station.id}`).then((r) => r.json()),
       ]);
 
       if (!isMountedRef.current) return;

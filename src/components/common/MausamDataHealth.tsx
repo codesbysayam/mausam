@@ -85,7 +85,7 @@ export const MausamDataHealth: React.FC<MausamDataHealthProps> = ({
     setConfigSaveResult(null);
     try {
       const keyToSave = customKey !== undefined ? customKey : configKeyInput.trim();
-      const res = await fetch('/api/system/config/provider', {
+      const res = await fetch('/api/system?mode=config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -136,10 +136,11 @@ export interface IMDStateInfo {
 }
 
 class IMDService {
-  private baseApiUrl = '/api/imd';
-
   private async fetchApi<T>(endpoint: string, params: Record<string, string | number | undefined> = {}): Promise<IMDResponse<T>> {
-    const url = new URL(this.baseApiUrl + endpoint, window.location.origin);
+    const cleanEndpoint = endpoint.replace(/^\//, '');
+    const url = new URL('/api/weather', window.location.origin);
+    url.searchParams.set('mode', 'imd');
+    url.searchParams.set('route', cleanEndpoint);
     Object.entries(params).forEach(([k, v]) => {
       if (v !== undefined && v !== null && v !== '') {
         url.searchParams.set(k, String(v));
