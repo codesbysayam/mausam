@@ -312,6 +312,7 @@ export const MausamDataHealth: React.FC<MausamDataHealthProps> = ({
           border: 'border-slate-700/80 hover:border-slate-600',
           bg: 'bg-slate-900/40',
         };
+      case 'OFFLINE':
       case 'UNAVAILABLE':
         return {
           label: 'Unavailable',
@@ -408,7 +409,12 @@ export const MausamDataHealth: React.FC<MausamDataHealthProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
         {coreActiveProviders.map((p) => {
           const detail = p.detail;
-          const status = detail?.status || (p.id === 'openMeteo' || p.id === 'osm' ? 'OPERATIONAL' : 'NOT_CONFIGURED');
+          const isZeroKeyProvider = p.id === 'openMeteo' || p.id === 'osm' || p.id === 'sachet' || p.id === 'radar';
+          let effectiveStatus: string | undefined = detail?.status;
+          if (isZeroKeyProvider && (!effectiveStatus || effectiveStatus === 'NOT_CONFIGURED')) {
+            effectiveStatus = (detail as any)?.operational === false ? 'UNAVAILABLE' : 'OPERATIONAL';
+          }
+          const status = effectiveStatus || (isZeroKeyProvider ? 'OPERATIONAL' : 'NOT_CONFIGURED');
           const badge = getStatusConfig(status);
 
           return (

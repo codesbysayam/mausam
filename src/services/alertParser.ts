@@ -2,7 +2,14 @@ import { LocationRecord } from '../types';
 import { StandardizedWarningResponse, warningService } from './warningService';
 
 export type AlertCenterUIState =
+  | 'LOADING'
+  | 'OPERATIONAL'
+  | 'OPERATIONAL_WITH_FALLBACK'
+  | 'NO_ACTIVE_WARNINGS'
   | 'NO_ACTIVE_WARNING'
+  | 'STALE_DATA'
+  | 'PROVIDER_UNAVAILABLE'
+  | 'ERROR'
   | 'WATCH_ADVISORY'
   | 'ORANGE_ALERT'
   | 'RED_ALERT'
@@ -329,10 +336,10 @@ export function mapWarningResponseToAlertCenter(
     };
   }
 
-  // 2. Check Data Unavailable / Network Failure
-  if (raw.state === 'DATA_UNAVAILABLE') {
+  // 2. Check Data Unavailable / Provider Failure (NEVER RED ALERT, NEVER GREEN)
+  if (raw.state === 'DATA_UNAVAILABLE' || raw.status === 'UNAVAILABLE') {
     return {
-      uiState: 'DATA_UNAVAILABLE',
+      uiState: 'PROVIDER_UNAVAILABLE',
       statusBadge: {
         label: 'DATA UNAVAILABLE',
         color: 'neutral',
@@ -341,17 +348,17 @@ export function mapWarningResponseToAlertCenter(
       severity: 'neutral',
       severityText: 'Unavailable',
       scope: 'LOCAL',
-      scopeLabel: 'DATA FEED',
+      scopeLabel: 'OFFICIAL WARNING FEED',
       hazardType: 'general',
-      hazardHeadline: 'WARNING DATA TEMPORARILY UNAVAILABLE',
+      hazardHeadline: 'OFFICIAL WARNING FEED UNAVAILABLE',
       regionSubdivision: locName,
       affectedDistricts: [],
       affectedCount: 0,
-      summary: 'Official real-time warning server is currently unreachable. Surface AWS telemetry and satellite radar remain operational.',
+      summary: 'Weather telemetry remains operational. Official real-time warning feed from NDMA / SACHET is temporarily unreachable.',
       metrics: {
         affectedText: 'Unavailable',
         severityText: 'Unavailable',
-        validUntilText: 'Unavailable',
+        validUntilText: 'N/A',
         issuedAtText: raw.issuedAt || 'Unavailable',
       },
       timeline: null,
@@ -361,9 +368,53 @@ export function mapWarningResponseToAlertCenter(
         recommendedActions: [],
       },
       trust: {
-        source: raw.source && raw.source !== 'None' ? raw.source : 'IMD Warning Service',
+        source: raw.source && raw.source !== 'None' ? raw.source : 'SACHET/NDMA',
         updatedAt: raw.updatedAt || 'Recent',
         status: 'UNAVAILABLE',
+        isLiveTelemetry: false,
+      },
+      additionalActiveCount: 0,
+      isExpired: false,
+      rawResponse: raw,
+    };
+  }
+
+  // 2b. Check Stale Cached Data
+  const isStale = raw.status === 'STALE' || raw.severityLabel?.includes('CACHED');
+  if (isStale && (raw.state === 'NO_ACTIVE_WARNING' || !raw.hazardHeadline || raw.hazardHeadline.includes('NO ACTIVE'))) {
+    return {
+      uiState: 'STALE_DATA',
+      statusBadge: {
+        label: 'NORMAL',
+        color: 'green',
+        pulse: false,
+      },
+      severity: 'green',
+      severityText: 'CACHED / NORMAL',
+      scope: 'LOCAL',
+      scopeLabel: 'CACHED / LAST UPDATED',
+      hazardType: 'routine',
+      hazardHeadline: 'NO ACTIVE OFFICIAL WARNINGS (CACHED)',
+      regionSubdivision: locName,
+      affectedDistricts: [],
+      affectedCount: 0,
+      summary: `Cached bulletin: No active official warnings for ${locName}. Last updated: ${raw.updatedAt || 'Recent'}.`,
+      metrics: {
+        affectedText: 'None',
+        severityText: 'NORMAL',
+        validUntilText: raw.validUntil && raw.validUntil !== 'N/A' ? raw.validUntil : 'Next 24 Hours',
+        issuedAtText: raw.issuedAt || 'Recent',
+      },
+      timeline: null,
+      actions: {
+        canViewFullWarning: true,
+        hasSafetyGuidance: false,
+        recommendedActions: [],
+      },
+      trust: {
+        source: raw.source || 'NDMA/SACHET',
+        updatedAt: raw.updatedAt || 'Recent',
+        status: 'STALE',
         isLiveTelemetry: false,
       },
       additionalActiveCount: 0,

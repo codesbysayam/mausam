@@ -226,12 +226,19 @@ export const HomeSevereWeatherStrip: React.FC<HomeSevereWeatherStripProps> = ({
   const isActiveAlert =
     currentData.uiState === 'RED_ALERT' ||
     currentData.uiState === 'ORANGE_ALERT' ||
-    currentData.uiState === 'WATCH_ADVISORY';
+    currentData.uiState === 'WATCH_ADVISORY' ||
+    currentData.uiState === 'OPERATIONAL' ||
+    currentData.uiState === 'OPERATIONAL_WITH_FALLBACK';
+
+  const isUnavailable =
+    currentData.uiState === 'PROVIDER_UNAVAILABLE' ||
+    currentData.uiState === 'DATA_UNAVAILABLE';
 
   // ─────────────────────────────────────────────────────────────
-  // 9. NO-WARNING STATE / ALL CLEAR (Calm Blue/Green Visual Treatment)
+  // 9. NO-WARNING STATE / ALL CLEAR (Calm Green Visual Treatment)
+  // Allowed ONLY when valid official feed responded with 0 warnings!
   // ─────────────────────────────────────────────────────────────
-  if (!isActiveAlert && currentData.uiState !== 'DATA_UNAVAILABLE' && currentData.uiState !== 'NOT_APPLICABLE') {
+  if (!isActiveAlert && !isUnavailable && currentData.uiState !== 'NOT_APPLICABLE') {
     return (
       <section
         id="severe-weather-alert-center"
@@ -257,7 +264,7 @@ export const HomeSevereWeatherStrip: React.FC<HomeSevereWeatherStripProps> = ({
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-[10px] sm:text-[11px] font-bold font-mono tracking-wider uppercase bg-[#10B981]/15 text-[#34D399] border border-[#10B981]/30 shrink-0">
                 <Check className="w-3.5 h-3.5" />
-                <span>NORMAL</span>
+                <span>ALL CLEAR</span>
               </span>
             </div>
           </div>
@@ -273,12 +280,12 @@ export const HomeSevereWeatherStrip: React.FC<HomeSevereWeatherStripProps> = ({
               </div>
 
               <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
-                NO ACTIVE SEVERE WEATHER WARNING
+                NO ACTIVE OFFICIAL WARNINGS
               </h3>
 
               <p className="text-xs sm:text-sm text-[#94A3B8] leading-relaxed max-w-2xl">
                 {currentData.summary ||
-                  `No official severe weather warning is currently reported for ${currentData.regionSubdivision}. Atmospheric parameters and convective indices remain within normal seasonal limits.`}
+                  `Verified official disaster bulletins report 0 active warnings for ${currentData.regionSubdivision}. Atmospheric parameters and convective indices remain within normal seasonal limits.`}
               </p>
             </div>
 
@@ -312,7 +319,7 @@ export const HomeSevereWeatherStrip: React.FC<HomeSevereWeatherStripProps> = ({
               <span>·</span>
               <span>Updated: {currentData.trust.updatedAt}</span>
               <span>·</span>
-              <span className="text-[#34D399] font-medium">Status: Routine Cycle</span>
+              <span className="text-[#34D399] font-medium">Status: Live Verified Feed</span>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -389,9 +396,10 @@ export const HomeSevereWeatherStrip: React.FC<HomeSevereWeatherStripProps> = ({
   }
 
   // ─────────────────────────────────────────────────────────────
-  // DATA UNAVAILABLE: Offline or server error (NEVER RED ALERT!)
+  // OFFICIAL WARNING FEED UNAVAILABLE: Offline or server error
+  // (NEVER RED ALERT, NEVER GREEN ALL CLEAR)
   // ─────────────────────────────────────────────────────────────
-  if (currentData.uiState === 'DATA_UNAVAILABLE') {
+  if (isUnavailable) {
     return (
       <section
         id="severe-weather-alert-center"
@@ -401,23 +409,27 @@ export const HomeSevereWeatherStrip: React.FC<HomeSevereWeatherStripProps> = ({
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2.5 text-[#94A3B8]">
-              <AlertTriangle className="w-4.5 h-4.5 shrink-0" />
+              <AlertTriangle className="w-4.5 h-4.5 shrink-0 text-[#EAB308]" />
               <h2 className="text-xs font-bold tracking-wider uppercase text-[#E2E8F0]">
                 WEATHER ALERT CENTER
               </h2>
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded text-[10px] sm:text-[11px] font-bold font-mono tracking-wider uppercase bg-[#64748B]/15 text-[#94A3B8] border border-[#64748B]/30">
-                ⚠ DATA UNAVAILABLE
+                OFFICIAL WARNING FEED UNAVAILABLE
               </span>
             </div>
             <div className="text-sm font-semibold text-white mt-1">
-              Warning data temporarily unavailable.
+              Weather telemetry remains operational.
             </div>
-            <p className="text-xs text-[#94A3B8]">
-              Official real-time warning feed is currently unreachable. Surface telemetry and NWP forecasts remain active.
-            </p>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#94A3B8] mt-0.5">
+              <span>Last official warning sync: <strong className="text-[#CBD5E1] font-mono">{currentData.trust.updatedAt || 'Recent'}</strong></span>
+              <span>•</span>
+              <span>Source: <strong className="text-[#CBD5E1]">{currentData.trust.source || 'SACHET/NDMA'}</strong></span>
+              <span>•</span>
+              <span>Status: <strong className="text-amber-400">Temporarily unreachable</strong></span>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={() => fetchWarningData(true)}
@@ -432,7 +444,7 @@ export const HomeSevereWeatherStrip: React.FC<HomeSevereWeatherStripProps> = ({
               onClick={onNavigateToWarnings}
               className="inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#1E293B] hover:bg-[#334155] border border-[#334155] text-xs font-semibold text-[#E2E8F0] transition-colors cursor-pointer"
             >
-              <span>View Warnings Archive</span>
+              <span>View Warning Archive</span>
               <ChevronRight className="w-4 h-4 text-[#94A3B8]" />
             </button>
           </div>

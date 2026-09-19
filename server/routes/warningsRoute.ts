@@ -45,6 +45,8 @@ export interface StandardizedWarningResponse {
     resolvedState?: string;
     subdivision?: string;
     isInternational?: boolean;
+    isCached?: boolean;
+    [key: string]: any;
   };
 }
 
@@ -62,7 +64,7 @@ const warningsCache = new Map<string, CacheEntry>();
 const inFlightRequests = new Map<string, Promise<StandardizedWarningResponse>>();
 
 // Clean up stale cache periodically
-setInterval(() => {
+const cleanupTimer = setInterval(() => {
   const now = Date.now();
   for (const [key, entry] of warningsCache.entries()) {
     if (now - entry.timestamp > CACHE_TTL_MS * 5) {
@@ -70,6 +72,9 @@ setInterval(() => {
     }
   }
 }, 120 * 1000);
+if (typeof cleanupTimer.unref === 'function') {
+  cleanupTimer.unref();
+}
 
 // ==========================================
 // Administrative Area Resolution
@@ -501,6 +506,7 @@ export async function resolveLocationWarning(params: {
   });
 
   if (sachetResult.status === 'SUCCESS') {
+    const isCachedFeed = !!(sachetResult as any).isCached;
     if (sachetResult.matchedWarnings.length > 0) {
       const highest = sachetResult.matchedWarnings[0];
       const sev = (highest.severity || 'ORANGE').toLowerCase() as 'yellow' | 'orange' | 'red';
@@ -513,7 +519,7 @@ export async function resolveLocationWarning(params: {
       return {
         state: uiState,
         severity: sev,
-        severityLabel,
+        severityLabel: isCachedFeed ? `CACHED / ${severityLabel}` : severityLabel,
         hazardHeadline: (highest.headline || highest.event || 'SEVERE WEATHER ALERT').toUpperCase(),
         hazardLabel: highest.event || 'Severe Weather',
         affectedAreasHeadline: highest.areas.join(', ') || locationLabel,
@@ -522,8 +528,8 @@ export async function resolveLocationWarning(params: {
         validUntil: highest.expires || 'Next 24 Hours',
         issuedAt: highest.issuedAt || updatedTimestamp,
         source: 'NDMA/SACHET',
-        updatedAt: updatedTimestamp,
-        status: 'LIVE',
+        updatedAt: isCachedFeed && sachetResult.lastSync ? `CACHED / LAST UPDATED ${sachetResult.lastSync}` : updatedTimestamp,
+        status: isCachedFeed ? 'STALE' : 'LIVE',
         isLocal: true,
         recommendedActions: [
           highest.instruction || 'Stay indoors and avoid travel through inundation zones or exposed terrain.',
@@ -541,24 +547,25 @@ export async function resolveLocationWarning(params: {
           resolvedState: area.state,
           subdivision: area.subdivision,
           isInternational: false,
+          isCached: isCachedFeed,
         },
       };
     }
 
-    // NDMA SACHET feed is live and verified, but this location has NO active warning!
+    // NDMA SACHET feed is live and verified, but this location has ZERO active official warnings!
     return {
       state: 'NO_ACTIVE_WARNING',
       severity: 'green',
       severityLabel: 'ALL CLEAR',
-      hazardHeadline: 'WEATHER ALERT CENTER: ALL CLEAR',
+      hazardHeadline: 'NO ACTIVE OFFICIAL WARNINGS',
       affectedAreasHeadline: locationLabel,
       affectedDistricts: [],
-      description: `No active meteorological or disaster alerts issued by NDMA / SACHET for ${locationLabel}. Atmospheric conditions and synoptic parameters are within seasonal routine limits across this division.`,
+      description: `Verified official NDMA / SACHET disaster bulletin reports 0 active severe weather warnings for ${locationLabel}. Atmospheric conditions and synoptic parameters are within seasonal routine limits across this division.`,
       validUntil: 'Next 24 Hours',
       issuedAt: sachetResult.lastSync || updatedTimestamp,
       source: 'NDMA/SACHET',
-      updatedAt: updatedTimestamp,
-      status: 'LIVE',
+      updatedAt: isCachedFeed && sachetResult.lastSync ? `CACHED / LAST UPDATED ${sachetResult.lastSync}` : updatedTimestamp,
+      status: isCachedFeed ? 'STALE' : 'LIVE',
       isLocal: true,
       metadata: {
         lat,
@@ -567,20 +574,21 @@ export async function resolveLocationWarning(params: {
         resolvedState: area.state,
         subdivision: area.subdivision,
         isInternational: false,
+        isCached: isCachedFeed,
       },
     };
   }
 
-  // SACHET unreachable and no valid cache exists
+  // Official feed unreachable: Return truthful PROVIDER_UNAVAILABLE state (NEVER GREEN, NEVER CLAIM NO WARNINGS)
   return {
     state: 'DATA_UNAVAILABLE',
     severity: 'neutral',
-    severityLabel: 'DATA UNAVAILABLE',
-    hazardHeadline: 'WARNING DATA TEMPORARILY UNAVAILABLE',
+    severityLabel: 'OFFICIAL WARNING FEED UNAVAILABLE',
+    hazardHeadline: 'OFFICIAL WARNING FEED UNAVAILABLE',
     affectedAreasHeadline: locationLabel,
     affectedDistricts: [area.district],
-    description: 'Official real-time warning feed is temporarily unreachable. Surface telemetry and NWP forecasts remain active.',
-    validUntil: 'Routine Cycle',
+    description: 'Weather telemetry remains operational. Official real-time warning feed from NDMA / SACHET is temporarily unreachable.',
+    validUntil: 'N/A',
     issuedAt: updatedTimestamp,
     source: 'NDMA/SACHET',
     updatedAt: updatedTimestamp,

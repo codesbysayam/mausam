@@ -8,9 +8,44 @@ import './index.css';
 
 console.log('[MAUSAM] main.tsx initializing...');
 
+// Helper to classify development-only Vite HMR socket errors
+function isDevelopmentHMRSocketError(error: any): boolean {
+  if (!error) return false;
+  const message = typeof error === 'string' 
+    ? error 
+    : (error.message || error.reason || error.error?.message || '');
+  
+  if (
+    message.includes('WebSocket closed without opened') ||
+    message.includes('failed to connect to websocket') ||
+    message.includes('[vite] failed to connect to websocket') ||
+    (message.includes('WebSocket') && message.includes('closed')) ||
+    (message.includes('vite') && message.includes('websocket'))
+  ) {
+    return true;
+  }
+
+  // Check if error event target is a WebSocket connection to Vite dev server
+  const target = error.target;
+  if (target && (target instanceof WebSocket || Object.prototype.toString.call(target) === '[object WebSocket]')) {
+    const url = target.url || '';
+    if (url.includes('vite') || url.includes(':3000') || url.includes('/vite-hmr') || !url) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 // Global runtime error monitor for diagnostics
 if (typeof window !== 'undefined') {
   window.addEventListener('error', (e) => {
+    if (isDevelopmentHMRSocketError(e) || isDevelopmentHMRSocketError(e.error)) {
+      e.stopImmediatePropagation();
+      e.preventDefault();
+      return;
+    }
+
     if (
       e.message &&
       (e.message.includes('ResizeObserver loop completed with undelivered notifications') ||
@@ -25,6 +60,13 @@ if (typeof window !== 'undefined') {
 
   window.addEventListener('unhandledrejection', (e) => {
     const reason = e.reason;
+
+    if (isDevelopmentHMRSocketError(reason)) {
+      e.stopImmediatePropagation();
+      e.preventDefault();
+      return;
+    }
+
     const isAbort =
       reason?.name === 'AbortError' ||
       reason?.message?.includes?.('aborted') ||

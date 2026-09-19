@@ -60,6 +60,10 @@ export class CacheService {
   public clear(): void {
     this.store.clear();
   }
+
+  public getEntryCount(): number {
+    return this.store.size;
+  }
 }
 
 export const serverCache = CacheService.getInstance();
