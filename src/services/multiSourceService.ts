@@ -36,6 +36,9 @@ export interface ProviderHealthDetail {
 }
 
 export interface SystemHealthResponse {
+  buildId?: string;
+  gitCommit?: string;
+  warningServiceVersion?: string;
   timestamp: string;
   database: {
     configured: boolean;

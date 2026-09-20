@@ -636,6 +636,17 @@ export const MausamDataHealth: React.FC<MausamDataHealthProps> = ({
             </span>
           </div>
         </div>
+
+        {/* Diagnostic Build Identifiers (Requirement 1: Display only in diagnostics, not prominently in UI) */}
+        <div className="mt-3 pt-2 border-t border-[#1E3852]/60 flex flex-wrap items-center justify-between gap-2 text-[10px] text-[#8EA3B8] font-mono">
+          <div className="flex items-center gap-3">
+            <span>BUILD: <strong className="text-[#D6E4F0] font-medium">{healthData?.buildId || 'MAUSAM-V1.4.2-20260920'}</strong></span>
+            <span>SHA: <strong className="text-[#D6E4F0] font-medium">{healthData?.gitCommit || 'synoptic-2026-09-20'}</strong></span>
+          </div>
+          <div>
+            <span>WARN SVC: <strong className="text-[#18A7E8] font-medium">{healthData?.warningServiceVersion || '2.4.0-sachet-canonical'}</strong></span>
+          </div>
+        </div>
       </div>
 
       {/* 4. Interactive Provider Diagnostics Modal */}

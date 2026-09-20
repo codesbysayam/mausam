@@ -2,6 +2,18 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
+      "source": "/api/system/health",
+      "destination": "/api/system?mode=health"
+    },
+    {
+      "source": "/api/system/providers",
+      "destination": "/api/system?mode=providers"
+    },
+    {
+      "source": "/api/system/readiness",
+      "destination": "/api/system?mode=readiness"
+    },
+    {
       "source": "/((?!api/.*).*)",
       "destination": "/index.html"
     }

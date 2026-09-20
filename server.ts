@@ -116,6 +116,18 @@ async function startServer() {
   app.all('/api/warnings', (req, res) => warningsHandler(req, res));
   app.all('/api/radar', (req, res) => radarHandler(req, res));
   app.all('/api/system', (req, res) => systemHandler(req, res));
+  app.all('/api/system/health', (req, res) => {
+    req.query = { ...(req.query || {}), mode: 'health' };
+    return systemHandler(req, res);
+  });
+  app.all('/api/system/providers', (req, res) => {
+    req.query = { ...(req.query || {}), mode: 'providers' };
+    return systemHandler(req, res);
+  });
+  app.all('/api/system/readiness', (req, res) => {
+    req.query = { ...(req.query || {}), mode: 'readiness' };
+    return systemHandler(req, res);
+  });
   app.all('/api/ai', (req, res) => aiHandler(req, res));
 
   // Severe Weather Government Warning Pipeline Route (NDMA SACHET + IMD)
