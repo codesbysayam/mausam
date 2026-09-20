@@ -5,8 +5,8 @@
 // Strictly truthful: no fake frames, no fabricated echoes, UNAVAILABLE if offline
 // ====================================================================
 
-import { radarService } from '../src/server/services/radarService';
-import { sendJson, parseQuery } from '../src/server/apiUtils';
+import { radarService } from '../src/server/services/radarService.ts';
+import { sendJson, parseQuery } from '../src/server/apiUtils.ts';
 
 export default async function handler(req: any, res: any) {
   if (req.method === 'OPTIONS') {

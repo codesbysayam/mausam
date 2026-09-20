@@ -5,8 +5,8 @@
 // current | forecast | hourly | daily | air | marine | bundle | search | imd
 // ====================================================================
 
-import { weatherService } from '../src/server/services/weatherService';
-import { sendJson, parseQuery } from '../src/server/apiUtils';
+import { weatherService } from '../src/server/services/weatherService.ts';
+import { sendJson, parseQuery } from '../src/server/apiUtils.ts';
 
 export default async function handler(req: any, res: any) {
   if (req.method === 'OPTIONS') {

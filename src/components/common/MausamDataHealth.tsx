@@ -409,12 +409,28 @@ export const MausamDataHealth: React.FC<MausamDataHealthProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3">
         {coreActiveProviders.map((p) => {
           const detail = p.detail;
-          const isZeroKeyProvider = p.id === 'openMeteo' || p.id === 'osm' || p.id === 'sachet' || p.id === 'radar';
-          let effectiveStatus: string | undefined = detail?.status;
-          if (isZeroKeyProvider && (!effectiveStatus || effectiveStatus === 'NOT_CONFIGURED')) {
-            effectiveStatus = (detail as any)?.operational === false ? 'UNAVAILABLE' : 'OPERATIONAL';
+          let status: string = 'NOT_CONFIGURED';
+
+          if (p.id === 'sachet') {
+            // Strictly truthful: SACHET is Operational ONLY if actual alert feed is fetched & parsed
+            if (detail?.status) {
+              status = detail.status;
+            } else if ((detail as any)?.operational === true) {
+              status = 'OPERATIONAL';
+            } else if ((detail as any)?.operational === false) {
+              status = 'UNAVAILABLE';
+            } else {
+              status = isRefreshing ? 'STALE' : 'UNAVAILABLE';
+            }
+          } else {
+            const isZeroKeyProvider = p.id === 'openMeteo' || p.id === 'osm' || p.id === 'radar';
+            let effectiveStatus: string | undefined = detail?.status;
+            if (isZeroKeyProvider && (!effectiveStatus || effectiveStatus === 'NOT_CONFIGURED')) {
+              effectiveStatus = (detail as any)?.operational === false ? 'UNAVAILABLE' : 'OPERATIONAL';
+            }
+            status = effectiveStatus || (isZeroKeyProvider ? 'OPERATIONAL' : 'NOT_CONFIGURED');
           }
-          const status = effectiveStatus || (isZeroKeyProvider ? 'OPERATIONAL' : 'NOT_CONFIGURED');
+
           const badge = getStatusConfig(status);
 
           return (

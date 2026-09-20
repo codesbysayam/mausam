@@ -4,8 +4,8 @@
 // Truthful reporting: missing keys report NOT_CONFIGURED, down feeds report OFFLINE
 // ====================================================================
 
-import { serverCache } from './cacheService';
-import { sachetService } from '../../../server/services/sachetService';
+import { serverCache } from './cacheService.ts';
+import { sachetService } from '../../../server/services/sachetService.ts';
 
 export interface ProviderDiagnostic {
   id: string;
@@ -111,15 +111,29 @@ export class ProviderService {
     const sachetProbe = (async (): Promise<ProviderDiagnostic> => {
       const start = performance.now();
       try {
-        await sachetService.fetchAllActiveWarnings();
+        const normalized = await sachetService.fetchNormalizedResult();
         const latencyMs = Math.round(performance.now() - start);
+
+        if (normalized.status === 'unavailable') {
+          return {
+            id: 'sachet',
+            name: 'NDMA / SACHET Disaster Alert Feed',
+            category: 'DISASTER',
+            configured: true,
+            operational: false,
+            status: 'OFFLINE',
+            latencyMs,
+            error: normalized.error || 'Alert feed unreachable',
+          };
+        }
+
         return {
           id: 'sachet',
           name: 'NDMA / SACHET Disaster Alert Feed',
           category: 'DISASTER',
           configured: true,
           operational: true,
-          status: 'OPERATIONAL',
+          status: normalized.status === 'stale' ? 'DEGRADED' : 'OPERATIONAL',
           latencyMs,
         };
       } catch (err: any) {
@@ -308,18 +322,27 @@ export class ProviderService {
       'https://open-meteo.com'
     );
 
-    const sachetDetail = buildDetail(
-      'SACHET',
-      'NDMA / SACHET Disaster Alert Feed',
-      'GOVERNMENT',
-      p.sachet,
-      'National CAP Disaster Warning & Alert Telemetry',
-      'NDMA / SACHET',
-      'https://sachet.ndma.gov.in',
-      'National Disaster Management Authority',
-      null,
-      'https://sachet.ndma.gov.in'
-    );
+    const sachetNormalized = await sachetService.fetchNormalizedResult();
+    const sachetDetail = {
+      ...buildDetail(
+        'SACHET',
+        'NDMA / SACHET Disaster Alert Feed',
+        'GOVERNMENT',
+        p.sachet,
+        'National CAP Disaster Warning & Alert Telemetry',
+        'NDMA / SACHET',
+        'https://sachet.ndma.gov.in/cap_public_website/rss/rss_india.xml',
+        'National Disaster Management Authority',
+        null,
+        'https://sachet.ndma.gov.in'
+      ),
+      last_sync: sachetNormalized.parsedAt || sachetNormalized.lastSuccessfulAt,
+      last_attempt: sachetNormalized.lastAttemptAt,
+      active_alerts: sachetNormalized.activeAlerts,
+      alerts_received: sachetNormalized.alertsReceived,
+      alerts_parsed: sachetNormalized.alertsParsed,
+      diagnostics: sachetNormalized.diagnostics,
+    };
 
     const radarDetail = buildDetail(
       'RADAR',

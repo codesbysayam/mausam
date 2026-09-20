@@ -76,6 +76,24 @@ export interface LocationRecord {
 
 export type RadarLayer = 'radar' | 'satellite' | 'wind' | 'temp' | 'aqi';
 
+export interface WeatherPin {
+  id: string;
+  lat: number;
+  lng: number;
+  label: string;
+  city?: string;
+  district?: string;
+  state?: string;
+  temperature: number;
+  feelsLike?: number;
+  condition: string;
+  humidity?: number;
+  windSpeed?: number;
+  accuracyMeters?: number | null;
+  timestamp: string;
+  rawTimestamp: number;
+}
+
 export interface WeatherStation {
   id: string;
   name: string;

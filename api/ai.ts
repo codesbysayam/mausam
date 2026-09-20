@@ -5,8 +5,8 @@
 // Graceful fallback, no 429 retry loops, secrets protected server-side
 // ====================================================================
 
-import { aiService } from '../src/server/services/aiService';
-import { sendJson, parseQuery, parseBody } from '../src/server/apiUtils';
+import { aiService } from '../src/server/services/aiService.ts';
+import { sendJson, parseQuery, parseBody } from '../src/server/apiUtils.ts';
 
 export default async function handler(req: any, res: any) {
   if (req.method === 'OPTIONS') {

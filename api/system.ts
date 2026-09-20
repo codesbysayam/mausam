@@ -5,8 +5,8 @@
 // Truthful reporting: unconfigured keys report NOT_CONFIGURED, unreachable feeds report OFFLINE
 // ====================================================================
 
-import { providerService } from '../src/server/services/providerService';
-import { sendJson, parseQuery, parseBody } from '../src/server/apiUtils';
+import { providerService } from '../src/server/services/providerService.ts';
+import { sendJson, parseQuery, parseBody } from '../src/server/apiUtils.ts';
 
 export default async function handler(req: any, res: any) {
   if (req.method === 'OPTIONS') {
