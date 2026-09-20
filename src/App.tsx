@@ -184,11 +184,14 @@ export default function App() {
     };
   }, []);
 
-  // Optional audio alert monitor: triggers distinct audible chime when severe alert count increases
+  // Official meteorological audio alert monitor: triggers for genuinely new active alerts
   const { isAudioAlertEnabled } = useAlertAudio({
-    alertCount: weatherBundle.alerts?.length || 0,
-    onAlertIncrease: (newCount, oldCount) => {
-      setGlobalAlertSurge({ newCount, oldCount });
+    warnings: weatherBundle.alerts,
+    onNewAlertTriggered: (newAlert) => {
+      setGlobalAlertSurge({
+        newCount: weatherBundle.alerts?.length || 1,
+        oldCount: 0,
+      });
       setTimeout(() => setGlobalAlertSurge(null), 8000);
     },
   });

@@ -1,110 +1,109 @@
 // ====================================================================
 // MAUSAM - Atmospheric Intelligence Platform
 // useAlertAudio Hook - Severe Weather Notification Audio
-// Monitors alert count increases and triggers distinct emergency audio
+// Seamless React binding for AlertAudioService with real warning checks
 // ====================================================================
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   alertAudioService,
-  AlertSoundType,
-  ALERT_SOUND_PROFILES,
-  AlertSoundProfile,
+  AlertAudioState,
+  AlertSeverityThreshold,
 } from '../services/alertAudioService';
 
 interface UseAlertAudioOptions {
-  alertCount?: number;
-  onAlertIncrease?: (newCount: number, oldCount: number) => void;
+  // Optional list of live warnings to monitor for new incoming alerts
+  warnings?: Array<{
+    id?: string;
+    bulletinNo?: string;
+    title?: string;
+    state?: string;
+    stateCode?: string;
+    hazardCategory?: string;
+    hazardLabel?: string;
+    severity?: string;
+    issuedAt?: string;
+    source?: string;
+  }>;
+  onNewAlertTriggered?: (warning: any) => void;
 }
 
 export function useAlertAudio(options?: UseAlertAudioOptions) {
-  const [isAudioAlertEnabled, setIsAudioAlertEnabled] = useState<boolean>(() =>
-    alertAudioService.isAudioAlertEnabled()
+  const [audioState, setAudioState] = useState<AlertAudioState>(() =>
+    alertAudioService.getStatus()
   );
-  const [soundType, setSoundTypeState] = useState<AlertSoundType>(() =>
-    alertAudioService.getSoundType()
-  );
-  const [volume, setVolumeState] = useState<number>(() =>
-    alertAudioService.getVolume()
-  );
-  const [isPlaying, setIsPlaying] = useState<boolean>(() =>
-    alertAudioService.getIsPlaying()
-  );
-
-  const prevCountRef = useRef<number | null>(null);
 
   // Sync state with global alertAudioService subscription
   useEffect(() => {
-    const update = () => {
-      setIsAudioAlertEnabled(alertAudioService.isAudioAlertEnabled());
-      setSoundTypeState(alertAudioService.getSoundType());
-      setVolumeState(alertAudioService.getVolume());
-      setIsPlaying(alertAudioService.getIsPlaying());
-    };
-    const unsubscribe = alertAudioService.subscribe(update);
+    const unsubscribe = alertAudioService.subscribe((newState) => {
+      setAudioState(newState);
+    });
     return unsubscribe;
   }, []);
 
-  const toggleAudioAlert = useCallback(() => {
-    return alertAudioService.toggleAudioAlert();
+  // Monitor incoming warnings and trigger alert for genuinely new active warnings
+  const prevWarningsCountRef = useRef<number>(options?.warnings?.length || 0);
+
+  useEffect(() => {
+    if (!options?.warnings || options.warnings.length === 0) return;
+
+    // Check each warning against alertAudioService
+    for (const w of options.warnings) {
+      const triggered = alertAudioService.triggerOfficialWarning(w);
+      if (triggered && options.onNewAlertTriggered) {
+        options.onNewAlertTriggered(w);
+      }
+    }
+
+    prevWarningsCountRef.current = options.warnings.length;
+  }, [options?.warnings, options?.onNewAlertTriggered]);
+
+  const toggleAudioAlert = useCallback(async () => {
+    return await alertAudioService.toggle();
   }, []);
 
-  const setAudioAlertEnabled = useCallback((enabled: boolean) => {
-    alertAudioService.setAudioAlertEnabled(enabled);
+  const enableAudioAlert = useCallback(async () => {
+    return await alertAudioService.enable();
   }, []);
 
-  const setSoundType = useCallback((type: AlertSoundType) => {
-    alertAudioService.setSoundType(type);
+  const disableAudioAlert = useCallback(() => {
+    alertAudioService.disable();
   }, []);
 
   const setVolume = useCallback((vol: number) => {
     alertAudioService.setVolume(vol);
   }, []);
 
-  const playTestSound = useCallback((overrideType?: AlertSoundType) => {
-    alertAudioService.playTestSound(overrideType);
+  const setMinSeverity = useCallback((threshold: AlertSeverityThreshold) => {
+    alertAudioService.setMinSeverity(threshold);
   }, []);
 
-  const playSevereAlertSound = useCallback((overrideType?: AlertSoundType) => {
-    alertAudioService.playSevereAlertSound(overrideType);
+  const playTestSound = useCallback(async () => {
+    return await alertAudioService.play('user_manual_test');
   }, []);
 
   const stopSound = useCallback(() => {
-    alertAudioService.stopSound();
+    alertAudioService.stop();
   }, []);
 
-  // Monitor alert count changes
-  useEffect(() => {
-    if (options?.alertCount === undefined) return;
-
-    const currentCount = options.alertCount;
-    const prevCount = prevCountRef.current;
-
-    // Only fire when alert count strictly increases from a previously recorded count
-    if (prevCount !== null && currentCount > prevCount) {
-      if (alertAudioService.isAudioAlertEnabled()) {
-        alertAudioService.playSevereAlertSound();
-      }
-      if (options.onAlertIncrease) {
-        options.onAlertIncrease(currentCount, prevCount);
-      }
-    }
-
-    prevCountRef.current = currentCount;
-  }, [options?.alertCount, options?.onAlertIncrease]);
+  const clearActiveBanner = useCallback(() => {
+    alertAudioService.clearActiveBanner();
+  }, []);
 
   return {
-    isAudioAlertEnabled,
-    soundType,
-    volume,
-    isPlaying,
-    soundProfiles: ALERT_SOUND_PROFILES,
+    isAudioAlertEnabled: audioState.isEnabled,
+    isPlaying: audioState.isPlaying,
+    status: audioState.status,
+    volume: audioState.volume,
+    minSeverity: audioState.minSeverity,
+    activeWarningBanner: audioState.activeWarningBanner,
     toggleAudioAlert,
-    setAudioAlertEnabled,
-    setSoundType,
+    enableAudioAlert,
+    disableAudioAlert,
     setVolume,
+    setMinSeverity,
     playTestSound,
-    playSevereAlertSound,
     stopSound,
+    clearActiveBanner,
   };
 }

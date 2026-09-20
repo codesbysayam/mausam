@@ -56,6 +56,42 @@ export const DraggableAskMausamButton: React.FC<DraggableAskMausamButtonProps> =
     };
   }, []);
 
+  // Snapping utility: automatically aligns to closest screen edge (left, right, top, or bottom)
+  const snapToEdge = useCallback((x: number, y: number) => {
+    if (typeof window === 'undefined') return { x, y };
+    const btnWidth = buttonRef.current?.offsetWidth || 160;
+    const btnHeight = buttonRef.current?.offsetHeight || 44;
+    const minX = PADDING;
+    const maxX = Math.max(PADDING, window.innerWidth - btnWidth - PADDING);
+    const minY = PADDING;
+    const maxY = Math.max(PADDING, window.innerHeight - btnHeight - PADDING);
+
+    const distLeft = Math.abs(x - minX);
+    const distRight = Math.abs(maxX - x);
+    const distTop = Math.abs(y - minY);
+    const distBottom = Math.abs(maxY - y);
+
+    const minDist = Math.min(distLeft, distRight, distTop, distBottom);
+
+    let targetX = x;
+    let targetY = y;
+
+    if (minDist === distLeft) {
+      targetX = minX;
+    } else if (minDist === distRight) {
+      targetX = maxX;
+    } else if (minDist === distTop) {
+      targetY = minY;
+    } else {
+      targetY = maxY;
+    }
+
+    return {
+      x: Math.min(Math.max(targetX, minX), maxX),
+      y: Math.min(Math.max(targetY, minY), maxY),
+    };
+  }, []);
+
   // Initialize position from localStorage or default to bottom-right
   useEffect(() => {
     try {
@@ -143,13 +179,14 @@ export const DraggableAskMausamButton: React.FC<DraggableAskMausamButtonProps> =
     setIsDragging(false);
 
     if (wasDragging) {
-      // Persist new position
-      if (position) {
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(position));
-        } catch {
-          // Ignore storage errors
-        }
+      // Snap to nearest edge when released
+      const current = position || getDefaultPosition();
+      const snapped = snapToEdge(current.x, current.y);
+      setPosition(snapped);
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(snapped));
+      } catch {
+        // Ignore storage errors
       }
     } else {
       // Trigger click if it was a tap/click without drag
@@ -162,6 +199,10 @@ export const DraggableAskMausamButton: React.FC<DraggableAskMausamButtonProps> =
     if (dragInfoRef.current.pointerId === e.pointerId) {
       dragInfoRef.current.pointerId = -1;
       setIsDragging(false);
+      if (dragInfoRef.current.hasMoved && position) {
+        const snapped = snapToEdge(position.x, position.y);
+        setPosition(snapped);
+      }
     }
   };
 
@@ -186,6 +227,9 @@ export const DraggableAskMausamButton: React.FC<DraggableAskMausamButtonProps> =
     touchAction: 'none',
     userSelect: 'none',
     WebkitUserSelect: 'none',
+    transition: isDragging
+      ? 'none'
+      : 'left 0.25s cubic-bezier(0.16, 1, 0.3, 1), top 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease',
   };
 
   return (
@@ -200,7 +244,7 @@ export const DraggableAskMausamButton: React.FC<DraggableAskMausamButtonProps> =
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onDoubleClick={handleDoubleClick}
-      className={`z-50 select-none group transition-opacity duration-200 ${
+      className={`mausam-draggable-ask-button z-50 select-none group transition-opacity duration-200 ${
         isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}
       role="button"

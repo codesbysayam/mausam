@@ -50,12 +50,12 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [alertSurgeNotice, setAlertSurgeNotice] = useState<string | null>(null);
 
-  // Monitor alert count and trigger audio chime when count increases
+  // Monitor alert warnings and trigger audio chime when a genuinely new active warning arrives
   const { isAudioAlertEnabled } = useAlertAudio({
-    alertCount: warningsList.length,
-    onAlertIncrease: (newCount, oldCount) => {
-      setAlertSurgeNotice(`Severe weather alert count increased (${oldCount} → ${newCount})`);
-      setTimeout(() => setAlertSurgeNotice(null), 7000);
+    warnings: warningsList,
+    onNewAlertTriggered: (newWarning) => {
+      setAlertSurgeNotice(`New ${newWarning.severity?.toUpperCase() || 'OFFICIAL'} Alert: ${newWarning.title || 'Severe Weather Warning'}`);
+      setTimeout(() => setAlertSurgeNotice(null), 8000);
     },
   });
 

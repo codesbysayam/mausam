@@ -1,432 +1,489 @@
 // ====================================================================
 // MAUSAM - Atmospheric Intelligence Platform
-// Severe Weather Audio Alert Service
-// Studio-Grade Emergency Broadcast Audio with Multi-Profile Support
+// Official Meteorological Warning Alert Audio System
+// Real-time emergency broadcast audio service grounded in NDMA/IMD
 // ====================================================================
 
-import { ANIME_AHH_BASE64_AUDIO } from './animeAhhAudioData';
+export type AudioAlertStatus = 'ready' | 'playing' | 'muted' | 'unavailable';
+export type AlertSeverityThreshold = 'yellow' | 'orange' | 'red';
 
-export type AlertSoundType = 'anime_ahh' | 'emergency_alert' | 'warning_siren' | 'broadcast_chime';
-
-export interface AlertSoundProfile {
-  id: AlertSoundType;
-  label: string;
-  description: string;
-  url: string;
-  fallbackUrl?: string;
+export interface AlertAudioState {
+  isEnabled: boolean;
+  isPlaying: boolean;
+  status: AudioAlertStatus;
+  volume: number;
+  minSeverity: AlertSeverityThreshold;
+  lastPlayedReason: string | null;
+  activeWarningBanner: {
+    severity: 'red' | 'orange' | 'yellow';
+    headline: string;
+    hazard: string;
+    timestamp: number;
+  } | null;
 }
 
-export const ALERT_SOUND_PROFILES: AlertSoundProfile[] = [
-  {
-    id: 'anime_ahh',
-    label: 'High-Priority Alert Tone',
-    description: 'Instant high-priority attention audio signal with acoustic resonance',
-    url: ANIME_AHH_BASE64_AUDIO, // Embedded base64 for 100% instant zero-failure playback
-    fallbackUrl: '/sounds/anime_ahh.mp3',
-  },
-  {
-    id: 'emergency_alert',
-    label: 'Emergency Broadcast (EAS)',
-    description: 'Official 853Hz+960Hz dual-frequency attention signal & 1050Hz weather warning bursts',
-    url: '/sounds/severe_alert.wav',
-  },
-  {
-    id: 'warning_siren',
-    label: 'Warning Siren (NDMA)',
-    description: 'Urgent civil defense emergency klaxon and warning wail',
-    url: '/sounds/warning_siren.wav',
-  },
-  {
-    id: 'broadcast_chime',
-    label: 'Broadcast Chime',
-    description: 'Authoritative 3-tone acoustic mallet announcement chime',
-    url: '/sounds/broadcast_chime.wav',
-  },
-];
-
 class AlertAudioService {
-  private audioCtx: AudioContext | null = null;
-  private isEnabled: boolean = true; // Enabled by default so alert sounds immediately
-  private soundType: AlertSoundType = 'anime_ahh'; // Default to anime_ahh
-  private volume: number = 0.9;
+  private audio: HTMLAudioElement | null = null;
+  private isEnabled: boolean = false; // Require explicit user gesture to enable
   private isPlaying: boolean = false;
-  private currentAudioElement: HTMLAudioElement | null = null;
-  private preloadedAudios: Map<AlertSoundType, HTMLAudioElement> = new Map();
-  private decodedBufferCache: Map<string, AudioBuffer> = new Map();
-  private listeners: Set<() => void> = new Set();
+  private status: AudioAlertStatus = 'muted';
+  private volume: number = 0.70; // Sensible 70% default
+  private minSeverity: AlertSeverityThreshold = 'orange'; // Default: Orange and Red alerts
+  private lastPlayedReason: string | null = null;
+  private activeWarningBanner: AlertAudioState['activeWarningBanner'] = null;
 
-  private readonly STORAGE_ENABLED_KEY = 'mausam_severe_audio_alert_enabled';
-  private readonly STORAGE_TYPE_KEY = 'mausam_severe_audio_sound_type';
-  private readonly STORAGE_VOL_KEY = 'mausam_severe_audio_volume';
+  private alertedFingerprints: Set<string> = new Set();
+  private listeners: Set<(state: AlertAudioState) => void> = new Set();
+  private bannerTimeoutId: any = null;
+
+  private readonly STORAGE_ENABLED_KEY = 'mausam_alert_audio_enabled';
+  private readonly STORAGE_VOLUME_KEY = 'mausam_alert_audio_volume';
+  private readonly STORAGE_THRESHOLD_KEY = 'mausam_alert_audio_threshold';
+  private readonly STORAGE_FINGERPRINTS_KEY = 'mausam_alerted_warnings';
+
+  // Canonical production audio asset paths
+  public readonly PRIMARY_AUDIO_URL = '/audio/mausam-alert.mp3';
+  public readonly FALLBACK_AUDIO_URL = '/audio/mausam-alert.wav';
 
   constructor() {
     if (typeof window !== 'undefined') {
-      try {
-        const storedEnabled = localStorage.getItem(this.STORAGE_ENABLED_KEY);
-        if (storedEnabled !== null) {
-          this.isEnabled = storedEnabled === 'true';
-        } else {
-          this.isEnabled = true; // default enabled
-        }
-
-        const storedType = localStorage.getItem(this.STORAGE_TYPE_KEY) as AlertSoundType;
-        if (storedType && ALERT_SOUND_PROFILES.some((p) => p.id === storedType)) {
-          this.soundType = storedType;
-        } else {
-          this.soundType = 'anime_ahh'; // default high-priority alert
-        }
-
-        const storedVol = localStorage.getItem(this.STORAGE_VOL_KEY);
-        if (storedVol) {
-          const parsed = parseFloat(storedVol);
-          if (!isNaN(parsed) && parsed >= 0 && parsed <= 1) {
-            this.volume = parsed;
-          }
-        }
-      } catch {
-        // storage access fallback
-      }
-
-      // Preload audio elements
-      this.preloadAudio();
+      this.initFromStorage();
+      this.setupVisibilityListener();
     }
   }
 
-  private preloadAudio(): void {
-    if (typeof window === 'undefined') return;
-    ALERT_SOUND_PROFILES.forEach((profile) => {
-      try {
-        const audio = new Audio(profile.url);
-        audio.preload = 'auto';
-        this.preloadedAudios.set(profile.id, audio);
-      } catch {
-        // ignore preload errors
-      }
-    });
-  }
-
-  public isAudioAlertEnabled(): boolean {
-    return this.isEnabled;
-  }
-
-  public getSoundType(): AlertSoundType {
-    return this.soundType;
-  }
-
-  public getVolume(): number {
-    return this.volume;
-  }
-
-  public getIsPlaying(): boolean {
-    return this.isPlaying;
-  }
-
-  public setAudioAlertEnabled(enabled: boolean): void {
-    this.isEnabled = enabled;
+  /**
+   * Restore user preferences and already-alerted fingerprints from storage
+   */
+  private initFromStorage(): void {
     try {
-      localStorage.setItem(this.STORAGE_ENABLED_KEY, String(enabled));
-    } catch {}
-    this.notifyListeners();
+      // 1. Alert enabled preference (default to false if not explicitly activated by user)
+      const storedEnabled = localStorage.getItem(this.STORAGE_ENABLED_KEY);
+      this.isEnabled = storedEnabled === 'true';
 
-    if (enabled) {
-      // Play brief test sound when user explicitly enables
-      this.playSevereAlertSound(this.soundType, false);
+      // 2. Volume preference
+      const storedVol = localStorage.getItem(this.STORAGE_VOLUME_KEY);
+      if (storedVol) {
+        const v = parseFloat(storedVol);
+        if (!isNaN(v) && v >= 0 && v <= 1) {
+          this.volume = v;
+        }
+      }
+
+      // 3. Severity threshold preference
+      const storedThreshold = localStorage.getItem(this.STORAGE_THRESHOLD_KEY) as AlertSeverityThreshold;
+      if (storedThreshold === 'yellow' || storedThreshold === 'orange' || storedThreshold === 'red') {
+        this.minSeverity = storedThreshold;
+      }
+
+      // 4. In-session alerted fingerprints
+      const storedFps = sessionStorage.getItem(this.STORAGE_FINGERPRINTS_KEY);
+      if (storedFps) {
+        const parsed = JSON.parse(storedFps);
+        if (Array.isArray(parsed)) {
+          this.alertedFingerprints = new Set(parsed);
+        }
+      }
+
+      this.status = this.isEnabled ? 'ready' : 'muted';
+    } catch (e) {
+      console.warn('[MAUSAM Alert Audio] Storage initialization note:', e);
     }
   }
 
-  public toggleAudioAlert(): boolean {
-    const next = !this.isEnabled;
-    this.setAudioAlertEnabled(next);
-    return next;
-  }
+  /**
+   * Lazy instantiate and preload the single HTMLAudioElement
+   */
+  private getOrCreateAudio(): HTMLAudioElement | null {
+    if (typeof window === 'undefined') return null;
+    if (this.audio) return this.audio;
 
-  public setSoundType(type: AlertSoundType): void {
-    this.soundType = type;
     try {
-      localStorage.setItem(this.STORAGE_TYPE_KEY, type);
-    } catch {}
-    this.notifyListeners();
+      const audioEl = new Audio();
+      audioEl.preload = 'auto';
+      audioEl.volume = this.volume;
+
+      // Primary source with fallback
+      audioEl.src = this.PRIMARY_AUDIO_URL;
+
+      // Lifecycle event listeners
+      audioEl.addEventListener('loadstart', () => {
+        // Audio loading
+      });
+
+      audioEl.addEventListener('canplay', () => {
+        if (this.status !== 'playing') {
+          this.status = this.isEnabled ? 'ready' : 'muted';
+          this.notify();
+        }
+      });
+
+      audioEl.addEventListener('play', () => {
+        this.isPlaying = true;
+        this.status = 'playing';
+        this.notify();
+      });
+
+      audioEl.addEventListener('pause', () => {
+        this.isPlaying = false;
+        this.status = this.isEnabled ? 'ready' : 'muted';
+        this.notify();
+      });
+
+      audioEl.addEventListener('ended', () => {
+        this.isPlaying = false;
+        this.status = this.isEnabled ? 'ready' : 'muted';
+        this.notify();
+      });
+
+      audioEl.addEventListener('error', (e) => {
+        console.warn('[MAUSAM Alert Audio] Error on primary asset, trying fallback:', e);
+        if (audioEl.src.endsWith('.mp3')) {
+          audioEl.src = this.FALLBACK_AUDIO_URL;
+          audioEl.load();
+        } else {
+          this.status = 'unavailable';
+          this.isPlaying = false;
+          this.notify();
+        }
+      });
+
+      this.audio = audioEl;
+      return this.audio;
+    } catch (err) {
+      console.error('[MAUSAM Alert Audio] Failed to instantiate audio element:', err);
+      this.status = 'unavailable';
+      this.notify();
+      return null;
+    }
   }
 
+  /**
+   * Preload the audio file without playing
+   */
+  public preload(): void {
+    const el = this.getOrCreateAudio();
+    if (el) {
+      el.load();
+    }
+  }
+
+  /**
+   * User Activation: Enable audio alerts inside a user gesture
+   */
+  public async enable(): Promise<boolean> {
+    const el = this.getOrCreateAudio();
+    if (!el) {
+      this.status = 'unavailable';
+      this.notify();
+      return false;
+    }
+
+    try {
+      this.isEnabled = true;
+      this.status = 'ready';
+      localStorage.setItem(this.STORAGE_ENABLED_KEY, 'true');
+
+      // Preload audio asset
+      el.load();
+
+      this.notify();
+      return true;
+    } catch (err) {
+      console.error('[MAUSAM Alert Audio] Enable failed:', err);
+      this.isEnabled = false;
+      this.status = 'unavailable';
+      this.notify();
+      return false;
+    }
+  }
+
+  /**
+   * Disable audio alerts: stop current playback and mute
+   */
+  public disable(): void {
+    this.stop();
+    this.isEnabled = false;
+    this.status = 'muted';
+    try {
+      localStorage.setItem(this.STORAGE_ENABLED_KEY, 'false');
+    } catch {
+      // Ignore
+    }
+    this.notify();
+  }
+
+  /**
+   * Toggle audio alert state
+   */
+  public async toggle(): Promise<boolean> {
+    if (this.isEnabled) {
+      this.disable();
+      return false;
+    } else {
+      return await this.enable();
+    }
+  }
+
+  /**
+   * Play the official MAUSAM alert tone
+   */
+  public async play(reason: string = 'manual_test'): Promise<boolean> {
+    const el = this.getOrCreateAudio();
+    if (!el) {
+      this.status = 'unavailable';
+      this.notify();
+      return false;
+    }
+
+    try {
+      el.volume = this.volume;
+      el.currentTime = 0;
+      this.lastPlayedReason = reason;
+
+      const playPromise = el.play();
+      if (playPromise !== undefined) {
+        await playPromise;
+      }
+      this.isPlaying = true;
+      this.status = 'playing';
+      this.notify();
+      return true;
+    } catch (err: any) {
+      // Gracefully handle browser autoplay blocks or aborts
+      if (err?.name === 'NotAllowedError') {
+        console.warn('[MAUSAM Alert Audio] Playback blocked by browser autoplay policy.');
+      } else {
+        console.warn('[MAUSAM Alert Audio] Playback error:', err);
+      }
+      this.isPlaying = false;
+      this.status = this.isEnabled ? 'ready' : 'muted';
+      this.notify();
+      return false;
+    }
+  }
+
+  /**
+   * Stop current alert playback
+   */
+  public stop(): void {
+    if (this.audio) {
+      try {
+        this.audio.pause();
+        this.audio.currentTime = 0;
+      } catch {
+        // Ignore
+      }
+    }
+    this.isPlaying = false;
+    this.status = this.isEnabled ? 'ready' : 'muted';
+    this.notify();
+  }
+
+  /**
+   * Set alert playback volume (0.0 to 1.0)
+   */
   public setVolume(vol: number): void {
-    this.volume = Math.max(0, Math.min(1, vol));
+    const clamped = Math.max(0, Math.min(1, vol));
+    this.volume = clamped;
+    if (this.audio) {
+      this.audio.volume = clamped;
+    }
     try {
-      localStorage.setItem(this.STORAGE_VOL_KEY, String(this.volume));
-    } catch {}
-    this.notifyListeners();
+      localStorage.setItem(this.STORAGE_VOLUME_KEY, clamped.toString());
+    } catch {
+      // Ignore
+    }
+    this.notify();
   }
 
-  public subscribe(listener: () => void): () => void {
+  /**
+   * Set minimum alert severity threshold for audio triggering
+   */
+  public setMinSeverity(threshold: AlertSeverityThreshold): void {
+    this.minSeverity = threshold;
+    try {
+      localStorage.setItem(this.STORAGE_THRESHOLD_KEY, threshold);
+    } catch {
+      // Ignore
+    }
+    this.notify();
+  }
+
+  /**
+   * Compute stable fingerprint for a warning record
+   */
+  public computeFingerprint(warning: {
+    id?: string;
+    bulletinNo?: string;
+    title?: string;
+    state?: string;
+    stateCode?: string;
+    hazardCategory?: string;
+    hazardLabel?: string;
+    severity?: string;
+    issuedAt?: string;
+    source?: string;
+  }): string {
+    const source = (warning.source || 'IMD').trim().toLowerCase();
+    const id = (warning.id || warning.bulletinNo || warning.title || 'alert').trim().toLowerCase();
+    const state = (warning.stateCode || warning.state || 'all').trim().toLowerCase();
+    const hazard = (warning.hazardCategory || warning.hazardLabel || 'general').trim().toLowerCase();
+    const issued = (warning.issuedAt || '').trim();
+
+    return `${source}::${id}::${state}::${hazard}::${issued}`;
+  }
+
+  /**
+   * Check if a warning meets the configured severity threshold
+   */
+  private meetsSeverityThreshold(severityRaw: string): boolean {
+    const sev = severityRaw.toLowerCase();
+    if (sev === 'green' || sev === 'none' || sev === 'info' || sev === 'normal') {
+      return false; // Green never triggers emergency audio
+    }
+
+    if (this.minSeverity === 'yellow') {
+      return sev === 'yellow' || sev === 'advisory' || sev === 'orange' || sev === 'severe' || sev === 'red' || sev === 'extreme';
+    }
+
+    if (this.minSeverity === 'orange') {
+      return sev === 'orange' || sev === 'severe' || sev === 'warning' || sev === 'red' || sev === 'extreme';
+    }
+
+    // Default 'red'
+    return sev === 'red' || sev === 'extreme';
+  }
+
+  /**
+   * Real Warning Trigger: Trigger alert tone for a newly arrived active official warning
+   */
+  public triggerOfficialWarning(warning: {
+    id?: string;
+    bulletinNo?: string;
+    title?: string;
+    state?: string;
+    stateCode?: string;
+    hazardCategory?: string;
+    hazardLabel?: string;
+    severity?: string;
+    issuedAt?: string;
+    source?: string;
+  }): boolean {
+    const severity = (warning.severity || 'yellow').toLowerCase();
+
+    // 1. Check severity threshold
+    if (!this.meetsSeverityThreshold(severity)) {
+      return false;
+    }
+
+    // 2. Calculate unique fingerprint
+    const fp = this.computeFingerprint(warning);
+
+    // 3. Prevent duplicate playback for already-alerted warning
+    if (this.alertedFingerprints.has(fp)) {
+      return false;
+    }
+
+    // 4. Mark fingerprint as alerted
+    this.alertedFingerprints.add(fp);
+    try {
+      // Keep up to 100 recent fingerprints in session storage
+      const fpArray = Array.from(this.alertedFingerprints).slice(-100);
+      sessionStorage.setItem(this.STORAGE_FINGERPRINTS_KEY, JSON.stringify(fpArray));
+    } catch {
+      // Ignore session storage errors
+    }
+
+    // 5. If audio alerts are enabled, play the official alert tone
+    if (this.isEnabled) {
+      this.play(`official_warning:${fp}`);
+    }
+
+    // 6. Update high-priority warning banner in UI
+    const mappedSeverity: 'red' | 'orange' | 'yellow' =
+      severity === 'red' || severity === 'extreme'
+        ? 'red'
+        : severity === 'orange' || severity === 'severe'
+        ? 'orange'
+        : 'yellow';
+
+    this.activeWarningBanner = {
+      severity: mappedSeverity,
+      headline: warning.title || 'Official Meteorological Warning Bulletin',
+      hazard: warning.hazardLabel || warning.hazardCategory || 'Severe Weather',
+      timestamp: Date.now(),
+    };
+
+    if (this.bannerTimeoutId) {
+      clearTimeout(this.bannerTimeoutId);
+    }
+    this.bannerTimeoutId = setTimeout(() => {
+      this.activeWarningBanner = null;
+      this.notify();
+    }, 15000); // Display alert banner for 15 seconds
+
+    this.notify();
+    return true;
+  }
+
+  /**
+   * Get complete service status snapshot
+   */
+  public getStatus(): AlertAudioState {
+    return {
+      isEnabled: this.isEnabled,
+      isPlaying: this.isPlaying,
+      status: this.status,
+      volume: this.volume,
+      minSeverity: this.minSeverity,
+      lastPlayedReason: this.lastPlayedReason,
+      activeWarningBanner: this.activeWarningBanner,
+    };
+  }
+
+  /**
+   * Clear active banner manually
+   */
+  public clearActiveBanner(): void {
+    this.activeWarningBanner = null;
+    this.notify();
+  }
+
+  /**
+   * Subscribe to audio state changes
+   */
+  public subscribe(listener: (state: AlertAudioState) => void): () => void {
     this.listeners.add(listener);
+    listener(this.getStatus());
     return () => {
       this.listeners.delete(listener);
     };
   }
 
-  private notifyListeners(): void {
-    for (const listener of this.listeners) {
-      listener();
-    }
-  }
-
-  private getAudioContext(): AudioContext | null {
-    if (typeof window === 'undefined') return null;
-    if (!this.audioCtx) {
-      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-      if (AudioCtx) {
-        this.audioCtx = new AudioCtx();
-      }
-    }
-    if (this.audioCtx && this.audioCtx.state === 'suspended') {
-      this.audioCtx.resume().catch(() => {});
-    }
-    return this.audioCtx;
-  }
-
-  /**
-   * Stop any currently active alert audio
-   */
-  public stopSound(): void {
-    if (this.currentAudioElement) {
+  private notify(): void {
+    const state = this.getStatus();
+    this.listeners.forEach((fn) => {
       try {
-        this.currentAudioElement.pause();
-        this.currentAudioElement.currentTime = 0;
-      } catch {}
-      this.currentAudioElement = null;
-    }
-    this.isPlaying = false;
-    this.notifyListeners();
+        fn(state);
+      } catch (err) {
+        console.error('[MAUSAM Alert Audio] Listener notification error:', err);
+      }
+    });
   }
 
   /**
-   * Play the alert audio without any failure
-   * Level 1: Embedded Audio / HTML5 Audio element
-   * Level 2: Secondary URL fallback
-   * Level 3: Web Audio API BufferSource playback
-   * Level 4: Synthesized fallback
+   * Synchronize when user returns to tab
    */
-  public playSevereAlertSound(overrideType?: AlertSoundType, enforceEnabled = true): void {
-    if (enforceEnabled && !this.isEnabled) return;
-
-    const typeToPlay = overrideType || this.soundType;
-    const profile = ALERT_SOUND_PROFILES.find((p) => p.id === typeToPlay) || ALERT_SOUND_PROFILES[0];
-
-    this.stopSound();
-    this.isPlaying = true;
-    this.notifyListeners();
-
-    // Trigger haptic vibration on devices with vibration support
-    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
-      try {
-        navigator.vibrate([200, 100, 200, 100, 300]);
-      } catch {}
-    }
-
-    // Try HTML5 Audio
-    try {
-      const audio = new Audio(profile.url);
-      audio.volume = this.volume;
-      this.currentAudioElement = audio;
-
-      audio.onended = () => {
-        this.isPlaying = false;
-        this.currentAudioElement = null;
-        this.notifyListeners();
-      };
-
-      const handleAudioError = () => {
-        // If primary url fails, try fallbackUrl or Web Audio
-        if (profile.fallbackUrl) {
-          try {
-            const fallbackAudio = new Audio(profile.fallbackUrl);
-            fallbackAudio.volume = this.volume;
-            this.currentAudioElement = fallbackAudio;
-            fallbackAudio.onended = () => {
-              this.isPlaying = false;
-              this.currentAudioElement = null;
-              this.notifyListeners();
-            };
-            fallbackAudio.onerror = () => {
-              this.playThroughWebAudio(profile, typeToPlay);
-            };
-            fallbackAudio.play().catch(() => {
-              this.playThroughWebAudio(profile, typeToPlay);
-            });
-            return;
-          } catch {
-            this.playThroughWebAudio(profile, typeToPlay);
-            return;
-          }
-        }
-        this.playThroughWebAudio(profile, typeToPlay);
-      };
-
-      audio.onerror = handleAudioError;
-
-      const playPromise = audio.play();
-      if (playPromise !== undefined) {
-        playPromise.catch((err) => {
-          console.warn('[AlertAudioService] HTML5 Audio play error, trying fallback:', err);
-          handleAudioError();
-        });
+  private setupVisibilityListener(): void {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') {
+        // Tab became visible again
+        this.notify();
       }
-    } catch (e) {
-      console.warn('[AlertAudioService] Error creating HTML5 audio element:', e);
-      this.playThroughWebAudio(profile, typeToPlay);
-    }
-  }
-
-  /**
-   * Direct test function to preview the alert sound
-   */
-  public playTestSound(overrideType?: AlertSoundType): void {
-    this.playSevereAlertSound(overrideType, false);
-  }
-
-  /**
-   * Play audio buffer directly using Web Audio API AudioContext
-   */
-  private playThroughWebAudio(profile: AlertSoundProfile, type: AlertSoundType): void {
-    try {
-      const ctx = this.getAudioContext();
-      if (!ctx) {
-        this.isPlaying = false;
-        this.notifyListeners();
-        return;
-      }
-
-      const cached = this.decodedBufferCache.get(profile.id);
-      if (cached) {
-        this.playBuffer(ctx, cached);
-        return;
-      }
-
-      // Convert data URL or fetch URL to ArrayBuffer
-      if (profile.url.startsWith('data:')) {
-        const base64Part = profile.url.split(',')[1];
-        const binaryString = atob(base64Part);
-        const len = binaryString.length;
-        const bytes = new Uint8Array(len);
-        for (let i = 0; i < len; i++) {
-          bytes[i] = binaryString.charCodeAt(i);
-        }
-        const decodeResult = ctx.decodeAudioData(
-          bytes.buffer.slice(0),
-          (decoded) => {
-            this.decodedBufferCache.set(profile.id, decoded);
-            this.playBuffer(ctx, decoded);
-          },
-          () => {
-            this.playSynthesizedEmergencyAudio(type);
-          }
-        );
-        if (decodeResult && typeof (decodeResult as any).catch === 'function') {
-          (decodeResult as any).catch(() => {
-            this.playSynthesizedEmergencyAudio(type);
-          });
-        }
-      } else {
-        fetch(profile.url)
-          .then((r) => r.arrayBuffer())
-          .then((arrBuf) => {
-            const decodeResult = ctx.decodeAudioData(
-              arrBuf,
-              (decoded) => {
-                this.decodedBufferCache.set(profile.id, decoded);
-                this.playBuffer(ctx, decoded);
-              },
-              () => {
-                this.playSynthesizedEmergencyAudio(type);
-              }
-            );
-            if (decodeResult && typeof (decodeResult as any).catch === 'function') {
-              (decodeResult as any).catch(() => {
-                this.playSynthesizedEmergencyAudio(type);
-              });
-            }
-          })
-          .catch(() => {
-            this.playSynthesizedEmergencyAudio(type);
-          });
-      }
-    } catch (e) {
-      console.warn('[AlertAudioService] Web Audio buffer playback failed:', e);
-      this.playSynthesizedEmergencyAudio(type);
-    }
-  }
-
-  private playBuffer(ctx: AudioContext, buffer: AudioBuffer): void {
-    try {
-      const source = ctx.createBufferSource();
-      source.buffer = buffer;
-      const gainNode = ctx.createGain();
-      gainNode.gain.setValueAtTime(this.volume, ctx.currentTime);
-      source.connect(gainNode);
-      gainNode.connect(ctx.destination);
-
-      source.onended = () => {
-        this.isPlaying = false;
-        this.notifyListeners();
-      };
-
-      source.start(0);
-    } catch (err) {
-      console.warn('[AlertAudioService] Buffer start error:', err);
-      this.isPlaying = false;
-      this.notifyListeners();
-    }
-  }
-
-  /**
-   * Emergency Tone Synthesis Fallback
-   */
-  private playSynthesizedEmergencyAudio(type: AlertSoundType): void {
-    try {
-      const ctx = this.getAudioContext();
-      if (!ctx) {
-        this.isPlaying = false;
-        this.notifyListeners();
-        return;
-      }
-
-      const now = ctx.currentTime;
-      const masterGain = ctx.createGain();
-      masterGain.gain.setValueAtTime(0.0001, now);
-      masterGain.connect(ctx.destination);
-      masterGain.gain.exponentialRampToValueAtTime(Math.max(0.001, this.volume * 0.7), now + 0.04);
-
-      // Play high-energy alert sound
-      const osc1 = ctx.createOscillator();
-      const osc2 = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      osc1.type = 'sawtooth';
-      osc2.type = 'sine';
-      osc1.frequency.setValueAtTime(880, now);
-      osc2.frequency.setValueAtTime(1046, now);
-
-      gain.gain.setValueAtTime(0.5, now);
-      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.85);
-
-      osc1.connect(gain);
-      osc2.connect(gain);
-      gain.connect(masterGain);
-
-      osc1.start(now);
-      osc2.start(now);
-      osc1.stop(now + 0.85);
-      osc2.stop(now + 0.85);
-
-      setTimeout(() => {
-        this.isPlaying = false;
-        this.notifyListeners();
-      }, 900);
-    } catch (err) {
-      console.warn('[AlertAudioService] Synthesis fallback error:', err);
-      this.isPlaying = false;
-      this.notifyListeners();
-    }
+    });
   }
 }
 
+// Global Singleton Export
 export const alertAudioService = new AlertAudioService();
