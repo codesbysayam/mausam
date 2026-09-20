@@ -1,7 +1,7 @@
 import React from 'react';
 import { useLanguage } from '../../i18n/LanguageContext';
 
-export type FooterView = 'terms' | 'privacy' | 'api' | 'debug';
+export type FooterView = 'terms' | 'privacy' | 'api' | 'debug' | 'docs';
 
 interface FooterNavigationProps {
   activeTab: string;
@@ -10,11 +10,12 @@ interface FooterNavigationProps {
 
 interface FooterLinkItem {
   id: FooterView;
-  labelKey: 'termsOfObservation' | 'privacyPolicy' | 'openDataApi' | 'apiDebug';
+  labelKey: 'termsOfObservation' | 'privacyPolicy' | 'openDataApi' | 'apiDebug' | 'projectDocs';
   defaultLabel: string;
 }
 
 const FOOTER_LINKS: FooterLinkItem[] = [
+  { id: 'docs', labelKey: 'projectDocs', defaultLabel: 'Documentation' },
   { id: 'terms', labelKey: 'termsOfObservation', defaultLabel: 'Terms of Observation' },
   { id: 'privacy', labelKey: 'privacyPolicy', defaultLabel: 'Privacy Policy' },
   { id: 'api', labelKey: 'openDataApi', defaultLabel: 'Open Data API' },

@@ -23,6 +23,7 @@ const PrivacyPolicy = React.lazy(() => import('./pages/PrivacyPolicy').then((m) 
 const OpenDataApi = React.lazy(() => import('./pages/OpenDataApi').then((m) => ({ default: m.OpenDataApi })));
 const TermsOfObservation = React.lazy(() => import('./pages/TermsOfObservation').then((m) => ({ default: m.TermsOfObservation })));
 const ApiDebugPage = React.lazy(() => import('./pages/ApiDebug').then((m) => ({ default: m.ApiDebugPage })));
+const DocsPage = React.lazy(() => import('./pages/DocsPage').then((m) => ({ default: m.DocsPage })));
 
 import { AskMausamDrawer } from './components/AskMausamDrawer';
 import { ReportDetailModal } from './components/ReportDetailModal';
@@ -47,6 +48,7 @@ const SWIPEABLE_TABS: MainNavTab[] = ['home', 'weather', 'forecast', 'warnings',
 function getTabFromPathname(path: string): AppView {
   const cleanPath = path.toLowerCase().replace(/\/+$/, '');
   if (cleanPath === '' || cleanPath === '/') return 'home';
+  if (cleanPath === '/docs' || cleanPath === '/documentation' || cleanPath === '/doc') return 'docs';
   if (cleanPath === '/privacy' || cleanPath === '/privacy-policy') return 'privacy';
   if (cleanPath === '/api' || cleanPath === '/open-data-api') return 'api';
   if (cleanPath === '/terms' || cleanPath === '/terms-of-observation' || cleanPath === '/terms-and-conditions') return 'terms';
@@ -64,6 +66,8 @@ function getTabFromPathname(path: string): AppView {
 
 function getPathForView(view: AppView): string {
   switch (view) {
+    case 'docs':
+      return '/docs';
     case 'privacy':
       return '/privacy';
     case 'api':
@@ -486,6 +490,11 @@ export default function App() {
             {/* TERMS OF OBSERVATION */}
             {activeTab === 'terms' && (
               <TermsOfObservation onNavigateHome={() => navigateToTab('home')} />
+            )}
+
+            {/* MAUSAM PROJECT DOCUMENTATION */}
+            {activeTab === 'docs' && (
+              <DocsPage onNavigateHome={() => navigateToTab('home')} />
             )}
 
             {/* IMD API INTEGRATION DIAGNOSTICS */}

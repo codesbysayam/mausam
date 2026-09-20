@@ -17,6 +17,7 @@ export const DraggableAskMausamButton: React.FC<DraggableAskMausamButtonProps> =
   const buttonRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isSnapping, setIsSnapping] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
 
   // Tracking drag state in ref to avoid lag in pointer event listeners
@@ -179,15 +180,19 @@ export const DraggableAskMausamButton: React.FC<DraggableAskMausamButtonProps> =
     setIsDragging(false);
 
     if (wasDragging) {
-      // Snap to nearest edge when released
+      // Fluid snap to nearest screen edge (left, right, top, or bottom)
       const current = position || getDefaultPosition();
       const snapped = snapToEdge(current.x, current.y);
-      setPosition(snapped);
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(snapped));
-      } catch {
-        // Ignore storage errors
-      }
+      setIsSnapping(true);
+      // Wait one animation frame so browser applies the transition curve before position change
+      requestAnimationFrame(() => {
+        setPosition(snapped);
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(snapped));
+        } catch {
+          // Ignore storage errors
+        }
+      });
     } else {
       // Trigger click if it was a tap/click without drag
       onClick();
@@ -201,7 +206,10 @@ export const DraggableAskMausamButton: React.FC<DraggableAskMausamButtonProps> =
       setIsDragging(false);
       if (dragInfoRef.current.hasMoved && position) {
         const snapped = snapToEdge(position.x, position.y);
-        setPosition(snapped);
+        setIsSnapping(true);
+        requestAnimationFrame(() => {
+          setPosition(snapped);
+        });
       }
     }
   };
@@ -210,12 +218,15 @@ export const DraggableAskMausamButton: React.FC<DraggableAskMausamButtonProps> =
   const handleDoubleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     const def = getDefaultPosition();
-    setPosition(def);
-    try {
-      localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      // Ignore
-    }
+    setIsSnapping(true);
+    requestAnimationFrame(() => {
+      setPosition(def);
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch {
+        // Ignore
+      }
+    });
   };
 
   const currentStyle: React.CSSProperties = {
@@ -227,9 +238,12 @@ export const DraggableAskMausamButton: React.FC<DraggableAskMausamButtonProps> =
     touchAction: 'none',
     userSelect: 'none',
     WebkitUserSelect: 'none',
-    transition: isDragging
+    willChange: isDragging || isSnapping ? 'left, top' : 'auto',
+    transition: isSnapping
+      ? 'left 0.42s cubic-bezier(0.16, 1, 0.3, 1), top 0.42s cubic-bezier(0.16, 1, 0.3, 1)'
+      : isDragging
       ? 'none'
-      : 'left 0.25s cubic-bezier(0.16, 1, 0.3, 1), top 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease',
+      : 'left 0.3s cubic-bezier(0.16, 1, 0.3, 1), top 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s ease',
   };
 
   return (
@@ -244,6 +258,11 @@ export const DraggableAskMausamButton: React.FC<DraggableAskMausamButtonProps> =
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       onDoubleClick={handleDoubleClick}
+      onTransitionEnd={(e) => {
+        if (e.propertyName === 'left' || e.propertyName === 'top') {
+          setIsSnapping(false);
+        }
+      }}
       className={`mausam-draggable-ask-button z-50 select-none group transition-opacity duration-200 ${
         isVisible ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}
