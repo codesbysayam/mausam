@@ -189,6 +189,29 @@ export function parseQuery(req: any): Record<string, any> {
 }
 
 /**
+ * Unified canonical parser for SACHET/NDMA XML/RSS/JSON feed data.
+ * Standardizes CAP feed data into a consistent internal JSON format.
+ */
+export function parseSachetAlertsCanonical(
+  rawText: string,
+  contentType: string | null = null
+): { alerts: SachetWarning[]; rawCount: number; parserType: string } {
+  const service = SachetService.getInstance();
+  const trimmed = (rawText || '').trim();
+
+  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+    try {
+      const json = JSON.parse(trimmed);
+      return (service as any).parseJsonAlerts(json);
+    } catch {
+      // Fall back to XML
+    }
+  }
+
+  return (service as any).parseXmlRssAlerts(rawText);
+}
+
+/**
  * Canonical SachetService Implementation
  */
 export class SachetService {
@@ -403,24 +426,11 @@ export class SachetService {
     throw lastErr || new Error('All official SACHET feed endpoints failed to respond');
   }
 
-  private parseFeedBody(
+  public parseFeedBody(
     body: string,
-    contentType: string | null
+    contentType: string | null = null
   ): { alerts: SachetWarning[]; rawCount: number; parserType: string } {
-    const trimmed = body.trim();
-
-    // JSON detection
-    if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
-      try {
-        const json = JSON.parse(trimmed);
-        return this.parseJsonAlerts(json);
-      } catch {
-        // Fall back to XML regex parsing
-      }
-    }
-
-    // RSS / CAP XML regex parser
-    return this.parseXmlRssAlerts(body);
+    return parseSachetAlertsCanonical(body, contentType);
   }
 
   private parseXmlRssAlerts(xml: string): { alerts: SachetWarning[]; rawCount: number; parserType: string } {

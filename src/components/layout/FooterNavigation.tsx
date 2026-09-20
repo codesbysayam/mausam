@@ -55,6 +55,20 @@ export const FooterNavigation: React.FC<FooterNavigationProps> = ({
           </React.Fragment>
         );
       })}
+      <span className="text-[#334155] select-none" aria-hidden="true">•</span>
+      <button
+        type="button"
+        id="footer-link-storage-preferences"
+        onClick={(e) => {
+          e.preventDefault();
+          if (typeof window !== 'undefined' && (window as any).MausamConsent?.openPreferences) {
+            (window as any).MausamConsent.openPreferences();
+          }
+        }}
+        className="transition-colors cursor-pointer text-xs py-0.5 rounded text-[#8A94A6] hover:text-[#38BDF8] hover:underline focus:outline-none focus:ring-1 focus:ring-[#4FA8E0]"
+      >
+        Privacy &amp; Storage Preferences
+      </button>
     </nav>
   );
 };

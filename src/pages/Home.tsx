@@ -198,6 +198,9 @@ export const HomePage: React.FC<HomePageProps> = ({
         lastUpdated={current.lastUpdated}
         onExploreWeather={() => onNavigateToTab('weather')}
         onExploreForecast={() => onNavigateToTab('forecast')}
+        onDetectLocation={onDetectLocation}
+        isLocating={isLocating}
+        locatePhase={locatePhase}
       />
 
       {/* WHAT'S HAPPENING NOW & WEATHER CHANGE DETECTOR GRID */}

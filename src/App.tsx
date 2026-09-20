@@ -36,17 +36,20 @@ import { useNetworkStatus } from './hooks/useNetworkStatus';
 import { useSwipeGesture } from './hooks/useSwipeGesture';
 import { useAlertAudio } from './hooks/useAlertAudio';
 import { Volume2, AlertTriangle } from 'lucide-react';
+import { NotFoundPage } from './pages/NotFoundPage';
+import { DraggableAskMausamButton } from './components/common/DraggableAskMausamButton';
 import './styles/mausam.css';
 
-export type AppView = MainNavTab | FooterView;
+export type AppView = MainNavTab | FooterView | 'not-found';
 
 const SWIPEABLE_TABS: MainNavTab[] = ['home', 'weather', 'forecast', 'warnings', 'radar', 'aqi', 'agromet', 'reports'];
 
 function getTabFromPathname(path: string): AppView {
   const cleanPath = path.toLowerCase().replace(/\/+$/, '');
+  if (cleanPath === '' || cleanPath === '/') return 'home';
   if (cleanPath === '/privacy' || cleanPath === '/privacy-policy') return 'privacy';
   if (cleanPath === '/api' || cleanPath === '/open-data-api') return 'api';
-  if (cleanPath === '/terms' || cleanPath === '/terms-of-observation') return 'terms';
+  if (cleanPath === '/terms' || cleanPath === '/terms-of-observation' || cleanPath === '/terms-and-conditions') return 'terms';
   if (cleanPath === '/debug' || cleanPath === '/api-debug') return 'debug';
   if (cleanPath === '/forecast') return 'forecast';
   if (cleanPath === '/warnings' || cleanPath === '/alerts') return 'warnings';
@@ -55,7 +58,8 @@ function getTabFromPathname(path: string): AppView {
   if (cleanPath === '/agromet') return 'agromet';
   if (cleanPath === '/reports') return 'reports';
   if (cleanPath === '/weather') return 'weather';
-  return 'home';
+  if (cleanPath === '/not-found' || cleanPath === '/404') return 'not-found';
+  return 'not-found';
 }
 
 function getPathForView(view: AppView): string {
@@ -82,6 +86,8 @@ function getPathForView(view: AppView): string {
       return '/reports';
     case 'weather':
       return '/weather';
+    case 'not-found':
+      return '/not-found';
     case 'home':
     default:
       return '/';
@@ -202,6 +208,9 @@ export default function App() {
     const handlePopState = () => {
       const tab = getTabFromPathname(window.location.pathname);
       setActiveTab(tab);
+      if (typeof window !== 'undefined' && (window as any).MausamSEO) {
+        (window as any).MausamSEO.updateMeta(window.location.pathname);
+      }
     };
 
     window.addEventListener('popstate', handlePopState);
@@ -211,10 +220,18 @@ export default function App() {
   const navigateToTab = useCallback((tab: AppView, pushHistory = true) => {
     setActiveTab(tab);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    const targetPath = getPathForView(tab);
     if (pushHistory) {
-      const targetPath = getPathForView(tab);
       if (window.location.pathname !== targetPath) {
         window.history.pushState({ tab }, '', targetPath);
+      }
+    }
+    if (typeof window !== 'undefined') {
+      if ((window as any).MausamSEO?.updateMeta) {
+        (window as any).MausamSEO.updateMeta(targetPath);
+      }
+      if ((window as any).MausamAnalytics?.trackPageView) {
+        (window as any).MausamAnalytics.trackPageView(targetPath);
       }
     }
   }, []);
@@ -470,6 +487,14 @@ export default function App() {
 
             {/* IMD API INTEGRATION DIAGNOSTICS */}
             {activeTab === 'debug' && <ApiDebugPage />}
+
+            {/* NOT FOUND (404) PAGE */}
+            {activeTab === 'not-found' && (
+              <NotFoundPage
+                onNavigateHome={() => navigateToTab('home')}
+                onNavigateTab={(tab) => navigateToTab(tab)}
+              />
+            )}
           </React.Suspense>
         </PageContainer>
       </main>
@@ -654,25 +679,11 @@ export default function App() {
         onClearSavedLocation={clearSavedLocation}
       />
 
-      {/* Floating Ask MAUSAM AI Quick Trigger */}
-      <button
-        id="floating-ask-mausam-btn"
-        type="button"
+      {/* Floating Moveable Ask MAUSAM AI Quick Trigger */}
+      <DraggableAskMausamButton
         onClick={() => setIsAskMausamOpen(true)}
-        className={`ask-mausam-cursor ask-mausam-pulse-shadow fixed bottom-4 sm:bottom-5 right-4 sm:right-5 z-40 flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-full bg-[#0B72B9] hover:bg-[#0A5A94] text-white text-xs font-bold border border-[#4FA8E0] transition-all duration-300 ${
-          isFloatingBtnVisible
-            ? 'opacity-100 translate-y-0 pointer-events-auto hover:scale-105'
-            : 'opacity-0 translate-y-6 pointer-events-none'
-        }`}
-        title="Ask MAUSAM AI Weather & Advisory"
-        aria-label="Open Ask MAUSAM AI Assistant"
-      >
-        <span className="material-symbols-outlined text-[18px] sm:text-[20px] text-[#4FA8E0] animate-spin-slow">
-          auto_awesome
-        </span>
-        <span className="font-semibold tracking-wide text-[11px] sm:text-xs">Ask MAUSAM</span>
-        <span className="w-2 h-2 rounded-full bg-[#2ECC71] animate-ping" />
-      </button>
+        isVisible={isFloatingBtnVisible}
+      />
 
       {/* Severe Weather Alert Surge Floating Toast */}
       {globalAlertSurge && (

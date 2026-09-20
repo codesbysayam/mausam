@@ -126,7 +126,7 @@ export const FAQ_ITEMS: FAQItem[] = [
 2. Carry at least 500 ml water with electrolytes for sessions exceeding 30 minutes.
 3. Suspend outdoor workouts immediately if thunder is audible or lightning is observed.`,
         sources: [
-          { title: 'SAFAR Urban Health & Exercise Advisory', url: 'http://safar.tropmet.res.in', type: 'search' },
+          { title: 'SAFAR Urban Health & Exercise Advisory', url: 'https://safar.tropmet.res.in', type: 'search' },
         ],
         followUps: [
           'What is the National Air Quality Index (NAQI) scale?',
@@ -507,7 +507,7 @@ The annual post-monsoon pollution crisis across Punjab, Haryana, Delhi-NCR, UP, 
 4. **Valley Topography Effect**:
    • The Himalayas to the north and Deccan plateau to the south create a geographic trough that funnels and traps aerosols across the Gangetic basin.`,
         sources: [
-          { title: 'SAFAR System of Air Quality & Weather Forecasting', url: 'http://safar.tropmet.res.in', type: 'search' },
+          { title: 'SAFAR System of Air Quality & Weather Forecasting', url: 'https://safar.tropmet.res.in', type: 'search' },
           { title: 'CPCB Winter Pollution Review', url: 'https://cpcb.nic.in', type: 'search' },
         ],
         followUps: [

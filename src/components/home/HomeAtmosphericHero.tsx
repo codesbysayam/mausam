@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { CurrentWeather, LocationRecord } from '../../types';
+import { LocatingPhase } from '../../services/geolocationService';
 import { getWeatherVisualConfig } from '../../utils/weatherIcons';
-import { ArrowRight, Droplets, Wind, Gauge, CloudRain, Eye, Thermometer } from 'lucide-react';
+import { ArrowRight, Droplets, Wind, Gauge, CloudRain, Eye, Thermometer, Crosshair, Loader2, AlertCircle } from 'lucide-react';
 
 interface HomeAtmosphericHeroProps {
   weather: CurrentWeather;
@@ -9,6 +10,9 @@ interface HomeAtmosphericHeroProps {
   onExploreWeather?: () => void;
   onExploreForecast?: () => void;
   lastUpdated?: string;
+  onDetectLocation?: (forceRefresh?: boolean) => Promise<any>;
+  isLocating?: boolean;
+  locatePhase?: LocatingPhase;
 }
 
 export const HomeAtmosphericHero: React.FC<HomeAtmosphericHeroProps> = ({
@@ -17,7 +21,29 @@ export const HomeAtmosphericHero: React.FC<HomeAtmosphericHeroProps> = ({
   onExploreWeather,
   onExploreForecast,
   lastUpdated,
+  onDetectLocation,
+  isLocating = false,
+  locatePhase = 'idle',
 }) => {
+  const [locationError, setLocationError] = useState<string | null>(null);
+
+  const handleDetectLocation = async () => {
+    setLocationError(null);
+    if (!onDetectLocation) return;
+    try {
+      if (typeof window !== 'undefined' && (window as any).MausamAnalytics?.trackCurrentLocationUsed) {
+        (window as any).MausamAnalytics.trackCurrentLocationUsed('HERO_PRIMARY_CTA');
+      }
+      await onDetectLocation(true);
+      const target = document.getElementById('current-weather-section') || document.getElementById('telemetry-snapshot');
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth' });
+      }
+    } catch (err: any) {
+      setLocationError(err?.message || 'Location permission denied. Please select city manually.');
+    }
+  };
+
   const visualConfig = getWeatherVisualConfig(weather.condition, weather.isDay, weather.conditionKey);
   const ConditionIcon = visualConfig.icon;
 
@@ -188,29 +214,69 @@ export const HomeAtmosphericHero: React.FC<HomeAtmosphericHeroProps> = ({
             </div>
           </div>
 
-          {/* Action links */}
-          <div className="flex items-center gap-2.5 mt-4 pt-2">
-            {onExploreWeather && (
+          {/* Primary Dominant CTA & Subordinate Actions */}
+          <div className="mt-4 pt-3 border-t border-[#1E3852]/60 flex flex-col gap-2.5">
+            {onDetectLocation && (
               <button
                 type="button"
-                id="hero-explore-weather-btn"
-                onClick={onExploreWeather}
-                className="px-3.5 py-1.5 rounded-lg bg-[#0B3D91] hover:bg-[#1565C0] text-[#F5F9FC] border border-[#1565C0] text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+                id="hero-primary-location-cta"
+                onClick={handleDetectLocation}
+                disabled={isLocating}
+                className="w-full min-h-[44px] py-2.5 px-4 rounded-xl bg-[#0B72B9] hover:bg-[#095991] active:bg-[#074773] text-white font-bold text-xs sm:text-sm tracking-wide border border-[#38BDF8] transition-all shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-[#38BDF8] focus:ring-offset-2 focus:ring-offset-[#112233]"
               >
-                <span>Full Telemetry</span>
-                <ArrowRight className="w-3.5 h-3.5" />
+                {isLocating ? (
+                  <>
+                    <Loader2 className="w-4 h-4 text-white animate-spin" aria-hidden="true" />
+                    <span>
+                      {locatePhase === 'prompting'
+                        ? 'Requesting Geolocation Permission...'
+                        : locatePhase === 'locating'
+                        ? 'Resolving GPS Coordinates...'
+                        : locatePhase === 'geocoding'
+                        ? 'Querying Nearest IMD Observatory...'
+                        : 'Acquiring Atmospheric Telemetry...'}
+                    </span>
+                  </>
+                ) : (
+                  <>
+                    <Crosshair className="w-4 h-4 text-white shrink-0" aria-hidden="true" />
+                    <span className="font-extrabold uppercase tracking-wider">CHECK WEATHER FOR MY LOCATION</span>
+                  </>
+                )}
               </button>
             )}
-            {onExploreForecast && (
-              <button
-                type="button"
-                id="hero-explore-forecast-btn"
-                onClick={onExploreForecast}
-                className="px-3.5 py-1.5 rounded-lg bg-[#172738] hover:bg-[#1C334A] text-[#B8C7D9] hover:text-[#F5F9FC] border border-[#1E3852] text-xs font-medium transition-colors cursor-pointer"
-              >
-                7-Day Outlook
-              </button>
+
+            {locationError && (
+              <div className="flex items-start gap-1.5 text-[11px] text-[#FCA5A5] bg-[#7F1D1D]/30 border border-[#991B1B]/60 p-2 rounded-lg" role="alert">
+                <AlertCircle className="w-3.5 h-3.5 text-[#EF4444] shrink-0 mt-0.5" aria-hidden="true" />
+                <span>{locationError}</span>
+              </div>
             )}
+
+            {/* Subordinate Secondary Action Links */}
+            <div className="flex items-center gap-2">
+              {onExploreWeather && (
+                <button
+                  type="button"
+                  id="hero-explore-weather-btn"
+                  onClick={onExploreWeather}
+                  className="flex-1 py-1.5 px-3 rounded-lg bg-[#172738] hover:bg-[#1C334A] text-[#CBD5E1] hover:text-white border border-[#1E3852] text-xs font-medium flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                >
+                  <span>Full Telemetry</span>
+                  <ArrowRight className="w-3.5 h-3.5 text-[#94A3B8]" aria-hidden="true" />
+                </button>
+              )}
+              {onExploreForecast && (
+                <button
+                  type="button"
+                  id="hero-explore-forecast-btn"
+                  onClick={onExploreForecast}
+                  className="flex-1 py-1.5 px-3 rounded-lg bg-[#172738] hover:bg-[#1C334A] text-[#CBD5E1] hover:text-white border border-[#1E3852] text-xs font-medium text-center transition-colors cursor-pointer"
+                >
+                  7-Day Outlook
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
