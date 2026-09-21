@@ -58,6 +58,7 @@
 | **Alert sound playing repeatedly** | Component re-renders triggered the audio player on every state change. | Introduced SHA-style fingerprint hashing (`source::id::state::hazard::issuedAt`) in `alertAudioService` singleton. Only unplayed hashes trigger the chime. |
 | **Node ESM relative import crashes in production** | Node's strict runtime ESM loader fails on extensionless imports in production builds. | Configured `esbuild` in `npm run build` to bundle `server.ts` into a self-contained CommonJS artifact `dist/server.cjs` with `--packages=external`. |
 | **Process termination on unexpected socket disconnects** | Unhandled upstream network rejections killed the Express server process. | Added process-level safety listeners (`uncaughtException` and `unhandledRejection`) in `server.ts` with diagnostic logging. |
+| **Mobile horizontal layout stretching on narrow screens** | Fixed pixel widths (`w-[320px]`, `w-[800px]`) and wide data tables forced viewport overflow on screens <= 375px. | Replaced fixed pixel widths with fluid responsive classes (`w-full max-w-[...]`), refactored data tables in Reports and Air Quality pages to render high-contrast 'stacked' card layouts on mobile viewports (`md:hidden` / `sm:hidden`), wrapped remaining wide tables in `overflow-x-auto` scroll containers, and verified responsive compliance across 320px, 375px, 768px, 1024px, 1440px, and 1920px. |
 
 ---
 

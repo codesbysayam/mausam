@@ -426,12 +426,12 @@ export const HomeRadarPreview: React.FC<HomeRadarPreviewProps> = ({
           host: 'https://tilecache.rainviewer.com',
           radar: {
             past: [
-              { time: nowUnix - 3000, path: '' },
-              { time: nowUnix - 2400, path: '' },
-              { time: nowUnix - 1800, path: '' },
-              { time: nowUnix - 1200, path: '' },
-              { time: nowUnix - 600, path: '' },
-              { time: nowUnix, path: '' },
+              { time: nowUnix - 3000, path: `/v2/radar/${nowUnix - 3000}/512` },
+              { time: nowUnix - 2400, path: `/v2/radar/${nowUnix - 2400}/512` },
+              { time: nowUnix - 1800, path: `/v2/radar/${nowUnix - 1800}/512` },
+              { time: nowUnix - 1200, path: `/v2/radar/${nowUnix - 1200}/512` },
+              { time: nowUnix - 600, path: `/v2/radar/${nowUnix - 600}/512` },
+              { time: nowUnix, path: `/v2/radar/${nowUnix}/512` },
             ],
             nowcast: [],
           },
@@ -903,7 +903,7 @@ export const HomeRadarPreview: React.FC<HomeRadarPreviewProps> = ({
 
               {activeTileUrl && (
                 <TileLayer
-                  key={activeFrame?.path || 'radar-tile'}
+                  key={activeFrame?.path ? `${activeFrame.path}-${activeFrameIndex}` : `radar-tile-${activeFrameIndex}`}
                   url={activeTileUrl}
                   opacity={0.72}
                   maxNativeZoom={7}
@@ -1231,7 +1231,7 @@ export const HomeRadarPreview: React.FC<HomeRadarPreviewProps> = ({
 
                 return (
                   <button
-                    key={frame.path}
+                    key={frame.path ? `${frame.path}-${idx}` : `radar-pip-${frame.time || idx}`}
                     type="button"
                     onClick={() => {
                       setIsPlaying(false);

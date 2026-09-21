@@ -492,29 +492,62 @@ export const ReportPreviewDrawer: React.FC<ReportPreviewDrawerProps> = ({
                   </p>
 
                   {sec.tableData && (
-                    <div className="overflow-x-auto mt-3 pt-2">
-                      <table className="w-full text-xs text-left border-collapse font-mono">
-                        <thead>
-                          <tr className="bg-[#080E16] border-b border-[#1E2E40] text-[#94A3B8]">
-                            {sec.tableData.headers.map((h, hi) => (
-                              <th key={hi} className="p-2.5 font-bold whitespace-nowrap">
-                                {h}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {sec.tableData.rows.map((row, ri) => (
-                            <tr key={ri} className="border-b border-[#1E2E40]/60 hover:bg-[#142232]">
-                              {row.map((cell, ci) => (
-                                <td key={ci} className="p-2.5 text-white">
-                                  {cell}
-                                </td>
+                    <div className="mt-3 pt-2">
+                      {/* Desktop / Tablet View: Tabular */}
+                      <div className="hidden sm:block overflow-x-auto">
+                        <table className="w-full text-xs text-left border-collapse font-mono">
+                          <thead>
+                            <tr className="bg-[#080E16] border-b border-[#1E2E40] text-[#94A3B8]">
+                              {sec.tableData.headers.map((h, hi) => (
+                                <th key={hi} className="p-2.5 font-bold whitespace-nowrap">
+                                  {h}
+                                </th>
                               ))}
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody>
+                            {sec.tableData.rows.map((row, ri) => (
+                              <tr key={ri} className="border-b border-[#1E2E40]/60 hover:bg-[#142232]">
+                                {row.map((cell, ci) => (
+                                  <td key={ci} className="p-2.5 text-white">
+                                    {cell}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Mobile View: Stacked Card Layout to Prevent Horizontal Scrolling */}
+                      <div className="sm:hidden flex flex-col gap-2.5">
+                        {sec.tableData.rows.map((row, ri) => (
+                          <div
+                            key={ri}
+                            className="p-3.5 rounded-xl bg-[#080E16] border border-[#1E2E40] flex flex-col gap-2 font-mono text-xs shadow-sm"
+                          >
+                            <div className="flex items-center justify-between border-b border-[#1E2E40]/60 pb-1.5 gap-2">
+                              <span className="text-[10px] font-bold text-[#38BDF8] uppercase tracking-wide shrink-0">
+                                {sec.tableData!.headers[0] || 'Metric'}
+                              </span>
+                              <span className="font-bold text-white text-xs text-right">
+                                {row[0]}
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-1 gap-1.5 pt-0.5">
+                              {row.slice(1).map((cell, ci) => {
+                                const header = sec.tableData!.headers[ci + 1] || `Metric ${ci + 1}`;
+                                return (
+                                  <div key={ci} className="flex items-center justify-between gap-2 text-[11px]">
+                                    <span className="text-[#94A3B8]">{header}:</span>
+                                    <span className="font-semibold text-[#E2E8F0] text-right">{cell}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -576,29 +609,62 @@ export const ReportPreviewDrawer: React.FC<ReportPreviewDrawerProps> = ({
                     <h4 className="text-sm font-bold text-white font-mono">
                       {sec.title}
                     </h4>
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-xs text-left border-collapse font-mono">
-                        <thead>
-                          <tr className="bg-[#080E16] border-b border-[#1E2E40] text-[#94A3B8]">
-                            {sec.tableData!.headers.map((h, hi) => (
-                              <th key={hi} className="p-2.5 font-bold whitespace-nowrap">
-                                {h}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {sec.tableData!.rows.map((row, ri) => (
-                            <tr key={ri} className="border-b border-[#1E2E40]/60 hover:bg-[#142232]">
-                              {row.map((cell, ci) => (
-                                <td key={ci} className="p-2.5 text-white">
-                                  {cell}
-                                </td>
+                    <div>
+                      {/* Desktop / Tablet View: Tabular */}
+                      <div className="hidden sm:block overflow-x-auto">
+                        <table className="w-full text-xs text-left border-collapse font-mono">
+                          <thead>
+                            <tr className="bg-[#080E16] border-b border-[#1E2E40] text-[#94A3B8]">
+                              {sec.tableData!.headers.map((h, hi) => (
+                                <th key={hi} className="p-2.5 font-bold whitespace-nowrap">
+                                  {h}
+                                </th>
                               ))}
                             </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                          </thead>
+                          <tbody>
+                            {sec.tableData!.rows.map((row, ri) => (
+                              <tr key={ri} className="border-b border-[#1E2E40]/60 hover:bg-[#142232]">
+                                {row.map((cell, ci) => (
+                                  <td key={ci} className="p-2.5 text-white">
+                                    {cell}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      {/* Mobile View: Stacked Card Layout to Prevent Horizontal Scrolling */}
+                      <div className="sm:hidden flex flex-col gap-2.5 mt-1">
+                        {sec.tableData!.rows.map((row, ri) => (
+                          <div
+                            key={ri}
+                            className="p-3.5 rounded-xl bg-[#080E16] border border-[#1E2E40] flex flex-col gap-2 font-mono text-xs shadow-sm"
+                          >
+                            <div className="flex items-center justify-between border-b border-[#1E2E40]/60 pb-1.5 gap-2">
+                              <span className="text-[10px] font-bold text-[#38BDF8] uppercase tracking-wide shrink-0">
+                                {sec.tableData!.headers[0] || 'Metric'}
+                              </span>
+                              <span className="font-bold text-white text-xs text-right">
+                                {row[0]}
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-1 gap-1.5 pt-0.5">
+                              {row.slice(1).map((cell, ci) => {
+                                const header = sec.tableData!.headers[ci + 1] || `Metric ${ci + 1}`;
+                                return (
+                                  <div key={ci} className="flex items-center justify-between gap-2 text-[11px]">
+                                    <span className="text-[#94A3B8]">{header}:</span>
+                                    <span className="font-semibold text-[#E2E8F0] text-right">{cell}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 ))

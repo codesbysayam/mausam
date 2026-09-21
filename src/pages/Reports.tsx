@@ -21,7 +21,8 @@ import { ReportPreviewDrawer } from '../components/reports/ReportPreviewDrawer';
 import { ResearchSourcesSection } from '../components/reports/ResearchSourcesSection';
 import { useSavedReports } from '../hooks/useSavedReports';
 import { LocationStatusBar } from '../components/location/LocationStatusBar';
-import { Sparkles, FileText, Search, BookOpen, Layers } from 'lucide-react';
+import { DataTable, ColumnDef } from '../components/common/DataTable';
+import { Sparkles, FileText, Search, BookOpen, Layers, Bookmark, ExternalLink } from 'lucide-react';
 
 interface ReportsPageProps {
   weatherBundle: WeatherDataBundle;
@@ -235,6 +236,77 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
     }
   };
 
+  // Stacked mobile card-friendly table column definitions
+  const publicationColumns: ColumnDef<MeteorologicalPublication>[] = useMemo(
+    () => [
+      {
+        header: 'Publication / Title',
+        align: 'left',
+        render: (pub) => (
+          <div className="flex flex-col gap-1 max-w-sm">
+            <span className="font-bold text-white text-xs hover:text-[#38BDF8] transition-colors cursor-pointer" onClick={() => handleOpenPublication(pub)}>
+              {pub.title}
+            </span>
+            <div className="flex items-center gap-2 text-[10px] text-[#64748B] font-mono">
+              <span>{pub.documentNumber}</span>
+              <span>•</span>
+              <span className="text-[#94A3B8]">{pub.author}</span>
+            </div>
+          </div>
+        ),
+      },
+      {
+        header: 'Category & Domain',
+        align: 'left',
+        render: (pub) => (
+          <div className="flex flex-col gap-0.5">
+            <span className="text-[11px] font-semibold text-[#38BDF8]">{pub.category}</span>
+            <span className="text-[10px] text-[#94A3B8]">{pub.type}</span>
+          </div>
+        ),
+      },
+      {
+        header: 'Date & Size',
+        align: 'left',
+        render: (pub) => (
+          <div className="flex flex-col gap-0.5 text-[11px] font-mono text-[#CBD5E1]">
+            <span>{pub.date}</span>
+            <span className="text-[10px] text-[#64748B]">{pub.size}</span>
+          </div>
+        ),
+      },
+      {
+        header: 'Action',
+        align: 'right',
+        render: (pub) => (
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => toggleSaveReport(pub.id)}
+              className={`p-1.5 rounded-lg border transition-colors cursor-pointer ${
+                isReportSaved(pub.id)
+                  ? 'border-[#F59E0B]/50 bg-[#F59E0B]/15 text-[#F59E0B]'
+                  : 'border-[#1E2E40] bg-[#0A1017] text-[#64748B] hover:text-white'
+              }`}
+              title={isReportSaved(pub.id) ? 'Saved to library' : 'Save publication'}
+            >
+              <Bookmark className={`w-3.5 h-3.5 ${isReportSaved(pub.id) ? 'fill-[#F59E0B]' : ''}`} />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleOpenPublication(pub)}
+              className="px-2.5 py-1 rounded-lg bg-[#38BDF8]/10 hover:bg-[#38BDF8] text-[#38BDF8] hover:text-[#0A1017] border border-[#38BDF8]/30 text-xs font-mono font-bold transition-all cursor-pointer inline-flex items-center gap-1"
+            >
+              <span>Read</span>
+              <ExternalLink className="w-3 h-3" />
+            </button>
+          </div>
+        ),
+      },
+    ],
+    [isReportSaved, toggleSaveReport]
+  );
+
   return (
     <div id="mausam-reports-library-page" className="space-y-6 pb-12">
       {/* Unified Compact Location Status Bar */}
@@ -339,6 +411,15 @@ export const ReportsPage: React.FC<ReportsPageProps> = ({
                 isSaved={isReportSaved(pub.id)}
               />
             ))}
+          </div>
+        ) : viewMode === 'table' ? (
+          <div className="rounded-2xl bg-[#0B131D] border border-[#1E2E40] p-4 shadow-xl">
+            <DataTable
+              data={filteredPublications}
+              columns={publicationColumns}
+              keyExtractor={(pub) => pub.id}
+              emptyMessage="No publications match your filter criteria."
+            />
           </div>
         ) : (
           <div className="space-y-3">

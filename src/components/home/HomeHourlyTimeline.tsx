@@ -123,7 +123,7 @@ export const HomeHourlyTimeline: React.FC<HomeHourlyTimelineProps> = ({
 
           return (
             <div
-              key={item.time || idx}
+              key={item.time ? `hourly-${item.time}-${idx}` : `hourly-${idx}`}
               onClick={() => setSelectedHourIndex(idx)}
               className={`min-w-[105px] sm:min-w-[115px] p-3.5 rounded-xl border flex flex-col justify-between items-center text-center cursor-pointer transition-all shrink-0 ${
                 isSelected

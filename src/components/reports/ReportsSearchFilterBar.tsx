@@ -4,6 +4,7 @@ import {
   SlidersHorizontal,
   LayoutGrid,
   List,
+  Table,
   Bookmark,
   X,
   Sparkles,
@@ -26,7 +27,7 @@ export type FilterCategory =
 
 export type SortOption = 'NEWEST' | 'OLDEST' | 'TITLE' | 'CATEGORY';
 
-export type ViewMode = 'list' | 'grid';
+export type ViewMode = 'list' | 'grid' | 'table';
 
 interface ReportsSearchFilterBarProps {
   searchQuery: string;
@@ -149,6 +150,18 @@ export const ReportsSearchFilterBar: React.FC<ReportsSearchFilterBarProps> = ({
               title="Row List View"
             >
               <List className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => onViewModeChange('table')}
+              className={`p-2 rounded-xl transition-colors cursor-pointer ${
+                viewMode === 'table'
+                  ? 'bg-[#38BDF8] text-[#0A1017] shadow-sm'
+                  : 'text-[#64748B] hover:text-white'
+              }`}
+              title="Table View (Stacked on Mobile)"
+            >
+              <Table className="w-4 h-4" />
             </button>
             <button
               type="button"

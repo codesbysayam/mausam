@@ -343,7 +343,7 @@ export const DateCalendar: React.FC<DateCalendarProps> = ({
 
               return (
                 <button
-                  key={`${cell.dayNumber}-${idx}`}
+                  key={cell.date.toISOString()}
                   type="button"
                   disabled={cell.isDisabled}
                   onClick={() => !cell.isDisabled && handleSelectDate(cell.date)}

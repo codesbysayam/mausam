@@ -232,7 +232,7 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
       {alertSurgeNotice && (
         <div
           id="severe-alert-surge-banner"
-          className="flex items-center justify-between gap-3 px-4 py-3 rounded-lg bg-[#E74C3C]/20 border border-[#E74C3C] text-white shadow-lg animate-pulse"
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 py-3 rounded-lg bg-[#E74C3C]/20 border border-[#E74C3C] text-white shadow-lg animate-pulse"
         >
           <div className="flex items-center gap-2.5 text-xs sm:text-sm font-bold">
             <Volume2 className="w-5 h-5 text-[#FF8A80] shrink-0" />

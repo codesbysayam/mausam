@@ -63,6 +63,7 @@
 - [x] **Multi-lingual i18n Localization**: Dynamic interface translation supporting English, Hindi, Bengali, Tamil, Telugu, Marathi, and Gujarati.
 - [x] **Mobile Drawer Navigation**: High-contrast responsive slide-out navigation with 48px touch targets.
 - [x] **High-Contrast Font Scaler**: Global accessibility font resizing controls (`A-`, `A+`) in the header.
+- [x] **Comprehensive Responsive Viewport Audit & Remediation**: Eliminated fixed width bottlenecks across modals and cards, implemented responsive 'stacked' card layouts on mobile viewports for data tables in Reports and Air Quality pages to eliminate horizontal page scrolling, wrapped remaining wide tables in overflow containers, and verified rendering across 320px, 375px, 768px, 1024px, 1440px, and 1920px viewports.
 - [x] **Skeleton Loading Screens**: Low-CLS shimmering placeholder skeletons for all data panels during initial network fetch.
 
 ---

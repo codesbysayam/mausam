@@ -457,7 +457,7 @@ const ArchitectureSection: React.FC = () => (
       <div className="bg-[#071A2D] p-3 rounded border border-[#1D5278] font-mono text-xs text-white">
         <span className="text-[#8EA3B8] select-none">$ </span>
         <span className="text-emerald-400">npm run build</span>
-        <div className="text-[11px] text-[#8EA3B8] mt-1">
+        <div className="text-[11px] text-[#8EA3B8] mt-1 break-all whitespace-pre-wrap">
           &gt; vite build &amp;&amp; esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs
         </div>
       </div>

@@ -551,7 +551,7 @@ export const HomeSevereWeatherStrip: React.FC<HomeSevereWeatherStripProps> = ({
                   <div className="flex flex-wrap items-center gap-1.5">
                     {currentData.affectedDistricts.slice(0, 6).map((district, idx) => (
                       <button
-                        key={idx}
+                        key={`${district}-${idx}`}
                         type="button"
                         onClick={() => setSelectedDistrictDetail(district)}
                         className="px-2.5 py-1 rounded bg-[#131E2C] hover:bg-[#1E2E40] border border-[#1E2E40] hover:border-[#38BDF8] text-xs font-medium text-[#E2E8F0] hover:text-white transition-colors cursor-pointer"

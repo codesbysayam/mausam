@@ -47,7 +47,7 @@ const SWIPEABLE_TABS: MainNavTab[] = ['home', 'weather', 'forecast', 'warnings',
 
 function getTabFromPathname(path: string): AppView {
   const cleanPath = path.toLowerCase().replace(/\/+$/, '');
-  if (cleanPath === '' || cleanPath === '/') return 'home';
+  if (cleanPath === '' || cleanPath === '/' || cleanPath === '/index.html' || cleanPath.endsWith('/index.html')) return 'home';
   if (cleanPath === '/docs' || cleanPath === '/documentation' || cleanPath === '/doc') return 'docs';
   if (cleanPath === '/privacy' || cleanPath === '/privacy-policy') return 'privacy';
   if (cleanPath === '/api' || cleanPath === '/open-data-api') return 'api';
@@ -349,7 +349,7 @@ export default function App() {
       />
 
       {/* 3. Main Body Content */}
-      <main id="main-content" ref={swipeContainerRef} className="relative flex-1 w-full min-w-0">
+      <main id="main-content" ref={swipeContainerRef} className="relative flex-1 w-full min-w-0 grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         {/* Slim indeterminate progress bar while weather data is syncing */}
         {isLoadingWeather && (
           <div
@@ -363,7 +363,7 @@ export default function App() {
           </div>
         )}
 
-        <PageContainer id="mausam-main-page-container">
+        <PageContainer id="mausam-main-page-container" className="grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
           {/* HOME: National Weather Overview */}
           {activeTab === 'home' && (
             <HomePage
@@ -703,7 +703,7 @@ export default function App() {
           id="global-severe-alert-surge-toast"
           role="alert"
           aria-live="assertive"
-          className="fixed bottom-16 sm:bottom-20 right-4 sm:right-6 z-50 max-w-sm w-full bg-[#180B0D] border-2 border-[#E74C3C] text-white p-4 rounded-xl shadow-2xl flex flex-col gap-2.5"
+          className="fixed bottom-16 sm:bottom-20 left-3 right-3 sm:left-auto sm:right-6 z-50 sm:w-full max-w-sm bg-[#180B0D] border-2 border-[#E74C3C] text-white p-4 rounded-xl shadow-2xl flex flex-col gap-2.5"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 text-[#FF8A80]">

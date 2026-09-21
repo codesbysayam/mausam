@@ -333,7 +333,7 @@ export const HourlyWeatherTimeline: React.FC<HourlyWeatherTimelineProps> = ({
 
             return (
               <div
-                key={idx}
+                key={item.time ? `hourly-card-${item.time}-${idx}` : `hourly-card-${idx}`}
                 id={`hourly-card-${idx}`}
                 className={`p-3 rounded-lg border flex flex-col items-center justify-between text-center transition-all min-w-[110px] w-[115px] ${
                   item.isNow
