@@ -230,6 +230,38 @@ async function startServer() {
       const imdConfigured = Boolean(process.env.IMD_API_KEY);
       const imdStatusStr = imdConfigured ? 'Operational' : 'Not Configured';
 
+      const cleanPrompt = (prompt || '').trim().toLowerCase();
+      const isDeveloperQuery =
+        cleanPrompt.includes('who developed') ||
+        cleanPrompt.includes('who created') ||
+        cleanPrompt.includes('who built') ||
+        cleanPrompt.includes('who made') ||
+        cleanPrompt.includes('developer');
+
+      const isMausamOverview =
+        cleanPrompt.includes('what is mausam') ||
+        cleanPrompt.includes('what does mausam do') ||
+        cleanPrompt === 'about mausam' ||
+        cleanPrompt.includes('what can you do');
+
+      if (isDeveloperQuery) {
+        return res.json({
+          response: "I don't have verified developer information in my current project data. MAUSAM is an atmospheric intelligence platform consolidating official telemetry from IMD, NDMA, CPCB, and INCOIS.",
+          source: 'MAUSAM Knowledge Base',
+          groundingSources: [],
+          modeUsed: 'offline',
+        });
+      }
+
+      if (isMausamOverview) {
+        return res.json({
+          response: "MAUSAM is a meteorological and atmospheric information platform designed to provide weather observations, forecasts, warnings, air-quality information, radar/map data, and agrometeorological information for locations across India.",
+          source: 'MAUSAM Knowledge Base',
+          groundingSources: [],
+          modeUsed: 'offline',
+        });
+      }
+
       if (!client) {
         // Fallback grounded meteorological intelligence strictly adhering to truthful source attribution
         const loc = telemetryContext.location;

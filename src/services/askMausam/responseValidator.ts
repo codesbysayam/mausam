@@ -2,6 +2,7 @@
 // MAUSAM - Atmospheric Intelligence Platform
 // Response Validator & Contradiction Detection Engine
 // Guarantees zero discrepancy between model text and canonical facts
+// ENFORCES: Knowledge questions NEVER output weather cards or telemetry
 // ====================================================================
 
 import {
@@ -18,6 +19,49 @@ export interface ValidationReport {
   validatedResponse: AskMausamResponse;
 }
 
+/**
+ * Hard Safety Assertion: Guarantees that knowledge, about, or help intents
+ * NEVER return weather, forecast, warning, AQI, or radar responses.
+ */
+export function assertResponseMatchesIntent(
+  response: AskMausamResponse,
+  intent: WeatherIntent | string
+): void {
+  const isKnowledgeIntent =
+    intent === 'ABOUT_MAUSAM' ||
+    intent === 'ABOUT_DEVELOPER' ||
+    intent === 'GENERAL_KNOWLEDGE' ||
+    intent === 'HELP' ||
+    intent === 'GREETING' ||
+    intent === 'CLARIFICATION' ||
+    intent === 'GENERAL_MAUSAM_INFORMATION';
+
+  if (isKnowledgeIntent) {
+    if (
+      response.responseType === 'weather' ||
+      response.responseType === 'forecast' ||
+      response.responseType === 'warning' ||
+      response.responseType === 'aqi' ||
+      response.responseType === 'radar' ||
+      response.responseType !== 'knowledge'
+    ) {
+      throw new Error(
+        `CRITICAL: Knowledge intent ${intent} produced non-knowledge responseType: ${response.responseType}`
+      );
+    }
+
+    if (
+      response.answer.includes('### Current Weather:') ||
+      response.answer.includes('Observed Telemetry') ||
+      response.answer.includes('Atmospheric Parameter')
+    ) {
+      throw new Error(
+        `CRITICAL: Knowledge intent ${intent} leaked weather telemetry card in answer`
+      );
+    }
+  }
+}
+
 export function validateAndEnforceGrounding(
   candidate: Partial<AskMausamResponse> | null,
   context: AskMausamContext,
@@ -32,16 +76,56 @@ export function validateAndEnforceGrounding(
   // Derive primary source status
   const primarySource = context.sources[0];
   const sourceStatus: SourceStatus = primarySource ? primarySource.status : 'LIVE';
-  const observedAt = cur?.observedAt || new Date().toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit' });
+  const observedAt =
+    cur?.observedAt ||
+    new Date().toLocaleTimeString('en-IN', {
+      timeZone: 'Asia/Kolkata',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+  // HARD KNOWLEDGE INTENT SAFETY GATE
+  const isKnowledgeIntent =
+    intent === 'ABOUT_MAUSAM' ||
+    intent === 'ABOUT_DEVELOPER' ||
+    intent === 'GENERAL_KNOWLEDGE' ||
+    intent === 'HELP' ||
+    intent === 'GREETING' ||
+    intent === 'CLARIFICATION' ||
+    intent === 'GENERAL_MAUSAM_INFORMATION';
+
+  if (isKnowledgeIntent) {
+    return {
+      isValid: true,
+      contradictions: [],
+      validatedResponse: {
+        answer: candidate?.answer || 'MAUSAM is a meteorological and atmospheric information platform.',
+        location: locName,
+        intent,
+        responseType: 'knowledge',
+        knowledge: candidate?.knowledge,
+        facts: candidate?.facts || [],
+        sourceStatus: 'LIVE',
+        observedAt,
+        confidenceReason: 'Verified canonical knowledge entry.',
+        suggestedFollowUps: candidate?.suggestedFollowUps || [
+          'What is MAUSAM?',
+          'Show current weather for Odisha',
+          'What is AQI?',
+        ],
+      },
+    };
+  }
 
   // 1. Check Temperature Contradiction
   if (cur && typeof cur.temperatureC === 'number' && candidate?.answer) {
-    // Look for patterns like "28°C" or "28 degrees" in answer
     const tempMatches = candidate.answer.match(/(\d+(\.\d+)?)\s*(°\s*C|degrees?\s*c)/i);
     if (tempMatches) {
       const citedTemp = parseFloat(tempMatches[1]);
       if (Math.abs(citedTemp - cur.temperatureC) > 1.5) {
-        contradictions.push(`Model stated temperature ${citedTemp}°C, but canonical context observed ${cur.temperatureC}°C`);
+        contradictions.push(
+          `Model stated temperature ${citedTemp}°C, but canonical context observed ${cur.temperatureC}°C`
+        );
       }
     }
   }
@@ -50,8 +134,14 @@ export function validateAndEnforceGrounding(
   const hasRedAlert = warnings.some((w) => w.severity === 'red');
   if (hasRedAlert && candidate?.answer) {
     const answerLower = candidate.answer.toLowerCase();
-    if (answerLower.includes('no warning') || answerLower.includes('no severe weather') || answerLower.includes('all clear')) {
-      contradictions.push('Model stated no warnings, but canonical context has an active IMD RED ALERT');
+    if (
+      answerLower.includes('no warning') ||
+      answerLower.includes('no severe weather') ||
+      answerLower.includes('all clear')
+    ) {
+      contradictions.push(
+        'Model stated no warnings, but canonical context has an active IMD RED ALERT'
+      );
     }
   }
 
@@ -61,7 +151,9 @@ export function validateAndEnforceGrounding(
     if (aqiMatches && aqiMatches[2]) {
       const citedAqi = parseInt(aqiMatches[2], 10);
       if (Math.abs(citedAqi - aqi.index) > 20) {
-        contradictions.push(`Model stated AQI ${citedAqi}, but canonical context recorded AQI ${aqi.index}`);
+        contradictions.push(
+          `Model stated AQI ${citedAqi}, but canonical context recorded AQI ${aqi.index}`
+        );
       }
     }
   }
@@ -132,45 +224,63 @@ export function validateAndEnforceGrounding(
   }
 
   // If contradictions found or candidate is missing, build strict data-grounded answer
-  if (contradictions.length > 0 || !candidate || !candidate.answer || candidate.answer.trim() === '') {
+  if (
+    contradictions.length > 0 ||
+    !candidate ||
+    !candidate.answer ||
+    candidate.answer.trim() === ''
+  ) {
     const groundedAnswer = buildGroundedAnswerText(context, intent);
+
+    const validated: AskMausamResponse = {
+      answer: groundedAnswer,
+      location: locName,
+      intent,
+      responseType: 'weather',
+      facts: canonicalFacts,
+      warnings: warnings.map((w) => `${w.severity.toUpperCase()}: ${w.headline}`),
+      sourceStatus,
+      observedAt,
+      confidenceReason: 'Canonical ground truth enforced following fact validation.',
+      suggestedFollowUps: generateFollowUps(intent, context),
+    };
+
+    assertResponseMatchesIntent(validated, intent);
 
     return {
       isValid: false,
       contradictions,
-      validatedResponse: {
-        answer: groundedAnswer,
-        location: locName,
-        intent,
-        facts: canonicalFacts,
-        warnings: warnings.map((w) => `${w.severity.toUpperCase()}: ${w.headline}`),
-        sourceStatus,
-        observedAt,
-        confidenceReason: 'Canonical ground truth enforced following fact validation.',
-        suggestedFollowUps: generateFollowUps(intent, context),
-      },
+      validatedResponse: validated,
     };
   }
 
   // Candidate is valid and truthful
+  const validated: AskMausamResponse = {
+    answer: candidate.answer,
+    location: candidate.location || locName,
+    intent: candidate.intent || intent,
+    timeframe: candidate.timeframe,
+    responseType: candidate.responseType || 'weather',
+    facts:
+      candidate.facts && candidate.facts.length > 0 ? candidate.facts : canonicalFacts,
+    warnings:
+      candidate.warnings || warnings.map((w) => `${w.severity.toUpperCase()}: ${w.headline}`),
+    sourceStatus,
+    observedAt,
+    confidenceReason:
+      candidate.confidenceReason || 'Telemetry validated against live atmospheric feeds.',
+    comparison: candidate.comparison,
+    groundingSources: candidate.groundingSources,
+    suggestedFollowUps: candidate.suggestedFollowUps || generateFollowUps(intent, context),
+    suggestedActions: candidate.suggestedActions,
+  };
+
+  assertResponseMatchesIntent(validated, intent);
+
   return {
     isValid: true,
     contradictions: [],
-    validatedResponse: {
-      answer: candidate.answer,
-      location: candidate.location || locName,
-      intent: candidate.intent || intent,
-      timeframe: candidate.timeframe,
-      facts: candidate.facts && candidate.facts.length > 0 ? candidate.facts : canonicalFacts,
-      warnings: candidate.warnings || warnings.map((w) => `${w.severity.toUpperCase()}: ${w.headline}`),
-      sourceStatus,
-      observedAt,
-      confidenceReason: candidate.confidenceReason || 'Telemetry validated against live atmospheric feeds.',
-      comparison: candidate.comparison,
-      groundingSources: candidate.groundingSources,
-      suggestedFollowUps: candidate.suggestedFollowUps || generateFollowUps(intent, context),
-      suggestedActions: candidate.suggestedActions,
-    },
+    validatedResponse: validated,
   };
 }
 
@@ -197,7 +307,13 @@ function buildGroundedAnswerText(context: AskMausamContext, intent: WeatherInten
   }
 
   if (intent === 'FORECAST' && forecast && forecast.daily.length > 0) {
-    const days = forecast.daily.slice(0, 3).map((d) => `• **${d.dayName}**: ${d.condition}, High ${d.maxTempC}°C / Low ${d.minTempC}°C (Rain probability: ${d.precipitationProbability}%)`).join('\n');
+    const days = forecast.daily
+      .slice(0, 3)
+      .map(
+        (d) =>
+          `• **${d.dayName}**: ${d.condition}, High ${d.maxTempC}°C / Low ${d.minTempC}°C (Rain probability: ${d.precipitationProbability}%)`
+      )
+      .join('\n');
     return `**Forecast for ${loc.name}**:\n\n${days}\n\n${forecast.synopsis || ''}`;
   }
 

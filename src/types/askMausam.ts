@@ -36,8 +36,11 @@ export type WeatherIntent =
   | 'MULTI_INTENT'
   | 'GENERAL_KNOWLEDGE'
   | 'ABOUT_MAUSAM'
+  | 'ABOUT_DEVELOPER'
   | 'HELP'
   | 'GREETING'
+  | 'CLARIFICATION'
+  | 'LOCATION'
   | 'GENERAL_MAUSAM_INFORMATION';
 
 export type Timeframe =

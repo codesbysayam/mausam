@@ -7,13 +7,15 @@ import {
   StateWarningSummary,
   AlertSeverity,
 } from '../types/warningTypes';
-import { warningService } from '../services/warningService';
-import { NATIONAL_WARNINGS_DATABASE } from '../data/nationalWarningsData';
+import { warningService as canonicalWarningService } from '../services/warnings/warningService';
+import { warningService as warningHelperService } from '../services/warningService';
+import { weatherWarningToRecord } from '../services/warnings/warningAdapter';
+import { WarningFeedDiagnostics } from '../types/warnings';
 import { WarningHeader } from '../components/warnings/WarningHeader';
 import { NationalAlertStatus } from '../components/warnings/NationalAlertStatus';
 import { WarningTicker } from '../components/warnings/WarningTicker';
 import { useAlertAudio } from '../hooks/useAlertAudio';
-import { Volume2 } from 'lucide-react';
+import { Volume2, AlertTriangle, RefreshCw } from 'lucide-react';
 import { WarningFilterBar } from '../components/warnings/WarningFilterBar';
 import { NationalWarningMap } from '../components/warnings/NationalWarningMap';
 import { StateWatchlistPanel } from '../components/warnings/StateWatchlistPanel';
@@ -42,8 +44,10 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
   weatherBundle,
   selectedLocation,
 }) => {
-  // Real warning records fetched from verified IMD API and national sub-division network
-  const [warningsList, setWarningsList] = useState<WarningRecord[]>(NATIONAL_WARNINGS_DATABASE);
+  // Real warning records fetched from verified SACHET/NDMA and IMD feed
+  const [warningsList, setWarningsList] = useState<WarningRecord[]>([]);
+  const [diagnostics, setDiagnostics] = useState<WarningFeedDiagnostics | null>(null);
+  const [isFeedUnavailable, setIsFeedUnavailable] = useState<boolean>(false);
   const [filter, setFilter] = useState<WarningFilterState>(INITIAL_FILTER_STATE);
   const [selectedDrawerWarning, setSelectedDrawerWarning] = useState<WarningRecord | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -59,72 +63,28 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
     },
   });
 
-  // Fetch verified warnings for the current location
+  // Fetch verified warnings for the current location & nation
   const loadWarnings = useCallback(async (force = false) => {
     setIsRefreshing(true);
     try {
-      const res = await warningService.fetchLocationWarning(selectedLocation, force);
-      const combined = [...NATIONAL_WARNINGS_DATABASE];
+      const { activeWarnings, diagnostics: diag } = await canonicalWarningService.fetchWarnings(force);
+      setDiagnostics(diag);
 
-      if (
-        res.state === 'WATCH_ADVISORY' ||
-        res.state === 'ORANGE_ALERT' ||
-        res.state === 'RED_ALERT'
-      ) {
-        const liveRecord: WarningRecord = {
-          id: 'imd-live-' + (res.metadata?.resolvedDistrict || 'warning').toLowerCase().replace(/\s+/g, '-'),
-          bulletinNo: `IMD/HQ/WRN/${new Date().getFullYear()}/LIVE`,
-          title: res.hazardHeadline,
-          severity: res.severity as AlertSeverity,
-          severityLabel: res.severityLabel || 'ACTIVE WARNING',
-          hazardCategory: 'heavy_rain',
-          hazardLabel: res.hazardLabel || res.hazardHeadline,
-          hazardIcon: 'warning',
-          region: 'east',
-          state: res.metadata?.resolvedState || selectedLocation?.state || 'India',
-          stateCode: (res.metadata?.resolvedState || selectedLocation?.state || 'IN').slice(0, 2).toUpperCase(),
-          subdivision: res.metadata?.subdivision || res.affectedAreasHeadline,
-          affectedDistricts: res.affectedDistricts.length > 0 ? res.affectedDistricts : [selectedLocation?.city || 'Local Sector'],
-          affectedAreaText: res.affectedAreasHeadline,
-          description: res.description,
-          impacts: ['Potential localized waterlogging', 'Traffic disruption during peak spell periods'],
-          recommendedActions: res.recommendedActions || [],
-          expectedConditions: {},
-          timeline: [],
-          issuedAt: res.issuedAt,
-          validFrom: res.issuedAt,
-          validUntil: res.validUntil,
-          validityTimestamp: Date.now() + 24 * 3600 * 1000,
-          authorityAgency: res.source === 'None' ? 'IMD Warning Service' : res.source,
-          source: res.source === 'None' ? 'IMD Warning Service' : res.source,
-          isRedAlert: res.severity === 'red',
-          emergencyContact: {
-            title: res.emergencyContact?.title || 'National Disaster Response Force',
-            number: res.emergencyContact?.number || '112',
-            description: 'Toll-free 24/7 disaster emergency line',
-          },
-        };
-
-        const existingIdx = combined.findIndex(
-          (w) =>
-            w.id === liveRecord.id ||
-            (w.state.toLowerCase() === liveRecord.state.toLowerCase() &&
-              w.hazardCategory === liveRecord.hazardCategory)
-        );
-        if (existingIdx >= 0) {
-          combined[existingIdx] = liveRecord;
-        } else {
-          combined.unshift(liveRecord);
-        }
+      if (diag.status === 'UNAVAILABLE') {
+        setIsFeedUnavailable(true);
+        setWarningsList([]);
+      } else {
+        setIsFeedUnavailable(false);
+        const mappedRecords = activeWarnings.map(weatherWarningToRecord);
+        setWarningsList(mappedRecords);
       }
-
-      setWarningsList(combined);
     } catch {
-      setWarningsList(NATIONAL_WARNINGS_DATABASE);
+      setIsFeedUnavailable(true);
+      setWarningsList([]);
     } finally {
       setIsRefreshing(false);
     }
-  }, [selectedLocation]);
+  }, []);
 
   useEffect(() => {
     loadWarnings(false);
@@ -135,17 +95,17 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
 
   // Filtered list of warnings based on active user filter
   const filteredWarnings = useMemo(() => {
-    return warningService.filterWarnings(warningsList, filter);
+    return warningHelperService.filterWarnings(warningsList, filter);
   }, [warningsList, filter]);
 
   // Real-time calculated national warning stats
   const stats = useMemo(() => {
-    return warningService.calculateStats(warningsList);
+    return warningHelperService.calculateStats(warningsList);
   }, [warningsList]);
 
   // Overall national alert status level
   const overallStatus = useMemo(() => {
-    return warningService.getNationalOverallStatus(warningsList);
+    return warningHelperService.getNationalOverallStatus(warningsList);
   }, [warningsList]);
 
   // Handle manual refresh
@@ -220,6 +180,35 @@ export const AlertsPage: React.FC<AlertsPageProps> = ({
     >
       {/* Unified Compact Location Status Bar */}
       <LocationStatusBar location={selectedLocation} />
+
+      {/* Official Warning Feed Unavailable Banner */}
+      {isFeedUnavailable && (
+        <div
+          id="warning-feed-unavailable-banner"
+          className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-5 py-4 rounded-xl bg-[#181109] border border-[#F59E0B]/50 text-white shadow-lg"
+        >
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="w-6 h-6 text-[#F59E0B] shrink-0" />
+            <div>
+              <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                OFFICIAL WARNING FEED UNAVAILABLE
+              </h3>
+              <p className="text-xs text-[#94A3B8] mt-0.5">
+                The real-time SACHET / NDMA disaster alert stream is temporarily unreachable. Surface telemetry and NWP numerical model forecasts remain active.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => loadWarnings(true)}
+            disabled={isRefreshing}
+            className="inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-[#241A0C] hover:bg-[#362713] border border-[#F59E0B]/60 text-xs font-bold text-[#FCD34D] transition-colors shrink-0"
+          >
+            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <span>Retry Feed Sync</span>
+          </button>
+        </div>
+      )}
 
       {/* 1. Official Header with Synoptic Status & Manual Refresh */}
       <WarningHeader

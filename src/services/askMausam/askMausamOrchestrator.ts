@@ -16,7 +16,7 @@ import {
 } from '../../types/askMausam';
 import { resolveLocation, locationToMetadata } from './locationResolver';
 import { routeIntent } from './intentRouter';
-import { validateAndEnforceGrounding } from './responseValidator';
+import { validateAndEnforceGrounding, assertResponseMatchesIntent } from './responseValidator';
 import { conversationMemory } from './conversationMemory';
 import { OpenMeteoProvider } from '../providers/openMeteoProvider';
 import { CpcbAirQualityProvider } from '../providers/cpcbAirQualityProvider';
@@ -26,6 +26,12 @@ import { withTimeout, TIMEOUT_CONFIG } from './providerTimeout';
 import { requestCache, CACHE_TTLS } from './requestCache';
 import { requestDeduper } from './requestDeduper';
 import { ResponseGenerator } from './responseGenerator';
+import {
+  findKnowledge,
+  MAUSAM_PLATFORM_OVERVIEW,
+  MAUSAM_CAPABILITIES,
+  DEVELOPER_KNOWLEDGE,
+} from './mausamKnowledge';
 
 export interface OrchestratorParams {
   query: string;
@@ -93,30 +99,135 @@ export class AskMausamOrchestrator {
 
     // Wrap in deduplication to prevent redundant concurrent fetches
     return requestDeduper.dedupe(cacheKey, async () => {
-      // 4. Instant Fast-Path for Pure Greetings/Help (ZERO network calls)
-      if (routing.intent === 'GENERAL_MAUSAM_INFORMATION' && routing.requiredTools.length === 0) {
-        const greetingFast = ResponseGenerator.generateGreetingResponse();
+      // 4. HARD GENERAL-QUESTION GATE & LOCAL KNOWLEDGE (ZERO external network calls)
+      const isGeneralOrKnowledge =
+        routing.isGeneralKnowledge ||
+        routing.intent === 'GENERAL_KNOWLEDGE' ||
+        routing.intent === 'ABOUT_MAUSAM' ||
+        routing.intent === 'ABOUT_DEVELOPER' ||
+        routing.intent === 'HELP' ||
+        routing.intent === 'GREETING' ||
+        routing.intent === 'CLARIFICATION' ||
+        routing.intent === 'GENERAL_MAUSAM_INFORMATION' ||
+        routing.requiredTools.length === 0;
+
+      if (isGeneralOrKnowledge && routing.requiredTools.length === 0) {
+        const knowledgeEntry = findKnowledge(query);
+        let title = 'About MAUSAM Platform';
+        let summary =
+          'MAUSAM is a meteorological and atmospheric information platform designed to provide weather observations, forecasts, warnings, air-quality information, radar/map data, and agrometeorological information for locations across India.';
+        let bullets = [
+          'Real-time atmospheric observations (temperature, humidity, wind, pressure, cloud cover)',
+          '7-day numerical forecasts and precipitation probability',
+          'Official color-coded early warnings (Red, Orange, Yellow)',
+          'National AQI and particulate matter (PM2.5 / PM10) monitoring',
+          'Doppler Weather Radar (DWR) composite reflectivity',
+          'Agrometeorological advisories and coastal marine conditions',
+        ];
+        let markdown = '';
+        let followUps = [
+          'What weather data can you provide?',
+          'Show current weather for Odisha',
+          'Are there active warnings?',
+          'Show the 7-day forecast',
+        ];
+
+        if (routing.intent === 'ABOUT_DEVELOPER') {
+          title = DEVELOPER_KNOWLEDGE.title;
+          summary = DEVELOPER_KNOWLEDGE.summary;
+          bullets = DEVELOPER_KNOWLEDGE.bullets;
+          markdown = DEVELOPER_KNOWLEDGE.markdown;
+          followUps = DEVELOPER_KNOWLEDGE.suggestedFollowUps;
+        } else if (routing.intent === 'ABOUT_MAUSAM') {
+          const overview = MAUSAM_PLATFORM_OVERVIEW;
+          title = overview.title;
+          summary = overview.summary;
+          bullets = overview.bullets;
+          markdown = overview.markdown;
+          followUps = overview.suggestedFollowUps;
+        } else if (routing.intent === 'HELP') {
+          const caps = MAUSAM_CAPABILITIES;
+          title = caps.title;
+          summary = caps.summary;
+          bullets = caps.bullets;
+          markdown = caps.markdown;
+          followUps = caps.suggestedFollowUps;
+        } else if (knowledgeEntry) {
+          title = knowledgeEntry.title;
+          summary = knowledgeEntry.summary;
+          bullets = knowledgeEntry.bullets;
+          markdown = knowledgeEntry.markdown;
+          followUps = knowledgeEntry.suggestedFollowUps;
+        } else if (routing.intent === 'GREETING') {
+          title = 'Namaste & Welcome to Ask MAUSAM';
+          summary =
+            'I am your National Meteorological Assistant, providing verified atmospheric observations, warnings, and forecasts across India.';
+          markdown = `### Welcome to Ask MAUSAM\n\nI am **Ask MAUSAM**, India's Atmospheric Intelligence Assistant. You can ask me about:\n- **Current Weather**: Temperature, humidity, wind, and sky condition for any Indian city.\n- **Forecasts**: 7-day predictions and rain probabilities.\n- **Official Warnings**: Color-coded disaster alerts (Red, Orange, Yellow).\n- **Air Quality (AQI)**: Live PM2.5 and PM10 pollution levels.\n- **Radar & Marine**: Doppler weather radar reflectivity and coastal sea state.\n\n*How can I help you today?*`;
+          bullets = ['36 States & UTs Covered', 'Official IMD / NDMA Bulletins', 'Real-time Telemetry'];
+          followUps = [
+            'What is MAUSAM?',
+            'Show current weather for Odisha',
+            'Are there active warnings?',
+            'What is the AQI in Bhubaneswar?',
+          ];
+        } else {
+          const overview = MAUSAM_PLATFORM_OVERVIEW;
+          title = overview.title;
+          summary = overview.summary;
+          bullets = overview.bullets;
+          markdown = overview.markdown;
+          followUps = overview.suggestedFollowUps;
+        }
+
+        const totalMs = Math.round(performance.now() - startTime);
+
+        const response: AskMausamResponse = {
+          answer: markdown || summary,
+          location: '',
+          intent: routing.intent,
+          responseType: 'knowledge',
+          knowledge: {
+            title,
+            summary,
+            bullets,
+            category:
+              knowledgeEntry?.category ||
+              (routing.intent === 'ABOUT_DEVELOPER' ? 'ABOUT' : 'MAUSAM'),
+          },
+          facts: bullets.map((b) => ({ label: title, value: b })),
+          sourceStatus: 'LIVE',
+          suggestedFollowUps: followUps,
+          debug: {
+            query,
+            intent: routing.intent,
+            location: 'None (Knowledge Query)',
+            locationIsContextOnly: true,
+            providers: [],
+            fastPath: 'LOCAL_KNOWLEDGE',
+            latencyMs: totalMs,
+          },
+        };
+
+        assertResponseMatchesIntent(response, routing.intent);
+
         const emptyContext: AskMausamContext = {
-          location: primaryLoc,
-          sources: greetingFast.sources,
+          location: {
+            name: 'India',
+            country: 'India',
+            latitude: 20.5937,
+            longitude: 78.9629,
+            timezone: 'Asia/Kolkata',
+          },
+          sources: [
+            {
+              provider: 'MAUSAM Canonical Knowledge Base',
+              status: 'LIVE',
+              retrievedAt: new Date().toISOString(),
+            },
+          ],
           contextVersion: `v1.${Date.now()}`,
         };
 
-        const response: AskMausamResponse = {
-          answer: greetingFast.markdown,
-          location: primaryLoc.name,
-          intent: 'GENERAL_MAUSAM_INFORMATION',
-          timeframe: 'now',
-          facts: greetingFast.keyFacts.map((k) => ({ label: 'Feature', value: k })),
-          sourceStatus: 'LIVE',
-          suggestedFollowUps: [
-            `Check rainfall warnings for ${primaryLoc.name}`,
-            `Current temperature in ${primaryLoc.name}`,
-            `Show 7-day forecast for ${primaryLoc.name}`,
-          ],
-        };
-
-        const totalMs = Math.round(performance.now() - startTime);
         const res: OrchestratorResult = {
           context: emptyContext,
           response,
@@ -395,22 +506,73 @@ export class AskMausamOrchestrator {
 
       // 8. FAST-PATH EXECUTION FOR PURE FACTUAL QUERIES (ZERO LLM LATENCY!)
       let fastResult: { markdown: string; summary: string; keyFacts: string[]; alertLevel: string } | null = null;
+      let responseType: 'weather' | 'forecast' | 'warning' | 'aqi' | 'radar' | 'knowledge' = 'weather';
+      let followUps: string[] = [
+        `Show 7-day forecast for ${primaryLoc.name}`,
+        `Check AQI observations for ${primaryLoc.name}`,
+        `Check active warnings for ${primaryLoc.name}`,
+      ];
 
       // Pure WARNING query: Instant generation from SACHET/IMD warning bulletins!
       if (routing.intent === 'WARNINGS') {
         const gen = ResponseGenerator.generateWarningResponse(canonicalContext);
         fastResult = gen;
+        responseType = 'warning';
+        followUps = [
+          'Show warning details',
+          `Show current weather for ${primaryLoc.name}`,
+          `Show rainfall forecast for ${primaryLoc.name}`,
+        ];
       } else if (
         routing.intent === 'CURRENT_WEATHER' ||
         routing.intent === 'TEMPERATURE' ||
         routing.intent === 'HUMIDITY' ||
-        routing.intent === 'WIND'
+        routing.intent === 'WIND' ||
+        routing.intent === 'RAIN'
       ) {
         const gen = ResponseGenerator.generateWeatherResponse(canonicalContext);
         fastResult = gen;
-      } else if (routing.intent === 'AQI') {
+        responseType = 'weather';
+        followUps = [
+          `Show the 7-day forecast for ${primaryLoc.name}`,
+          `Any active warnings in ${primaryLoc.name}?`,
+          `What is the AQI in ${primaryLoc.name}?`,
+        ];
+      } else if (routing.intent === 'FORECAST' || routing.intent === 'RAINFALL') {
+        const gen = ResponseGenerator.generateForecastResponse(canonicalContext, routing.timeframe);
+        fastResult = gen;
+        responseType = 'forecast';
+        followUps = [
+          `Will it rain tomorrow in ${primaryLoc.name}?`,
+          `Current weather in ${primaryLoc.name}`,
+          `Any rainfall warnings in ${primaryLoc.name}?`,
+        ];
+      } else if (routing.intent === 'AQI' || routing.intent === 'AIR_QUALITY') {
         const gen = ResponseGenerator.generateAqiResponse(canonicalContext);
         fastResult = gen;
+        responseType = 'aqi';
+        followUps = [
+          'What is AQI?',
+          `Show current weather for ${primaryLoc.name}`,
+          `Are there active warnings in ${primaryLoc.name}?`,
+        ];
+      } else if (routing.intent === 'RADAR') {
+        const gen = ResponseGenerator.generateRadarResponse(canonicalContext);
+        fastResult = gen;
+        responseType = 'radar';
+        followUps = [
+          'What is radar?',
+          `Show current weather for ${primaryLoc.name}`,
+          `Are there active warnings in ${primaryLoc.name}?`,
+        ];
+      } else if (routing.intent === 'MULTI_INTENT') {
+        const gen = ResponseGenerator.generateMultiIntentResponse(canonicalContext, query);
+        fastResult = gen;
+        responseType = 'weather';
+        followUps = [
+          `Show 7-day forecast for ${primaryLoc.name}`,
+          `Are there active warnings in ${primaryLoc.name}?`,
+        ];
       }
 
       if (fastResult) {
@@ -419,23 +581,48 @@ export class AskMausamOrchestrator {
           return { label: parts[0] || 'Fact', value: parts[1] || parts[0] };
         });
 
+        const totalMs = Math.round(performance.now() - startTime);
+
         const fastResponse: AskMausamResponse = {
           answer: fastResult.markdown,
           location: primaryLoc.name,
           intent: routing.intent,
+          responseType,
           timeframe: routing.timeframe,
           facts,
           warnings: (canonicalContext.warnings || []).map((w) => `${w.severity.toUpperCase()}: ${w.headline || w.hazard}`),
           sourceStatus: 'LIVE',
           observedAt: curContext?.observedAt || nowIso,
-          suggestedFollowUps: [
-            `Show 7-day forecast for ${primaryLoc.name}`,
-            `Check AQI observations for ${primaryLoc.name}`,
-            `Check active warnings for ${primaryLoc.name}`,
-          ],
+          suggestedFollowUps: followUps,
+          debug: {
+            query,
+            intent: routing.intent,
+            location: resolvedLoc.resolutionType === 'EXPLICIT_QUERY' ? primaryLoc.name : `${primaryLoc.name} (context only)`,
+            locationIsContextOnly: resolvedLoc.resolutionType !== 'EXPLICIT_QUERY',
+            providers:
+              routing.intent === 'WARNINGS'
+                ? ['SACHET/NDMA']
+                : routing.intent === 'AQI'
+                ? ['CPCB']
+                : routing.intent === 'RADAR'
+                ? ['DWR']
+                : ['Open-Meteo'],
+            fastPath:
+              routing.intent === 'WARNINGS'
+                ? 'OFFICIAL_WARNING'
+                : routing.intent === 'AQI'
+                ? 'AQI_OBSERVATION'
+                : routing.intent === 'RADAR'
+                ? 'RADAR_IMAGERY'
+                : routing.intent === 'FORECAST'
+                ? 'FORECAST_PROJECTION'
+                : 'WEATHER_FAST_PATH',
+            latencyMs: totalMs,
+          },
         };
 
-        const totalMs = Math.round(performance.now() - startTime);
+        assertResponseMatchesIntent(fastResponse, routing.intent);
+
         if (process.env.NODE_ENV !== 'production') {
           console.log(`[AskMAUSAM:FastPath] ${query} -> Intent: ${routing.intent} | Providers: ${providersMs}ms | TOTAL: ${totalMs}ms`);
         }
@@ -526,6 +713,7 @@ export class AskMausamOrchestrator {
 
       // 10. Validate Grounding & Contradictions
       const report = validateAndEnforceGrounding(aiCandidate, canonicalContext, routing.intent);
+      assertResponseMatchesIntent(report.validatedResponse, routing.intent);
 
       // 11. Update Conversation Memory
       conversationMemory.update({

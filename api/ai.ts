@@ -134,6 +134,39 @@ export default async function handler(req: any, res: any) {
   const client = getAIClient();
 
   if (!client) {
+    const cleanPrompt = (prompt || '').trim().toLowerCase();
+    if (
+      cleanPrompt.includes('who developed') ||
+      cleanPrompt.includes('who created') ||
+      cleanPrompt.includes('who built') ||
+      cleanPrompt.includes('developer')
+    ) {
+      return sendJson(res, 200, {
+        response: "I don't have verified developer information in my current project data. MAUSAM is an atmospheric intelligence platform consolidating official telemetry from IMD, NDMA, CPCB, and INCOIS.",
+        facts: [],
+        warnings: [],
+        source: 'MAUSAM Knowledge Base',
+        groundingSources: [],
+        modeUsed: 'knowledge-grounded',
+      });
+    }
+
+    if (
+      cleanPrompt.includes('what is mausam') ||
+      cleanPrompt.includes('what does mausam do') ||
+      cleanPrompt === 'about mausam' ||
+      cleanPrompt.includes('what can you do')
+    ) {
+      return sendJson(res, 200, {
+        response: "MAUSAM is a meteorological and atmospheric information platform designed to provide weather observations, forecasts, warnings, air-quality information, radar/map data, and agrometeorological information for locations across India.",
+        facts: [],
+        warnings: [],
+        source: 'MAUSAM Knowledge Base',
+        groundingSources: [],
+        modeUsed: 'knowledge-grounded',
+      });
+    }
+
     // Truthful deterministic meteorological fallback when no Gemini key is provided
     let fallbackText = `Current surface observation for **${loc.name || loc.city}**:\n\n`;
     if (cur && typeof cur.temperatureC === 'number') {

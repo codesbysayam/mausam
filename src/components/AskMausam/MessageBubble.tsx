@@ -43,17 +43,26 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
   const facts = structured?.facts || [];
   const followUps = structured?.suggestedFollowUps || [];
   const sourceName = context?.sources?.[0]?.provider || 'Atmospheric Telemetry';
+  const isKnowledgeResponse =
+    structured?.responseType === 'knowledge' ||
+    intent === 'GENERAL_KNOWLEDGE' ||
+    intent === 'ABOUT_MAUSAM' ||
+    intent === 'ABOUT_DEVELOPER' ||
+    intent === 'HELP' ||
+    intent === 'GREETING' ||
+    intent === 'CLARIFICATION' ||
+    intent === 'GENERAL_MAUSAM_INFORMATION';
 
   return (
     <div className="flex flex-col gap-1.5 mb-4">
       {/* Sender Header */}
       <div className="flex items-center justify-between text-xs text-[#94A3B8] px-1">
         <div className="flex items-center gap-1.5">
-          <span className="w-2 h-2 rounded-full bg-[#38BDF8]" />
+          <span className={`w-2 h-2 rounded-full ${isKnowledgeResponse ? 'bg-[#34D399]' : 'bg-[#38BDF8]'}`} />
           <span className="font-semibold text-white tracking-wide">Ask MAUSAM</span>
           <span className="text-[10px] text-[#64748B]">•</span>
-          <span className="text-[10px] font-mono text-[#94A3B8] truncate max-w-[160px]">
-            {sourceName}
+          <span className="text-[10px] font-mono text-[#94A3B8] truncate max-w-[180px]">
+            {isKnowledgeResponse ? 'Knowledge Base' : sourceName}
           </span>
         </div>
         <span className="text-[10px] font-mono text-[#64748B]">{time}</span>
@@ -61,6 +70,18 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 
       {/* Main Bubble Content */}
       <div className="rounded-2xl rounded-tl-sm bg-[#0F172A] border border-[#1E293B] p-3.5 sm:p-4 text-[#D7DEE8] shadow-sm flex flex-col gap-3">
+        {/* Knowledge Category Tag */}
+        {isKnowledgeResponse && structured?.knowledge && (
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 rounded text-[10px] font-semibold tracking-wider uppercase bg-[#0284C7]/20 text-[#38BDF8] border border-[#0284C7]/40">
+              {structured.knowledge.category}
+            </span>
+            <span className="text-xs text-[#94A3B8] font-medium truncate">
+              {structured.knowledge.title}
+            </span>
+          </div>
+        )}
+
         {/* Safe, Sanitized Markdown Narrative */}
         <MarkdownRenderer content={message.text} />
 
@@ -71,8 +92,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           </div>
         )}
 
-        {/* Fact Chips / Verified Grounding Context */}
-        {facts.length > 0 && (
+        {/* Fact Chips / Verified Grounding Context (only when non-empty) */}
+        {!isKnowledgeResponse && facts.length > 0 && (
           <div className="flex flex-wrap gap-1.5 pt-2 border-t border-[#1E293B]">
             {facts.map((fact, idx) => (
               <span
@@ -85,8 +106,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
           </div>
         )}
 
-        {/* Switch Location Quick Action */}
-        {context?.location && onSelectLocation && (
+        {/* Switch Location Quick Action - ONLY when response is location-specific */}
+        {!isKnowledgeResponse && context?.location && onSelectLocation && !structured?.debug?.locationIsContextOnly && (
           <div className="flex items-center justify-between pt-2 border-t border-[#1E293B] text-[11px]">
             <span className="text-[#94A3B8] truncate">Grounded in: {context.location.name}</span>
             <button
@@ -95,6 +116,36 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
             >
               Switch Location
             </button>
+          </div>
+        )}
+
+        {/* Intent Debugger in Development Mode (Requirement 17) */}
+        {Boolean((import.meta as any)?.env?.DEV ?? true) && structured?.debug && (
+          <div className="p-2.5 rounded-lg bg-[#070B12] border border-[#1E293B] text-[11px] font-mono text-[#94A3B8] space-y-1">
+            <div className="flex items-center justify-between border-b border-[#1E293B] pb-1">
+              <span className="text-[#38BDF8] font-bold text-[10px] tracking-wider uppercase">Intent Debugger (Dev Mode)</span>
+              <span className="text-[#34D399] font-semibold">{structured.debug.latencyMs}ms</span>
+            </div>
+            <div className="grid grid-cols-[80px_1fr] gap-1 text-[10px]">
+              <span className="text-[#64748B]">USER:</span>
+              <span className="text-white truncate">&ldquo;{structured.debug.query}&rdquo;</span>
+
+              <span className="text-[#64748B]">INTENT:</span>
+              <span className="text-[#FBBF24] font-semibold">{structured.debug.intent}</span>
+
+              <span className="text-[#64748B]">LOCATION:</span>
+              <span className={structured.debug.locationIsContextOnly ? 'text-[#94A3B8]' : 'text-[#38BDF8]'}>
+                {structured.debug.location}
+              </span>
+
+              <span className="text-[#64748B]">PROVIDERS:</span>
+              <span className={structured.debug.providers.length === 0 ? 'text-[#34D399]' : 'text-[#CBD5E1]'}>
+                {structured.debug.providers.length > 0 ? structured.debug.providers.join(', ') : 'NONE'}
+              </span>
+
+              <span className="text-[#64748B]">FAST PATH:</span>
+              <span className="text-[#38BDF8]">{structured.debug.fastPath}</span>
+            </div>
           </div>
         )}
 

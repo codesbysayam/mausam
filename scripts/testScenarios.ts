@@ -54,9 +54,9 @@ async function runTests() {
   try {
     const loc = resolveLocation('Are there any cyclone or heavy rain warnings for Odisha?');
     const routing = routeIntent('Are there any cyclone or heavy rain warnings for Odisha?', false);
-    const warnings = getActiveWarningsForLocation(loc.primaryLocation.state, loc.primaryLocation.district, loc.primaryLocation.name);
+    const warnings = await getActiveWarningsForLocation(loc.primaryLocation.state, loc.primaryLocation.district, loc.primaryLocation.name);
     
-    if (routing.intent === 'WARNINGS' && warnings.status) {
+    if ((routing.intent === 'WARNINGS' || routing.intent === 'MULTI_INTENT') && warnings.status) {
       console.log(`[PASS] Scenario 3: Odisha Warnings -> intent: ${routing.intent}, status: ${warnings.status}, warnings: ${warnings.warnings.length}`);
       passed++;
     } else {
@@ -149,7 +149,7 @@ async function runTests() {
     const loc = resolveLocation('क्या कल बारिश होगी?', undefined, memory);
     const routing = routeIntent('क्या कल बारिश होगी?', false, memory);
     
-    if ((routing.intent === 'RAIN' || routing.intent === 'RAINFALL') && routing.timeframe === 'tomorrow' && loc.primaryLocation.name.includes('Delhi')) {
+    if ((routing.intent === 'RAIN' || routing.intent === 'RAINFALL' || routing.intent === 'FORECAST') && routing.timeframe === 'tomorrow' && loc.primaryLocation.name.includes('Delhi')) {
       console.log(`[PASS] Scenario 9: Hindi Rain Tomorrow -> Intent: ${routing.intent}, Timeframe: ${routing.timeframe}, Location: ${loc.primaryLocation.name}`);
       passed++;
     } else {

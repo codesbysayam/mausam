@@ -62,36 +62,72 @@ export const AskMausamPanel: React.FC<AskMausamPanelProps> = ({
     let isMounted = true;
 
     async function init() {
-      setIsLoading(true);
-      const initialQuery = currentLocation?.name
-        ? `What is the current weather in ${currentLocation.name}?`
-        : 'What is the current weather in Bhubaneswar, Odisha?';
-
+      // 1. Pre-fetch background weather context for header ribbon silently
       try {
+        const initialLocQuery = currentLocation?.name
+          ? `Current weather in ${currentLocation.name}`
+          : 'Current weather in Bhubaneswar, Odisha';
+
         const result = await AskMausamOrchestrator.execute({
-          query: initialQuery,
+          query: initialLocQuery,
           selectedAppLocation: currentLocation,
           preferredLanguage,
         });
 
-        if (!isMounted) return;
+        if (isMounted) {
+          setCanonicalContext(result.context);
+        }
+      } catch (err) {
+        console.error('Failed to pre-fetch Ask MAUSAM context:', err);
+      }
 
-        setCanonicalContext(result.context);
-
-        const initialMsg: AskMausamMessage = {
-          id: `msg-${Date.now()}`,
+      // 2. Initial Greeting Briefing (Clean introduction, NOT a weather table!)
+      if (isMounted) {
+        const welcomeMsg: AskMausamMessage = {
+          id: `msg-welcome`,
           sender: 'assistant',
-          text: result.response.answer,
+          text: `### Welcome to Ask MAUSAM
+
+I am your **National Meteorological Assistant**, providing verified atmospheric, marine, and disaster intelligence directly from official providers including the **India Meteorological Department (IMD)**, **SACHET / NDMA**, **Central Pollution Control Board (CPCB)**, and **INCOIS**.
+
+**You can ask me about:**
+- **What is MAUSAM?** (*platform architecture & verified datasets*)
+- **Active Weather Warnings** (*e.g., "any rainfall warnings in Odisha?", "active alerts"*)
+- **Current Temperature & Sky** (*e.g., "what is the weather in Odisha?", "temperature in Delhi"*)
+- **Forecasts** (*e.g., "will it rain tomorrow?", "7-day forecast for Odisha"*)
+- **Air Quality (AQI)** (*e.g., "what is AQI?", "AQI in Bhubaneswar"*)
+- **Doppler Radar** (*e.g., "show radar for Odisha", "how does radar work?"*)`,
           timestamp: Date.now(),
-          structured: result.response,
-          contextSnapshot: result.context,
+          structured: {
+            answer: '',
+            location: currentLocation?.name || 'India',
+            intent: 'GREETING',
+            responseType: 'knowledge',
+            sourceStatus: 'LIVE',
+            facts: [
+              { label: 'Coverage', value: 'All 28 States & 8 Union Territories' },
+              { label: 'Alerts', value: 'Live SACHET / NDMA Bulletins' },
+              { label: 'Telemetry', value: 'IMD Station Grounding' },
+            ],
+            suggestedFollowUps: [
+              'What is MAUSAM?',
+              `Show current weather for ${currentLocation?.name || 'Odisha'}`,
+              `Any rainfall warnings in ${currentLocation?.state || 'Odisha'}?`,
+              'What is AQI?',
+            ],
+            debug: {
+              query: 'WELCOME_INIT',
+              intent: 'GREETING',
+              location: `${currentLocation?.name || 'India'} (context only)`,
+              locationIsContextOnly: true,
+              providers: [],
+              fastPath: 'LOCAL_KNOWLEDGE',
+              latencyMs: 0,
+            },
+          },
         };
 
-        setMessages([initialMsg]);
-      } catch (err) {
-        console.error('Failed to initialize Ask MAUSAM context:', err);
-      } finally {
-        if (isMounted) setIsLoading(false);
+        setMessages([welcomeMsg]);
       }
     }
 
@@ -128,8 +164,19 @@ export const AskMausamPanel: React.FC<AskMausamPanelProps> = ({
     setMessages((prev) => [...prev, userMsg]);
 
     const routing = routeIntent(textToSend);
-    setLoadingMessage(getIntentLoadingMessage(routing.intent));
-    setIsLoading(true);
+    const isInstantKnowledge =
+      routing.isGeneralKnowledge ||
+      routing.intent === 'GENERAL_KNOWLEDGE' ||
+      routing.intent === 'ABOUT_MAUSAM' ||
+      routing.intent === 'HELP' ||
+      routing.intent === 'GREETING' ||
+      routing.requiredTools.length === 0;
+
+    // Requirement 15: For local knowledge answers: NO LOADING SCREEN.
+    if (!isInstantKnowledge) {
+      setLoadingMessage(getIntentLoadingMessage(routing.intent));
+      setIsLoading(true);
+    }
 
     try {
       const result = await AskMausamOrchestrator.execute({
@@ -411,14 +458,47 @@ export const AskMausamPanel: React.FC<AskMausamPanelProps> = ({
             </div>
 
             <div className="flex items-center justify-between text-[10px] text-[#64748B] px-1">
-              <span>Grounding: IMD & Open-Meteo Normalized Telemetry</span>
-              {lastTiming ? (
-                <span className="font-mono text-[#38BDF8]">
-                  Resolved in {lastTiming.totalMs}ms {lastTiming.aiMs === 0 ? '(Fast-Path)' : `(Providers: ${lastTiming.providersMs}ms)`}
-                </span>
-              ) : (
-                <span>Zero-Discrepancy Fact Enforcement</span>
-              )}
+              {(() => {
+                const lastMsg = [...messages].reverse().find((m) => m.sender === 'assistant');
+                const isKnowledge =
+                  lastMsg?.structured?.responseType === 'knowledge' ||
+                  lastMsg?.structured?.intent === 'GENERAL_KNOWLEDGE' ||
+                  lastMsg?.structured?.intent === 'ABOUT_MAUSAM' ||
+                  lastMsg?.structured?.intent === 'ABOUT_DEVELOPER' ||
+                  lastMsg?.structured?.intent === 'HELP' ||
+                  lastMsg?.structured?.intent === 'GREETING';
+
+                if (isKnowledge) {
+                  return (
+                    <>
+                      <span>Grounding: MAUSAM Canonical Knowledge Base</span>
+                      {lastTiming ? (
+                        <span className="font-mono text-[#34D399]">
+                          Resolved in {lastTiming.totalMs}ms (Local Knowledge)
+                        </span>
+                      ) : (
+                        <span>Verified Knowledge Grounding</span>
+                      )}
+                    </>
+                  );
+                }
+
+                return (
+                  <>
+                    <span>Grounding: IMD & Open-Meteo Normalized Telemetry</span>
+                    {lastTiming ? (
+                      <span className="font-mono text-[#38BDF8]">
+                        Resolved in {lastTiming.totalMs}ms{' '}
+                        {lastTiming.aiMs === 0
+                          ? `(${lastMsg?.structured?.debug?.fastPath || 'Telemetry Fast-Path'})`
+                          : `(Providers: ${lastTiming.providersMs}ms)`}
+                      </span>
+                    ) : (
+                      <span>Zero-Discrepancy Fact Enforcement</span>
+                    )}
+                  </>
+                );
+              })()}
             </div>
           </div>
         </div>

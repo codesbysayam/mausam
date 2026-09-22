@@ -3,7 +3,7 @@ import { LocationRecord } from '../../types';
 import { locationService } from '../../services/locationService';
 import { LocatingPhase } from '../../services/geolocationService';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { LanguageSelector } from './LanguageSelector';
+import { LanguageSelector } from '../common/LanguageSelector';
 import { MobileNavDrawer } from './MobileNavDrawer';
 import { MainNavTab } from './MainNavigation';
 import { FooterView } from './FooterNavigation';
@@ -301,7 +301,10 @@ export const GovernmentHeader: React.FC<GovernmentHeaderProps> = ({
 
               {/* Language Selector */}
               <div className="hidden sm:flex items-center shrink-0">
-                <LanguageSelector />
+                <LanguageSelector
+                  stateOrRegion={selectedLocation?.state || selectedLocation?.city}
+                  idPrefix="header"
+                />
               </div>
 
               {/* Accessibility Font Size Controls (2XL only) */}

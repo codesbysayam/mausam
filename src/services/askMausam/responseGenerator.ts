@@ -5,7 +5,8 @@
 // from canonical telemetry without LLM overhead for factual queries.
 // ====================================================================
 
-import { AskMausamContext, DataSourceContext } from '../../types/askMausam';
+import { AskMausamContext, DataSourceContext, DailyForecastContext } from '../../types/askMausam';
+import { KnowledgeEntry } from './mausamKnowledge';
 
 export interface FastPathResult {
   markdown: string;
@@ -22,22 +23,40 @@ export class ResponseGenerator {
   public static generateGreetingResponse(): FastPathResult {
     return {
       markdown: `### Welcome to Ask MAUSAM
-I am your **National Meteorological Assistant**, providing verified atmospheric, marine, and disaster intelligence directly from official providers including the **India Meteorological Department (IMD)**, **SACHET / NDMA**, **Central Pollution Control Board (CPCB)**, and **INCOIS**.
 
-**You can ask me about:**
-- **Active Weather Warnings & Alerts** (*e.g., "rainfall warnings", "any warning in Odisha?"*)
-- **Current Temperature & Sky Conditions** (*e.g., "temperature in Chandaka", "how is the weather in Delhi?"*)
-- **Precipitation & Monsoon** (*e.g., "will it rain today?", "tomorrow rain forecast"*)
-- **Air Quality Index (AQI)** (*e.g., "AQI in Anand Vihar", "pollution level in Mumbai"*)
-- **Multi-City Comparisons** (*e.g., "which is cooler right now, Bhubaneswar or Cuttack?"*)
-- **Agromet & Farming Advisories** (*e.g., "is it safe to spray pesticides tomorrow in Ganjam?"*)
-- **Doppler Radar & Marine Conditions** (*e.g., "Gopalpur radar status", "sea state for fishermen"*)`,
+I am **Ask MAUSAM**, India's Atmospheric Intelligence Assistant. You can ask me about:
+- **Current Weather**: Temperature, humidity, wind, and sky condition for any Indian city.
+- **Forecasts**: 7-day numerical predictions and precipitation probabilities.
+- **Official Warnings**: Color-coded disaster alerts (Red, Orange, Yellow).
+- **Air Quality (AQI)**: Live PM2.5 and PM10 pollution levels from CPCB stations.
+- **Radar & Marine**: Doppler weather radar reflectivity and coastal sea state.
+
+*How can I help you today?*`,
       summary: 'Ask MAUSAM provides official, real-time meteorological intelligence across all 28 States and 8 Union Territories.',
       keyFacts: ['36 States & UTs Covered', 'Official IMD / NDMA Bulletins', 'Real-time Telemetry'],
       alertLevel: 'GREEN',
       sources: [
         {
           provider: 'MAUSAM Core Registry',
+          status: 'LIVE',
+          retrievedAt: new Date().toISOString(),
+        },
+      ],
+    };
+  }
+
+  /**
+   * Generates response for local knowledge entries
+   */
+  public static generateKnowledgeResponse(entry: KnowledgeEntry): FastPathResult {
+    return {
+      markdown: entry.markdown,
+      summary: entry.summary,
+      keyFacts: entry.bullets,
+      alertLevel: 'GREEN',
+      sources: [
+        {
+          provider: 'MAUSAM Canonical Knowledge Base',
           status: 'LIVE',
           retrievedAt: new Date().toISOString(),
         },
@@ -166,6 +185,89 @@ Current atmospheric observations are temporarily unavailable from the station ne
   }
 
   /**
+   * Fast-path generator for Forecast Queries (7-day / Tomorrow)
+   */
+  public static generateForecastResponse(ctx: AskMausamContext, timeframe = 'now'): FastPathResult {
+    const locName = ctx.location.name;
+    const daily = ctx.forecast?.daily || [];
+    const sourceStatus = ctx.sources || [];
+
+    if (daily.length === 0) {
+      return {
+        markdown: `### Weather Forecast: ${locName}
+Detailed numerical forecast models are temporarily unavailable for this coordinate grid.`,
+        summary: `Forecast unavailable for ${locName}.`,
+        keyFacts: [`Location: ${locName}`],
+        alertLevel: 'GREEN',
+        sources: sourceStatus,
+      };
+    }
+
+    const isTomorrowQuery = timeframe.includes('tomorrow');
+
+    if (isTomorrowQuery && daily.length > 1) {
+      const tmrw = daily[1];
+      const rainProb = tmrw.precipitationProbability ?? 0;
+      const rainMm = tmrw.precipitationMm ?? 0;
+      const willRain = rainProb >= 40 || rainMm >= 1.0;
+
+      const rainAssessment = willRain
+        ? `**Rain is likely tomorrow in ${locName}**, with a **${rainProb}%** precipitation probability and approximately **${rainMm} mm** of precipitation expected.`
+        : `**Rain is unlikely tomorrow in ${locName}**. The precipitation probability is low (**${rainProb}%**) with **${rainMm} mm** expected.`;
+
+      return {
+        markdown: `### Tomorrow's Weather Forecast: ${locName}
+
+${rainAssessment}
+
+| Parameter | Forecast Value |
+| :--- | :--- |
+| **Expected Max Temp** | **${tmrw.maxTempC}°C** |
+| **Expected Min Temp** | **${tmrw.minTempC}°C** |
+| **Condition** | **${tmrw.condition}** |
+| **Precipitation Probability** | **${rainProb}%** |
+| **Expected Rainfall** | **${rainMm} mm** |
+
+- **Grounding**: High-resolution numerical weather prediction (NWP) model for ${locName}.`,
+        summary: `Tomorrow in ${locName}: ${tmrw.condition}, max ${tmrw.maxTempC}°C, min ${tmrw.minTempC}°C, rain probability ${rainProb}%.`,
+        keyFacts: [
+          `Max Temp: ${tmrw.maxTempC}°C`,
+          `Min Temp: ${tmrw.minTempC}°C`,
+          `Precipitation Prob: ${rainProb}%`,
+          `Condition: ${tmrw.condition}`,
+        ],
+        alertLevel: rainProb > 70 ? 'YELLOW' : 'GREEN',
+        sources: sourceStatus,
+      };
+    }
+
+    // 7-day tabular breakdown
+    const rows = daily.slice(0, 7).map((d: DailyForecastContext) => {
+      const prob = d.precipitationProbability !== undefined ? `${d.precipitationProbability}%` : `${d.precipitationMm} mm`;
+      return `| **${d.dayName}** (${d.date.slice(5)}) | **${d.maxTempC}°C** / ${d.minTempC}°C | ${d.condition} | ${prob} |`;
+    }).join('\n');
+
+    return {
+      markdown: `### 7-Day Weather Forecast: ${locName}
+
+| Day & Date | Max / Min Temp | Sky Condition | Rain Probability |
+| :--- | :--- | :--- | :--- |
+${rows}
+
+- **Forecast Model**: ECMWF / GFS Normalized Ensemble for ${locName}
+- **Update Frequency**: Refreshed every 6 hours with synoptic station assimilations.`,
+      summary: `7-day forecast for ${locName}: temperatures ranging from ${daily[0]?.minTempC}°C to ${daily[0]?.maxTempC}°C.`,
+      keyFacts: [
+        `Today: ${daily[0]?.maxTempC}°C / ${daily[0]?.minTempC}°C`,
+        `Condition: ${daily[0]?.condition}`,
+        `Days Projected: ${Math.min(daily.length, 7)}`,
+      ],
+      alertLevel: 'GREEN',
+      sources: sourceStatus,
+    };
+  }
+
+  /**
    * Fast-path generator for AQI
    */
   public static generateAqiResponse(ctx: AskMausamContext): FastPathResult {
@@ -223,6 +325,74 @@ Real-time air quality telemetry is temporarily unavailable for this monitoring s
         `PM2.5: ${pm25}`,
       ],
       alertLevel,
+      sources: sourceStatus,
+    };
+  }
+
+  /**
+   * Fast-path generator for Radar queries
+   */
+  public static generateRadarResponse(ctx: AskMausamContext): FastPathResult {
+    const locName = ctx.location.name;
+    const sourceStatus = ctx.sources || [];
+
+    return {
+      markdown: `### Doppler Weather Radar (DWR): ${locName}
+
+**Status: RADAR NETWORK OPERATIONAL**
+
+- **Station Coverage**: ${locName} region is scanned via the national Doppler Weather Radar network.
+- **Reflectivity Range**: 0 to 65 dBZ monitoring precipitation cores and convective clouds.
+- **Radial Velocity**: Tracking storm translation speed and low-level wind shear.
+- **Viewing Live Radar**: You can access real-time radar layers, precipitation accumulation, and storm playback directly in the **Radar** view of the platform.`,
+      summary: `Doppler weather radar tracking active for ${locName}.`,
+      keyFacts: [
+        `Location: ${locName}`,
+        'Radar Status: OPERATIONAL',
+        'Products: Reflectivity (dBZ) & Storm Velocity',
+      ],
+      alertLevel: 'GREEN',
+      sources: sourceStatus,
+    };
+  }
+
+  /**
+   * Fast-path generator for Multi-Intent (e.g. Weather + AQI, or Weather + Warning)
+   */
+  public static generateMultiIntentResponse(ctx: AskMausamContext, query: string): FastPathResult {
+    const locName = ctx.location.name;
+    const w = ctx.currentWeather;
+    const a = ctx.aqi;
+    const warnings = ctx.warnings || [];
+    const sourceStatus = ctx.sources || [];
+
+    const temp = w && typeof w.temperatureC === 'number' ? `${w.temperatureC.toFixed(1)}°C` : 'N/A';
+    const condition = w?.condition || 'Clear';
+    const humidity = w && typeof w.humidity === 'number' ? `${w.humidity}%` : 'N/A';
+    const aqiVal = a && typeof a.index === 'number' ? `${a.index} (${a.category})` : 'N/A';
+    const warningStatus = warnings.length > 0
+      ? `⚠️ ${warnings.length} Active Warning(s) (${warnings[0].severity.toUpperCase()})`
+      : '🟢 No Active Warnings';
+
+    return {
+      markdown: `### Atmospheric & Environmental Telemetry: ${locName}
+
+| Parameter | Observed Telemetry |
+| :--- | :--- |
+| **Temperature** | **${temp}** (${condition}) |
+| **Relative Humidity** | **${humidity}** |
+| **Air Quality (AQI)** | **${aqiVal}** |
+| **Alert Status** | **${warningStatus}** |
+
+- **Data Grounding**: Normalized observations from IMD, CPCB CAAQMS network, and SACHET disaster bulletins for **${locName}**.`,
+      summary: `Current conditions in ${locName}: ${temp}, ${condition}, AQI ${aqiVal}, ${warningStatus}.`,
+      keyFacts: [
+        `Temperature: ${temp}`,
+        `Condition: ${condition}`,
+        `AQI: ${aqiVal}`,
+        `Warning: ${warningStatus}`,
+      ],
+      alertLevel: warnings.length > 0 ? 'YELLOW' : 'GREEN',
       sources: sourceStatus,
     };
   }

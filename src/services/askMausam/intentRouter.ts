@@ -3,15 +3,24 @@
 // Deterministic Meteorological Intent Router
 // Enforces selective provider invocation: NEVER fetch unrelated data
 // Hierarchical Intent Classification:
-// GREETING > ABOUT_MAUSAM / GENERAL_KNOWLEDGE > HELP > LOCATION >
-// WARNING > FORECAST > CURRENT_WEATHER > AQI > RAINFALL > RADAR >
-// MARINE > AGRICULTURE > GENERAL
+// GREETING > ABOUT_DEVELOPER > ABOUT_MAUSAM > HELP > GENERAL_KNOWLEDGE >
+// MULTI_LOCATION_COMPARISON > MULTI_INTENT > WARNING > FORECAST >
+// AQI > RADAR > RAINFALL > MARINE > AGRICULTURE > CURRENT_WEATHER > CLARIFICATION
 // ====================================================================
 
 import { WeatherIntent, Timeframe, ConversationMemoryState } from '../../types/askMausam';
+import { AskIntent, AskIntentResult } from './types';
+import { normalizeQuestion } from './questionNormalizer';
 import { findKnowledge } from './mausamKnowledge';
 
-export type RequiredTool = 'WEATHER' | 'FORECAST' | 'WARNINGS' | 'AQI' | 'AGRICULTURE' | 'MARINE' | 'RADAR';
+export type RequiredTool =
+  | 'WEATHER'
+  | 'FORECAST'
+  | 'WARNINGS'
+  | 'AQI'
+  | 'AGRICULTURE'
+  | 'MARINE'
+  | 'RADAR';
 
 export interface IntentRoutingResult {
   intent: WeatherIntent;
@@ -20,148 +29,65 @@ export interface IntentRoutingResult {
   confidence: number;
   fastPathEligible: boolean;
   isGeneralKnowledge?: boolean;
+  requiresLocation?: boolean;
+  requiresProvider?: boolean;
+  topic?: string;
 }
 
 export function detectTimeframe(query: string): Timeframe {
-  const q = query.toLowerCase();
+  const q = (query || '').toLowerCase();
   if (q.includes('tomorrow morning') || q.includes('कल सुबह')) return 'tomorrow_morning';
-  if (q.includes('tomorrow evening') || q.includes('tomorrow night') || q.includes('कल शाम') || q.includes('कल रात')) return 'tomorrow_evening';
+  if (
+    q.includes('tomorrow evening') ||
+    q.includes('tomorrow night') ||
+    q.includes('कल शाम') ||
+    q.includes('कल रात')
+  )
+    return 'tomorrow_evening';
   if (q.includes('tomorrow') || q.includes('कल')) return 'tomorrow';
   if (q.includes('tonight') || q.includes('आज रात')) return 'tonight';
-  if (q.includes('weekend') || q.includes('saturday') || q.includes('sunday') || q.includes('शनिवार') || q.includes('रविवार')) return 'this_weekend';
-  if (q.includes('next 3 days') || q.includes('3 days') || q.includes('three days') || q.includes('अगले 3 दिन')) return 'next_3_days';
-  if (q.includes('next 7 days') || q.includes('7 day') || q.includes('7-day') || q.includes('week') || q.includes('weekly') || q.includes('अगले 7 दिन') || q.includes('सप्ताह')) return 'next_7_days';
+  if (
+    q.includes('weekend') ||
+    q.includes('saturday') ||
+    q.includes('sunday') ||
+    q.includes('शनिवार') ||
+    q.includes('रविवार')
+  )
+    return 'this_weekend';
+  if (
+    q.includes('next 3 days') ||
+    q.includes('3 days') ||
+    q.includes('three days') ||
+    q.includes('अगले 3 दिन')
+  )
+    return 'next_3_days';
+  if (
+    q.includes('next 7 days') ||
+    q.includes('7 day') ||
+    q.includes('7-day') ||
+    q.includes('week') ||
+    q.includes('weekly') ||
+    q.includes('अगले 7 दिन') ||
+    q.includes('सप्ताह')
+  )
+    return 'next_7_days';
   if (q.includes('today') || q.includes('आज')) return 'today';
   return 'now';
 }
 
 /**
- * Checks if a query is a general knowledge question about weather/platform concepts
- * that should NEVER trigger live external telemetry or weather APIs.
+ * Section 2: Canonical Intent Classifier
+ * Evaluates semantic patterns rather than naive keywords
  */
-function isConceptualOrGeneralQuery(q: string): boolean {
-  const clean = q.trim().toLowerCase().replace(/[?!.,]/g, '');
-
-  // Direct platform inquiries
-  if (
-    clean === 'what is mausam' ||
-    clean === 'what does mausam do' ||
-    clean === 'what can you do' ||
-    clean === 'how does mausam work' ||
-    clean === 'tell me about mausam' ||
-    clean === 'explain mausam' ||
-    clean === 'what is this platform' ||
-    clean === 'what are the features of mausam' ||
-    clean === 'what does mausam mean' ||
-    clean === 'what information can you provide' ||
-    clean === 'who are you' ||
-    clean.includes('about mausam') ||
-    clean.includes('what is mausam') ||
-    clean.includes('explain mausam') ||
-    clean.includes('what does mausam mean') ||
-    clean.includes('what can you do')
-  ) {
-    return true;
-  }
-
-  // Check if findKnowledge matches directly
-  if (findKnowledge(q) !== null) {
-    return true;
-  }
-
-  // Conceptual definitions ("What is X", "Explain X", "How does X work", "Why is X")
-  // Make sure there is NO specific location preposition like "in delhi", "in odisha", "for mumbai"
-  const hasLocationSpecifier = /\b(in|for|at|near|of)\s+[a-z]{3,}\b/i.test(clean);
-
-  if (!hasLocationSpecifier) {
-    // AQI concepts
-    if (
-      clean === 'what is aqi' ||
-      clean === 'what does aqi mean' ||
-      clean === 'explain aqi' ||
-      clean === 'what is air quality index' ||
-      clean.startsWith('what is aqi') ||
-      clean.startsWith('explain aqi')
-    ) {
-      return true;
-    }
-
-    // Radar concepts
-    if (
-      clean === 'what is radar' ||
-      clean === 'what is weather radar' ||
-      clean === 'how does radar work' ||
-      clean === 'how does weather radar work' ||
-      clean === 'explain radar' ||
-      clean.startsWith('how does radar') ||
-      clean.startsWith('how does weather radar') ||
-      clean.startsWith('what is radar')
-    ) {
-      return true;
-    }
-
-    // Warning concepts
-    if (
-      clean === 'explain weather warnings' ||
-      clean === 'what are weather warnings' ||
-      clean === 'what do warning colors mean' ||
-      clean === 'what is red alert' ||
-      clean === 'what is orange alert' ||
-      clean.startsWith('explain weather warning')
-    ) {
-      return true;
-    }
-
-    // Rainfall / Monsoon concepts
-    if (
-      clean === 'what is rainfall' ||
-      clean === 'why does it rain' ||
-      clean === 'why is it raining' ||
-      clean === 'explain monsoon' ||
-      clean.startsWith('what is rainfall') ||
-      clean.startsWith('explain monsoon') ||
-      clean.startsWith('why does it rain')
-    ) {
-      return true;
-    }
-
-    // Humidity concepts
-    if (
-      clean === 'what is humidity' ||
-      clean === 'why is humidity important' ||
-      clean.startsWith('what is humidity') ||
-      clean.startsWith('why is humidity')
-    ) {
-      return true;
-    }
-
-    // Agriculture concepts
-    if (
-      clean === 'what is agromet' ||
-      clean === 'what is agrometeorology' ||
-      clean.startsWith('what is agromet')
-    ) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-export function routeIntent(
-  query: string,
-  isComparison = false,
-  memory?: ConversationMemoryState
-): IntentRoutingResult {
-  const q = (query || '').trim().toLowerCase();
-  const timeframe = detectTimeframe(q);
+export function classifyIntent(query: string): AskIntentResult {
+  const q = normalizeQuestion(query);
   const cleanQ = q.replace(/[?!.,]/g, '').trim();
 
-  // ====================================================================
   // 1. GREETING
-  // ====================================================================
   if (
-    /^(hi|hello|hey|namaste|greetings|good morning|good afternoon|good evening|नमस्ते|नमस्कार)\b/i.test(cleanQ) ||
+    /^(hi|hello|hey|namaste|greetings|good morning|good afternoon|good evening|नमस्ते|नमस्कार)[!. ]*$/i.test(
+      cleanQ
+    ) ||
     cleanQ === 'hello' ||
     cleanQ === 'hi' ||
     cleanQ === 'hey' ||
@@ -169,62 +95,492 @@ export function routeIntent(
   ) {
     return {
       intent: 'GREETING',
-      timeframe: 'now',
-      requiredTools: [],
       confidence: 1.0,
-      fastPathEligible: true,
-      isGeneralKnowledge: true,
+      requiresLocation: false,
+      requiresProvider: false,
+      entities: {},
     };
   }
 
-  // ====================================================================
-  // 2. HARD GENERAL QUESTION GATE: ABOUT_MAUSAM / GENERAL_KNOWLEDGE / HELP
-  // NEVER triggers weather, AQI, warning, radar, or forecast APIs!
-  // ====================================================================
-  if (isConceptualOrGeneralQuery(q)) {
-    const isAboutMausam =
-      cleanQ.includes('mausam') ||
-      cleanQ.includes('platform') ||
-      cleanQ === 'what is mausam' ||
-      cleanQ === 'what does mausam do' ||
-      cleanQ.startsWith('what is mausam');
-
-    const isHelp =
-      cleanQ.includes('what can you do') ||
-      cleanQ.includes('features of mausam') ||
-      cleanQ.includes('what information can you provide') ||
-      cleanQ === 'help' ||
-      cleanQ === 'what can you do' ||
-      cleanQ === 'who are you';
-
-    const intent: WeatherIntent = isHelp
-      ? 'HELP'
-      : isAboutMausam
-      ? 'ABOUT_MAUSAM'
-      : 'GENERAL_KNOWLEDGE';
-
+  // 2. CHECK VERIFIED CANONICAL KNOWLEDGE BASE FIRST
+  // Any query mapped to developer, platform, capabilities, or conceptual knowledge
+  // MUST immediately return a non-weather intent with ZERO external network calls.
+  const knowledge = findKnowledge(cleanQ);
+  if (knowledge) {
+    if (knowledge.id === 'about-developer') {
+      return {
+        intent: 'ABOUT_DEVELOPER',
+        confidence: 1.0,
+        requiresLocation: false,
+        requiresProvider: false,
+        entities: { topic: 'developer' },
+      };
+    }
+    if (knowledge.id === 'about-mausam') {
+      return {
+        intent: 'ABOUT_MAUSAM',
+        confidence: 1.0,
+        requiresLocation: false,
+        requiresProvider: false,
+        entities: { topic: 'mausam' },
+      };
+    }
+    if (knowledge.id === 'mausam-capabilities') {
+      return {
+        intent: 'HELP',
+        confidence: 1.0,
+        requiresLocation: false,
+        requiresProvider: false,
+        entities: {},
+      };
+    }
     return {
-      intent,
-      timeframe: 'now',
-      requiredTools: [],
+      intent: 'GENERAL_KNOWLEDGE',
       confidence: 1.0,
-      fastPathEligible: true,
-      isGeneralKnowledge: true,
+      requiresLocation: false,
+      requiresProvider: false,
+      entities: { topic: knowledge.category.toLowerCase() },
     };
   }
 
-  // ====================================================================
-  // 3. MULTI-LOCATION COMPARISON (e.g. "Bhubaneswar or Cuttack", "Delhi vs Mumbai")
-  // ====================================================================
+  // 3. ABOUT_DEVELOPER (Semantic Pattern Fallback)
+  if (
+    /who\s+(developed|created|built|made|is\s+behind)\s+(this|mausam|the\s+platform|the\s+app)/i.test(
+      cleanQ
+    ) ||
+    /who\s+(are\s+the\s+developers|is\s+the\s+developer|is\s+the\s+author)/i.test(cleanQ) ||
+    /developers?\s+of\s+mausam/i.test(cleanQ) ||
+    cleanQ === 'who developed this' ||
+    cleanQ === 'who created this' ||
+    cleanQ === 'who built this' ||
+    cleanQ === 'who made this' ||
+    cleanQ === 'who is the developer' ||
+    cleanQ === 'who developed mausam' ||
+    cleanQ === 'who created mausam' ||
+    cleanQ === 'who built mausam' ||
+    cleanQ === 'who made mausam' ||
+    cleanQ === 'who is behind mausam'
+  ) {
+    return {
+      intent: 'ABOUT_DEVELOPER',
+      confidence: 1.0,
+      requiresLocation: false,
+      requiresProvider: false,
+      entities: { topic: 'developer' },
+    };
+  }
+
+  // 4. ABOUT_MAUSAM (Semantic Pattern Fallback)
+  if (
+    cleanQ === 'what is mausam' ||
+    cleanQ === 'what does mausam do' ||
+    cleanQ === 'tell me about mausam' ||
+    cleanQ === 'what is this platform' ||
+    cleanQ === 'what is this application' ||
+    cleanQ === 'what can mausam do' ||
+    cleanQ === 'how does mausam work' ||
+    cleanQ === 'about mausam' ||
+    cleanQ === 'what does mausam mean' ||
+    /what\s+is\s+mausam/i.test(cleanQ) ||
+    /what\s+does\s+mausam\s+do/i.test(cleanQ) ||
+    /tell\s+me\s+about\s+mausam/i.test(cleanQ) ||
+    /explain\s+mausam/i.test(cleanQ)
+  ) {
+    return {
+      intent: 'ABOUT_MAUSAM',
+      confidence: 1.0,
+      requiresLocation: false,
+      requiresProvider: false,
+      entities: { topic: 'mausam' },
+    };
+  }
+
+  // 5. HELP / CAPABILITIES (Semantic Pattern Fallback)
+  if (
+    cleanQ === 'what can you do' ||
+    cleanQ === 'what can you ask' ||
+    cleanQ === 'how can you help' ||
+    cleanQ === 'help me' ||
+    cleanQ === 'help' ||
+    cleanQ === 'what are your features' ||
+    cleanQ === 'what can i ask' ||
+    cleanQ === 'who are you' ||
+    /what\s+can\s+you\s+do/i.test(cleanQ) ||
+    /what\s+are\s+the\s+features\s+of\s+mausam/i.test(cleanQ) ||
+    /what\s+information\s+can\s+you\s+provide/i.test(cleanQ)
+  ) {
+    return {
+      intent: 'HELP',
+      confidence: 1.0,
+      requiresLocation: false,
+      requiresProvider: false,
+      entities: {},
+    };
+  }
+
+  // 6. BROAD CONCEPTUAL / EDUCATIONAL QUESTIONS (ZERO PROVIDERS)
+  // If query starts with conceptual interrogatives and lacks a specific place name inquiry
+  // ("in Delhi", "in Odisha"), it is GUARANTEED to be GENERAL_KNOWLEDGE.
+  const hasPlaceName = /\b(in|at|for|near|around)\s+[a-z]{3,}\b/i.test(cleanQ);
+  const isConceptualOpener =
+    /^(what is|what are|what does|what do|what can|how is|how are|how does|how do|how can|why is|why are|why does|why do|explain|define|describe|meaning of|definition of)\b/i.test(
+      cleanQ
+    );
+
+  if (isConceptualOpener && !hasPlaceName) {
+    return {
+      intent: 'GENERAL_KNOWLEDGE',
+      confidence: 0.95,
+      requiresLocation: false,
+      requiresProvider: false,
+      entities: { topic: 'concept' },
+    };
+  }
+
+  // Check Radar Concept
+  if (/\b(radar|doppler|dwr)\b/i.test(cleanQ)) {
+    if (
+      /^(what is|how does|explain|define|how do)\b/i.test(cleanQ) &&
+      !/\b(in|at|for|near|of)\s+[a-z]{3,}\b/i.test(cleanQ)
+    ) {
+      return {
+        intent: 'GENERAL_KNOWLEDGE',
+        confidence: 0.98,
+        requiresLocation: false,
+        requiresProvider: false,
+        entities: { topic: 'radar' },
+      };
+    }
+  }
+
+  // Check Warning Concept
+  if (/\b(warning|warnings|alert|alerts|red alert|orange alert|yellow alert)\b/i.test(cleanQ)) {
+    if (
+      /^(what is|what are|explain|define|what do)\b/i.test(cleanQ) &&
+      !/\b(in|at|for|near|of)\s+[a-z]{3,}\b/i.test(cleanQ)
+    ) {
+      return {
+        intent: 'GENERAL_KNOWLEDGE',
+        confidence: 0.98,
+        requiresLocation: false,
+        requiresProvider: false,
+        entities: { topic: 'warnings' },
+      };
+    }
+  }
+
+  // Check Rainfall / Rain Concept
+  if (/\b(rainfall|rain|precipitation|monsoon)\b/i.test(cleanQ)) {
+    if (
+      /^(what is|why does|why is it|explain|define|how does rain)\b/i.test(cleanQ) &&
+      !/\b(in|at|for|near|of)\s+[a-z]{3,}\b/i.test(cleanQ)
+    ) {
+      return {
+        intent: 'GENERAL_KNOWLEDGE',
+        confidence: 0.98,
+        requiresLocation: false,
+        requiresProvider: false,
+        entities: { topic: cleanQ.includes('monsoon') ? 'monsoon' : 'rainfall' },
+      };
+    }
+  }
+
+  // Check Humidity Concept
+  if (/\b(humidity|humid|moisture)\b/i.test(cleanQ)) {
+    if (
+      /^(what is|why is|why does|explain|define)\b/i.test(cleanQ) &&
+      !/\b(in|at|for|near|of)\s+[a-z]{3,}\b/i.test(cleanQ)
+    ) {
+      return {
+        intent: 'GENERAL_KNOWLEDGE',
+        confidence: 0.98,
+        requiresLocation: false,
+        requiresProvider: false,
+        entities: { topic: 'humidity' },
+      };
+    }
+  }
+
+  // Check Agromet Concept
+  if (/\b(agromet|agrometeorology)\b/i.test(cleanQ)) {
+    if (
+      /^(what is|explain|define)\b/i.test(cleanQ) ||
+      cleanQ === 'what is agromet' ||
+      cleanQ === 'what is agrometeorology'
+    ) {
+      return {
+        intent: 'GENERAL_KNOWLEDGE',
+        confidence: 0.98,
+        requiresLocation: false,
+        requiresProvider: false,
+        entities: { topic: 'agriculture' },
+      };
+    }
+  }
+
+  // General "What is / Explain / How does / Why is" without explicit location
+  if (
+    /^(what is|what are|who is|who are|how does|how do|why is|why does|why do|explain)\b/i.test(
+      cleanQ
+    ) &&
+    !/\b(in|at|for|near|of)\s+[a-z]{3,}\b/i.test(cleanQ)
+  ) {
+    const matched = findKnowledge(cleanQ);
+    return {
+      intent: 'GENERAL_KNOWLEDGE',
+      confidence: matched ? 0.95 : 0.85,
+      requiresLocation: false,
+      requiresProvider: false,
+      entities: { topic: matched?.category?.toLowerCase() || 'general' },
+    };
+  }
+
+  // 6. MULTI-LOCATION COMPARISON
+  if (
+    cleanQ.includes('compare') ||
+    cleanQ.includes('which is cooler') ||
+    cleanQ.includes('which is warmer') ||
+    cleanQ.includes('which is hotter') ||
+    cleanQ.includes('difference between') ||
+    cleanQ.includes(' vs ') ||
+    cleanQ.includes(' or ')
+  ) {
+    // Check if comparing locations (e.g. Pune and Nagpur)
+    if (/\b(between|and|vs|or)\b/i.test(cleanQ)) {
+      return {
+        intent: 'MULTI_INTENT',
+        confidence: 0.95,
+        requiresLocation: true,
+        requiresProvider: true,
+        entities: {},
+      };
+    }
+  }
+
+  // 7. MULTI-INTENT (Weather + AQI or Weather + Warnings)
+  const asksWeather = /\b(weather|temperature|temp|climate|मौसम|तापमान)\b/i.test(cleanQ);
+  const asksAqi = /\b(aqi|air quality|pollution|pm2\.5|pm10|smog|हवा की गुणवत्ता|प्रदूषण)\b/i.test(
+    cleanQ
+  );
+  const asksWarning = /\b(warnings?|alerts?|cyclones?|floods?|hazards?|चेतावनी|अलर्ट)\b/i.test(cleanQ);
+
+  if ((asksWeather && asksAqi) || (asksWeather && asksWarning)) {
+    return {
+      intent: 'MULTI_INTENT',
+      confidence: 0.95,
+      requiresLocation: true,
+      requiresProvider: true,
+      entities: {},
+    };
+  }
+
+  // 8. OFFICIAL WARNINGS & DISASTER ALERTS
+  if (
+    asksWarning ||
+    cleanQ.includes('red alert') ||
+    cleanQ.includes('orange alert') ||
+    cleanQ.includes('yellow alert') ||
+    cleanQ.includes('heavy rain warning') ||
+    cleanQ.includes('rainfall warning') ||
+    cleanQ.includes('तूफान') ||
+    cleanQ.includes('बाढ़')
+  ) {
+    return {
+      intent: 'WARNING',
+      confidence: 0.95,
+      requiresLocation: true,
+      requiresProvider: true,
+      entities: {},
+    };
+  }
+
+  // 9. FORECAST (Tomorrow, 7-day, next 3 days, weekend, weekly)
+  const timeframe = detectTimeframe(cleanQ);
+  if (
+    cleanQ.includes('forecast') ||
+    cleanQ.includes('7 day') ||
+    cleanQ.includes('7-day') ||
+    cleanQ.includes('weekly') ||
+    cleanQ.includes('next week') ||
+    timeframe === 'tomorrow' ||
+    timeframe === 'tomorrow_morning' ||
+    timeframe === 'tomorrow_evening' ||
+    timeframe === 'next_3_days' ||
+    timeframe === 'next_7_days' ||
+    timeframe === 'this_weekend' ||
+    cleanQ.includes('पूर्वानुमान')
+  ) {
+    return {
+      intent: 'FORECAST',
+      confidence: 0.95,
+      requiresLocation: true,
+      requiresProvider: true,
+      entities: {},
+    };
+  }
+
+  // 10. AIR QUALITY & AQI
+  if (asksAqi) {
+    return {
+      intent: 'AQI',
+      confidence: 0.95,
+      requiresLocation: true,
+      requiresProvider: true,
+      entities: {},
+    };
+  }
+
+  // 11. RADAR & DOPPLER IMAGERY
+  if (
+    cleanQ.includes('radar') ||
+    cleanQ.includes('doppler') ||
+    cleanQ.includes('dwr') ||
+    cleanQ.includes('satellite') ||
+    cleanQ.includes('रडार')
+  ) {
+    return {
+      intent: 'RADAR',
+      confidence: 0.95,
+      requiresLocation: true,
+      requiresProvider: true,
+      entities: {},
+    };
+  }
+
+  // 12. RAINFALL & PRECIPITATION
+  if (
+    cleanQ.includes('rainfall') ||
+    cleanQ.includes('precipitation') ||
+    cleanQ.includes('downpour') ||
+    cleanQ.includes('rain today') ||
+    cleanQ.includes('is it raining') ||
+    cleanQ.includes('will it rain') ||
+    cleanQ.includes('raining') ||
+    cleanQ.includes('बारिश') ||
+    cleanQ.includes('वर्षा')
+  ) {
+    return {
+      intent: 'RAINFALL',
+      confidence: 0.95,
+      requiresLocation: true,
+      requiresProvider: true,
+      entities: {},
+    };
+  }
+
+  // 13. AGRICULTURE & FARMING
+  if (
+    cleanQ.includes('crop') ||
+    cleanQ.includes('spray') ||
+    cleanQ.includes('farm') ||
+    cleanQ.includes('soil') ||
+    cleanQ.includes('irrigation') ||
+    cleanQ.includes('harvest') ||
+    cleanQ.includes('pesticide') ||
+    cleanQ.includes('agromet') ||
+    cleanQ.includes('farmer') ||
+    cleanQ.includes('खेती') ||
+    cleanQ.includes('फसल')
+  ) {
+    return {
+      intent: 'AGRICULTURE',
+      confidence: 0.92,
+      requiresLocation: true,
+      requiresProvider: true,
+      entities: {},
+    };
+  }
+
+  // 14. MARINE & COASTAL
+  if (
+    cleanQ.includes('marine') ||
+    cleanQ.includes('sea') ||
+    cleanQ.includes('wave') ||
+    cleanQ.includes('tide') ||
+    cleanQ.includes('fishermen') ||
+    cleanQ.includes('coastal') ||
+    cleanQ.includes('beach') ||
+    cleanQ.includes('समुद्र') ||
+    cleanQ.includes('तट')
+  ) {
+    return {
+      intent: 'MARINE',
+      confidence: 0.92,
+      requiresLocation: true,
+      requiresProvider: true,
+      entities: {},
+    };
+  }
+
+  // 15. SPECIFIC WEATHER PARAMETERS
+  if (
+    asksWeather ||
+    cleanQ.includes('temperature') ||
+    cleanQ.includes('temp') ||
+    cleanQ.includes('wind') ||
+    cleanQ.includes('humidity') ||
+    cleanQ.includes('humid') ||
+    cleanQ.includes('hot') ||
+    cleanQ.includes('cold') ||
+    cleanQ.includes('warm') ||
+    cleanQ.includes('breeze') ||
+    cleanQ.includes('climate') ||
+    cleanQ.includes('how is the weather') ||
+    cleanQ.includes('what is the weather') ||
+    cleanQ.includes('current weather')
+  ) {
+    return {
+      intent: 'CURRENT_WEATHER',
+      confidence: 0.90,
+      requiresLocation: true,
+      requiresProvider: true,
+      entities: {},
+    };
+  }
+
+  // 16. LOCATION INQUIRY
+  if (/^(where is|show|location of)\b/i.test(cleanQ)) {
+    return {
+      intent: 'LOCATION',
+      confidence: 0.85,
+      requiresLocation: true,
+      requiresProvider: false,
+      entities: {},
+    };
+  }
+
+  // 17. FINAL FALLBACK: GENERAL_KNOWLEDGE or CLARIFICATION
+  // NEVER DEFAULT UNKNOWN QUESTIONS TO CURRENT_WEATHER!
+  return {
+    intent: 'GENERAL_KNOWLEDGE',
+    confidence: 0.60,
+    requiresLocation: false,
+    requiresProvider: false,
+    entities: {},
+  };
+}
+
+/**
+ * Backwards-compatible routeIntent for AskMausamOrchestrator
+ */
+export function routeIntent(
+  query: string,
+  isComparison = false,
+  memory?: ConversationMemoryState
+): IntentRoutingResult {
+  const q = normalizeQuestion(query);
+  const timeframe = detectTimeframe(q);
+  const cleanQ = q.replace(/[?!.,]/g, '').trim();
+
+  // Multi-location comparison shortcut
   if (
     isComparison ||
-    q.includes('compare') ||
-    q.includes('which is cooler') ||
-    q.includes('which is warmer') ||
-    q.includes('which is hotter') ||
-    q.includes('difference between') ||
-    q.includes('तुलना') ||
-    q.includes('ज्यादा ठंडा')
+    cleanQ.includes('which is cooler') ||
+    cleanQ.includes('which is warmer') ||
+    cleanQ.includes('which is hotter') ||
+    cleanQ.includes('compare weather between') ||
+    cleanQ.includes('compare weather') ||
+    (cleanQ.includes('compare') && cleanQ.includes('and'))
   ) {
     return {
       intent: 'MULTI_LOCATION_COMPARISON',
@@ -232,301 +588,245 @@ export function routeIntent(
       requiredTools: ['WEATHER', 'AQI'],
       confidence: 0.98,
       fastPathEligible: true,
+      requiresLocation: true,
+      requiresProvider: true,
     };
   }
 
-  // ====================================================================
-  // 4. MULTI-INTENT QUERIES (e.g. "Weather in Odisha and AQI")
-  // ====================================================================
-  const asksWeather = /\b(weather|temperature|temp|rain|raining|climate|मौसम|तापमान)\b/i.test(q);
-  const asksAqi = /\b(aqi|air quality|pollution|pm2\.5|pm10|smog|हवा की गुणवत्ता|प्रदूषण)\b/i.test(q);
-  const asksWarning = /\b(warning|alert|cyclone|flood|hazard|चेतावनी|अलर्ट)\b/i.test(q);
+  // Run canonical intent classifier
+  const classification = classifyIntent(query);
 
-  if (asksWeather && asksAqi) {
-    return {
-      intent: 'MULTI_INTENT',
-      timeframe,
-      requiredTools: ['WEATHER', 'AQI'],
-      confidence: 0.98,
-      fastPathEligible: true,
-    };
-  }
-
-  if (asksWeather && asksWarning) {
-    return {
-      intent: 'MULTI_INTENT',
-      timeframe,
-      requiredTools: ['WEATHER', 'WARNINGS'],
-      confidence: 0.98,
-      fastPathEligible: true,
-    };
-  }
-
-  // ====================================================================
-  // 5. OFFICIAL WARNINGS & DISASTER ALERTS
-  // ====================================================================
-  if (
-    asksWarning ||
-    q.includes('red alert') ||
-    q.includes('orange alert') ||
-    q.includes('yellow alert') ||
-    q.includes('heavy rain warning') ||
-    q.includes('rainfall warning') ||
-    q.includes('तूफान') ||
-    q.includes('बाढ़')
-  ) {
-    return {
-      intent: 'WARNINGS',
-      timeframe,
-      requiredTools: ['WARNINGS'], // STRICTLY WARNINGS ONLY
-      confidence: 0.98,
-      fastPathEligible: true,
-    };
-  }
-
-  // ====================================================================
-  // 6. FORECAST QUERIES (Tomorrow, 7-day, next 3 days, weekend, weekly)
-  // ====================================================================
-  if (
-    q.includes('forecast') ||
-    q.includes('7 day') ||
-    q.includes('7-day') ||
-    q.includes('weekly') ||
-    q.includes('next week') ||
-    timeframe === 'tomorrow' ||
-    timeframe === 'tomorrow_morning' ||
-    timeframe === 'tomorrow_evening' ||
-    timeframe === 'next_3_days' ||
-    timeframe === 'next_7_days' ||
-    timeframe === 'this_weekend' ||
-    q.includes('पूर्वानुमान')
-  ) {
-    return {
-      intent: 'FORECAST',
-      timeframe,
-      requiredTools: ['FORECAST'],
-      confidence: 0.96,
-      fastPathEligible: true,
-    };
-  }
-
-  // ====================================================================
-  // 7. AIR QUALITY & AQI (Grounded to location)
-  // ====================================================================
-  if (asksAqi) {
-    return {
-      intent: 'AQI',
-      timeframe,
-      requiredTools: ['AQI'], // STRICTLY AQI ONLY
-      confidence: 0.98,
-      fastPathEligible: true,
-    };
-  }
-
-  // ====================================================================
-  // 8. RADAR & DOPPLER IMAGERY (e.g. "Show radar for Odisha")
-  // ====================================================================
-  if (
-    q.includes('radar') ||
-    q.includes('doppler') ||
-    q.includes('dwr') ||
-    q.includes('satellite') ||
-    q.includes('रडार')
-  ) {
-    return {
-      intent: 'RADAR',
-      timeframe,
-      requiredTools: ['RADAR'],
-      confidence: 0.95,
-      fastPathEligible: true,
-    };
-  }
-
-  // ====================================================================
-  // 9. RAINFALL & PRECIPITATION
-  // ====================================================================
-  if (
-    q.includes('rainfall') ||
-    q.includes('precipitation') ||
-    q.includes('downpour') ||
-    q.includes('shower') ||
-    q.includes('बारिश') ||
-    q.includes('वर्षा') ||
-    q.includes('बरसात') ||
-    q.includes('बूंदाबांदी')
-  ) {
-    return {
-      intent: timeframe === 'now' ? 'RAIN' : 'RAINFALL',
-      timeframe,
-      requiredTools: timeframe === 'now' ? ['WEATHER'] : ['WEATHER', 'FORECAST'],
-      confidence: 0.95,
-      fastPathEligible: true,
-    };
-  }
-
-  // ====================================================================
-  // 10. MARINE & COASTAL
-  // ====================================================================
-  if (
-    q.includes('marine') ||
-    q.includes('sea') ||
-    q.includes('wave') ||
-    q.includes('tide') ||
-    q.includes('fishermen') ||
-    q.includes('coastal') ||
-    q.includes('beach') ||
-    q.includes('समुद्र') ||
-    q.includes('तट')
-  ) {
-    return {
-      intent: q.includes('tide') ? 'TIDE' : 'MARINE',
-      timeframe,
-      requiredTools: ['MARINE'],
-      confidence: 0.92,
-      fastPathEligible: true,
-    };
-  }
-
-  // ====================================================================
-  // 11. AGRICULTURE & FARMING
-  // ====================================================================
-  if (
-    q.includes('crop') ||
-    q.includes('spray') ||
-    q.includes('farm') ||
-    q.includes('soil') ||
-    q.includes('irrigation') ||
-    q.includes('harvest') ||
-    q.includes('pesticide') ||
-    q.includes('agromet') ||
-    q.includes('farmer') ||
-    q.includes('खेती') ||
-    q.includes('फसल') ||
-    q.includes('कीटनाशक')
-  ) {
-    return {
-      intent: q.includes('soil') ? 'SOIL' : 'AGRICULTURE',
-      timeframe,
-      requiredTools: ['WEATHER', 'AGRICULTURE'],
-      confidence: 0.92,
-      fastPathEligible: true,
-    };
-  }
-
-  // ====================================================================
-  // 12. SPECIFIC WEATHER PARAMETERS (Temperature, Wind, Humidity)
-  // ====================================================================
-  if (
-    q.includes('temperature') ||
-    q.includes('temp') ||
-    q.includes('hot') ||
-    q.includes('cold') ||
-    q.includes('warm') ||
-    q.includes('तापमान') ||
-    q.includes('गर्मी') ||
-    q.includes('ठंड')
-  ) {
-    return {
-      intent: 'TEMPERATURE',
-      timeframe,
-      requiredTools: ['WEATHER'],
-      confidence: 0.95,
-      fastPathEligible: true,
-    };
-  }
-
-  if (q.includes('wind') || q.includes('breeze') || q.includes('gust') || q.includes('हवा')) {
-    return {
-      intent: 'WIND',
-      timeframe,
-      requiredTools: ['WEATHER'],
-      confidence: 0.95,
-      fastPathEligible: true,
-    };
-  }
-
-  if (q.includes('humidity') || q.includes('humid') || q.includes('moisture') || q.includes('नमी')) {
-    return {
-      intent: 'HUMIDITY',
-      timeframe,
-      requiredTools: ['WEATHER'],
-      confidence: 0.95,
-      fastPathEligible: true,
-    };
-  }
-
-  if (q.includes('is it raining') || q.includes('raining')) {
-    return {
-      intent: 'RAIN',
-      timeframe: 'now',
-      requiredTools: ['WEATHER'],
-      confidence: 0.95,
-      fastPathEligible: true,
-    };
-  }
-
-  // ====================================================================
-  // 13. CONVERSATIONAL FOLLOW-UP EVALUATION
-  // ====================================================================
-  if (
-    q.startsWith('what about') ||
-    q.startsWith('how about') ||
-    q.startsWith('and ') ||
-    q.startsWith('what of')
-  ) {
-    if (timeframe === 'tomorrow' || timeframe === 'next_7_days' || timeframe === 'next_3_days') {
+  // Map to WeatherIntent and RequiredTools
+  switch (classification.intent) {
+    case 'GREETING':
       return {
-        intent: 'FORECAST',
-        timeframe,
-        requiredTools: ['FORECAST'],
-        confidence: 0.95,
+        intent: 'GREETING',
+        timeframe: 'now',
+        requiredTools: [],
+        confidence: classification.confidence,
         fastPathEligible: true,
+        isGeneralKnowledge: true,
+        requiresLocation: false,
+        requiresProvider: false,
       };
-    }
-    if (asksWarning) {
+
+    case 'ABOUT_DEVELOPER':
+      return {
+        intent: 'ABOUT_DEVELOPER',
+        timeframe: 'now',
+        requiredTools: [],
+        confidence: classification.confidence,
+        fastPathEligible: true,
+        isGeneralKnowledge: true,
+        requiresLocation: false,
+        requiresProvider: false,
+        topic: 'developer',
+      };
+
+    case 'ABOUT_MAUSAM':
+      return {
+        intent: 'ABOUT_MAUSAM',
+        timeframe: 'now',
+        requiredTools: [],
+        confidence: classification.confidence,
+        fastPathEligible: true,
+        isGeneralKnowledge: true,
+        requiresLocation: false,
+        requiresProvider: false,
+        topic: 'mausam',
+      };
+
+    case 'HELP':
+      return {
+        intent: 'HELP',
+        timeframe: 'now',
+        requiredTools: [],
+        confidence: classification.confidence,
+        fastPathEligible: true,
+        isGeneralKnowledge: true,
+        requiresLocation: false,
+        requiresProvider: false,
+      };
+
+    case 'GENERAL_KNOWLEDGE':
+      return {
+        intent: 'GENERAL_KNOWLEDGE',
+        timeframe: 'now',
+        requiredTools: [],
+        confidence: classification.confidence,
+        fastPathEligible: true,
+        isGeneralKnowledge: true,
+        requiresLocation: false,
+        requiresProvider: false,
+        topic: classification.entities.topic,
+      };
+
+    case 'WARNING':
       return {
         intent: 'WARNINGS',
         timeframe,
         requiredTools: ['WARNINGS'],
-        confidence: 0.95,
+        confidence: classification.confidence,
         fastPathEligible: true,
+        requiresLocation: true,
+        requiresProvider: true,
       };
-    }
-    if (asksAqi) {
+
+    case 'FORECAST':
+      return {
+        intent: 'FORECAST',
+        timeframe,
+        requiredTools: ['FORECAST'],
+        confidence: classification.confidence,
+        fastPathEligible: true,
+        requiresLocation: true,
+        requiresProvider: true,
+      };
+
+    case 'AQI':
       return {
         intent: 'AQI',
         timeframe,
         requiredTools: ['AQI'],
-        confidence: 0.95,
+        confidence: classification.confidence,
         fastPathEligible: true,
+        requiresLocation: true,
+        requiresProvider: true,
       };
-    }
-  }
 
-  // ====================================================================
-  // 14. DEFAULT INTENT: CURRENT_WEATHER
-  // (Only if asking a weather-related query or unspecified atmospheric state)
-  // ====================================================================
-  return {
-    intent: 'CURRENT_WEATHER',
-    timeframe,
-    requiredTools: ['WEATHER'],
-    confidence: 0.90,
-    fastPathEligible: true,
-  };
+    case 'RADAR':
+      return {
+        intent: 'RADAR',
+        timeframe,
+        requiredTools: ['RADAR'],
+        confidence: classification.confidence,
+        fastPathEligible: true,
+        requiresLocation: true,
+        requiresProvider: true,
+      };
+
+    case 'RAINFALL':
+      return {
+        intent: timeframe === 'now' ? 'RAIN' : 'RAINFALL',
+        timeframe,
+        requiredTools: timeframe === 'now' ? ['WEATHER'] : ['WEATHER', 'FORECAST'],
+        confidence: classification.confidence,
+        fastPathEligible: true,
+        requiresLocation: true,
+        requiresProvider: true,
+      };
+
+    case 'AGRICULTURE':
+      return {
+        intent: cleanQ.includes('soil') ? 'SOIL' : 'AGRICULTURE',
+        timeframe,
+        requiredTools: ['WEATHER', 'AGRICULTURE'],
+        confidence: classification.confidence,
+        fastPathEligible: true,
+        requiresLocation: true,
+        requiresProvider: true,
+      };
+
+    case 'MARINE':
+      return {
+        intent: cleanQ.includes('tide') ? 'TIDE' : 'MARINE',
+        timeframe,
+        requiredTools: ['MARINE'],
+        confidence: classification.confidence,
+        fastPathEligible: true,
+        requiresLocation: true,
+        requiresProvider: true,
+      };
+
+    case 'MULTI_INTENT':
+      return {
+        intent: 'MULTI_INTENT',
+        timeframe,
+        requiredTools: cleanQ.includes('warning') || cleanQ.includes('alert')
+          ? ['WEATHER', 'WARNINGS']
+          : ['WEATHER', 'AQI'],
+        confidence: classification.confidence,
+        fastPathEligible: true,
+        requiresLocation: true,
+        requiresProvider: true,
+      };
+
+    case 'LOCATION':
+      return {
+        intent: 'LOCATION',
+        timeframe,
+        requiredTools: [],
+        confidence: classification.confidence,
+        fastPathEligible: true,
+        requiresLocation: true,
+        requiresProvider: false,
+      };
+
+    case 'CURRENT_WEATHER':
+      if (cleanQ.includes('temperature') || cleanQ.includes('temp') || cleanQ.includes('तापमान')) {
+        return {
+          intent: 'TEMPERATURE',
+          timeframe,
+          requiredTools: ['WEATHER'],
+          confidence: classification.confidence,
+          fastPathEligible: true,
+          requiresLocation: true,
+          requiresProvider: true,
+        };
+      }
+      if (cleanQ.includes('wind') || cleanQ.includes('हवा')) {
+        return {
+          intent: 'WIND',
+          timeframe,
+          requiredTools: ['WEATHER'],
+          confidence: classification.confidence,
+          fastPathEligible: true,
+          requiresLocation: true,
+          requiresProvider: true,
+        };
+      }
+      if (cleanQ.includes('humidity') || cleanQ.includes('नमी')) {
+        return {
+          intent: 'HUMIDITY',
+          timeframe,
+          requiredTools: ['WEATHER'],
+          confidence: classification.confidence,
+          fastPathEligible: true,
+          requiresLocation: true,
+          requiresProvider: true,
+        };
+      }
+      return {
+        intent: 'CURRENT_WEATHER',
+        timeframe,
+        requiredTools: ['WEATHER'],
+        confidence: classification.confidence,
+        fastPathEligible: true,
+        requiresLocation: true,
+        requiresProvider: true,
+      };
+
+    default:
+      return {
+        intent: 'GENERAL_KNOWLEDGE',
+        timeframe: 'now',
+        requiredTools: [],
+        confidence: 0.60,
+        fastPathEligible: true,
+        isGeneralKnowledge: true,
+        requiresLocation: false,
+        requiresProvider: false,
+      };
+  }
 }
 
 /**
- * Returns dynamic, intent-specific progress text to display in the UI
- * GENERAL questions: "Preparing an answer…"
- * WEATHER questions: "Checking current weather…"
- * FORECAST: "Preparing the forecast…"
- * WARNING: "Checking official warnings…"
- * AQI: "Checking air-quality observations…"
- * RADAR: "Loading radar data…"
+ * Dynamic, intent-specific progress text to display in the UI
  */
 export function getIntentLoadingMessage(intent: WeatherIntent): string {
   switch (intent) {
+    case 'ABOUT_DEVELOPER':
+      return 'Checking project metadata…';
     case 'GENERAL_KNOWLEDGE':
     case 'ABOUT_MAUSAM':
     case 'HELP':
@@ -561,6 +861,6 @@ export function getIntentLoadingMessage(intent: WeatherIntent): string {
     case 'SOIL':
       return 'Checking agricultural advisories…';
     default:
-      return 'Checking atmospheric observations…';
+      return 'Processing request…';
   }
 }

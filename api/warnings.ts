@@ -553,23 +553,23 @@ export class SachetService {
 
   private detectEventFromText(headline: string, desc: string): string {
     const text = `${headline} ${desc}`.toLowerCase();
-    if (text.includes('cyclone') || text.includes('depression') || text.includes('storm')) return 'Cyclone Warning';
-    if (text.includes('thunderstorm') || text.includes('lightning') || text.includes('squall')) return 'Thunderstorm & Lightning Warning';
-    if (text.includes('heavy rain') || text.includes('rainfall') || text.includes('downpour')) return 'Heavy Rainfall Warning';
-    if (text.includes('heatwave') || text.includes('heat wave')) return 'Heatwave Alert';
-    if (text.includes('cold wave') || text.includes('frost')) return 'Cold Wave Warning';
-    if (text.includes('dense fog') || text.includes('fog')) return 'Dense Fog Warning';
-    if (text.includes('flood')) return 'Flood Warning';
+    if (/\b(cyclone|cyclonic|deep depression)\b/.test(text)) return 'Cyclone Warning';
+    if (/\b(thunderstorm|thundershower|lightning|squall)\b/.test(text)) return 'Thunderstorm & Lightning Warning';
+    if (/\b(heavy rain|rainfall|downpour)\b/.test(text)) return 'Heavy Rainfall Warning';
+    if (/\b(heatwave|heat wave|loo)\b/.test(text)) return 'Heatwave Alert';
+    if (/\b(cold wave|coldwave|frost)\b/.test(text)) return 'Cold Wave Warning';
+    if (/\b(dense fog|fog|smog)\b/.test(text)) return 'Dense Fog Warning';
+    if (/\b(flood|inundation)\b/.test(text)) return 'Flood Warning';
     return 'Severe Weather Advisory';
   }
 
   private normalizeSeverity(raw?: string): 'GREEN' | 'YELLOW' | 'ORANGE' | 'RED' {
     if (!raw) return 'YELLOW';
     const s = raw.toLowerCase();
-    if (s.includes('red') || s.includes('severe') || s.includes('extreme')) return 'RED';
-    if (s.includes('orange') || s.includes('amber') || s.includes('moderate')) return 'ORANGE';
-    if (s.includes('yellow') || s.includes('watch') || s.includes('advisory')) return 'YELLOW';
-    if (s.includes('green') || s.includes('clear') || s.includes('normal')) return 'GREEN';
+    if (/\b(red|extreme|take action)\b/.test(s)) return 'RED';
+    if (/\b(orange|amber|be prepared|very heavy)\b/.test(s)) return 'ORANGE';
+    if (/\b(yellow|watch|be updated|moderate|advisory|light to moderate)\b/.test(s)) return 'YELLOW';
+    if (/\b(green|clear|normal|all clear)\b/.test(s)) return 'GREEN';
     return 'YELLOW';
   }
 
