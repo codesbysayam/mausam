@@ -305,6 +305,13 @@ class LocationService {
     try {
       localStorage.setItem('mausam_selected_location_id', loc.id);
       localStorage.setItem('mausam_location_source', source);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('mausam_location_changed', {
+            detail: { id: loc.id, state: loc.state, city: loc.city, record: loc },
+          })
+        );
+      }
     } catch {
       // Ignore in restricted iframe
     }

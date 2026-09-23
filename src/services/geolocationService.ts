@@ -456,6 +456,18 @@ class GeolocationService {
       }));
       localStorage.setItem('mausam_selected_location_id', resolved.record.id);
       localStorage.setItem('mausam_location_source', 'DEVICE_GPS');
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(
+          new CustomEvent('mausam_location_changed', {
+            detail: {
+              id: resolved.record.id,
+              state: resolved.record.state,
+              city: resolved.record.city,
+              record: resolved.record,
+            },
+          })
+        );
+      }
     } catch {
       // Ignore in restricted iframe
     }

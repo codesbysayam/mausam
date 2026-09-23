@@ -14,6 +14,7 @@ import warningsHandler from './api/warnings';
 import radarHandler from './api/radar';
 import systemHandler from './api/system';
 import aiHandler from './api/ai';
+import cycloneHandler from './api/cyclone';
 import {
   buildMausamSystemInstruction,
   generateMausamGroundedFallback,
@@ -129,6 +130,8 @@ async function startServer() {
     return systemHandler(req, res);
   });
   app.all('/api/ai', (req, res) => aiHandler(req, res));
+  app.all('/api/cyclone', (req, res) => cycloneHandler(req, res));
+  app.all('/api/cyclone/*', (req, res) => cycloneHandler(req, res));
 
   // Severe Weather Government Warning Pipeline Route (NDMA SACHET + IMD)
   app.use('/api/warnings', warningsRouter);

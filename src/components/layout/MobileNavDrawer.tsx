@@ -9,6 +9,7 @@ import {
   Wheat,
   FileText,
   LucideIcon,
+  Disc,
 } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { MainNavTab } from './MainNavigation';
@@ -53,6 +54,7 @@ const MOBILE_NAV_ITEMS: MobileNavItem[] = [
   { id: 'forecast', labelKey: 'forecast', defaultLabel: 'FORECAST', icon: TrendingUp, color: 'text-[#818CF8]' },
   { id: 'warnings', labelKey: 'warnings', defaultLabel: 'WARNINGS', icon: AlertTriangle, color: 'text-[#E74C3C]' },
   { id: 'radar', labelKey: 'radar', defaultLabel: 'RADAR & MAPS', icon: Radio, color: 'text-[#2ECC71]' },
+  { id: 'cyclone-tracker', labelKey: 'cycloneTracker', defaultLabel: 'CYCLONE TRACKER', icon: Disc, color: 'text-[#38BDF8]' },
   { id: 'aqi', labelKey: 'airQuality', defaultLabel: 'AQI & AIR', icon: Activity, color: 'text-[#F1C40F]' },
   { id: 'agromet', labelKey: 'agromet', defaultLabel: 'AGROMET', icon: Wheat, color: 'text-[#1ABC9C]' },
   { id: 'reports', labelKey: 'reports', defaultLabel: 'REPORTS', icon: FileText, color: 'text-[#9B59B6]' },

@@ -65,6 +65,7 @@ export interface TranslationDictionary {
   forecast: string;
   warnings: string;
   radar: string;
+  cycloneTracker?: string;
   airQuality: string;
   agromet: string;
   reports: string;

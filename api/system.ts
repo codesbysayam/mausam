@@ -153,7 +153,7 @@ async function checkAllProviders(): Promise<ProviderDiagnostic[]> {
   const imdConfigured = !!process.env.IMD_API_KEY;
   const cpcbConfigured = !!process.env.CPCB_API_KEY;
 
-  const [openMeteo, sachet, radar, osm] = await Promise.all([
+  const [openMeteo, sachet, radar, osm, imdCycloneProbe, imdCapProbe] = await Promise.all([
     safeProbe(
       'openMeteo',
       'Open-Meteo Weather API',
@@ -185,6 +185,22 @@ async function checkAllProviders(): Promise<ProviderDiagnostic[]> {
       'https://tile.openstreetmap.org/0/0/0.png',
       true,
       3500
+    ),
+    safeProbe(
+      'imdCyclone',
+      'IMD Cyclone & RSMC Disturbance Feed',
+      'GOVERNMENT_CYCLONE',
+      'https://rsmcnewdelhi.imd.gov.in',
+      true,
+      4500
+    ),
+    safeProbe(
+      'imdCap',
+      'IMD Official CAP Warning Feed',
+      'GOVERNMENT_WARNINGS',
+      'https://cap-sources.s3.amazonaws.com/in-imd-en/rss.xml',
+      true,
+      4500
     ),
   ]);
 
@@ -218,7 +234,7 @@ async function checkAllProviders(): Promise<ProviderDiagnostic[]> {
     latencyMs: null,
   };
 
-  return [openMeteo, sachet, radar, osm, gemini, imd, cpcb];
+  return [openMeteo, sachet, radar, osm, imdCycloneProbe, imdCapProbe, gemini, imd, cpcb];
 }
 
 async function getHealthReport(): Promise<any> {

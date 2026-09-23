@@ -10,6 +10,7 @@ import {
   OFFICIAL_RADAR_STATIONS,
   fetchLiveRadarData,
   RadarApiResponse,
+  RadarFrame,
 } from '../services/radarService';
 import { MausamMap, MausamMapControls } from '../components/map/MausamMap';
 import { MapToolbar } from '../components/map/MapToolbar';
@@ -18,6 +19,7 @@ import { StationObservationPanel } from '../components/radar/StationObservationP
 import { RadarStationNetwork } from '../components/radar/RadarStationNetwork';
 import { RadarProductSelector } from '../components/radar/RadarProductSelector';
 import { RadarTechnicalSpecs } from '../components/radar/RadarTechnicalSpecs';
+import { RadarTimeSpan } from '../components/radar/RadarTimeLapseController';
 
 export interface RadarPageProps {
   selectedLocation?: LocationRecord;
@@ -40,7 +42,10 @@ export const RadarPage: React.FC<RadarPageProps> = ({
   const [mapControls, setMapControls] = useState<MausamMapControls | null>(null);
 
   // Mode Selection: 'synoptic' (All-India Synoptic Map) or 'radar' (Radar Station View)
-  const [viewMode, setViewMode] = useState<'synoptic' | 'radar'>('synoptic');
+  const [viewMode, setViewMode] = useState<'synoptic' | 'radar'>('radar');
+
+  // Map View Lock State (prevents accidental panning/zooming while viewing specific weather sectors)
+  const [isMapLocked, setIsMapLocked] = useState<boolean>(false);
 
   // Active Map Layer Metric in Synoptic Mode
   const [activeMetric, setActiveMetric] = useState<WeatherMapMetric>('rainfall');
@@ -64,6 +69,9 @@ export const RadarPage: React.FC<RadarPageProps> = ({
   const [isLoadingRadar, setIsLoadingRadar] = useState<boolean>(false);
   const [activeFrameIndex, setActiveFrameIndex] = useState<number>(0);
   const [isPlayingRadar, setIsPlayingRadar] = useState<boolean>(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
+  const [isLooping, setIsLooping] = useState<boolean>(true);
+  const [timeSpan, setTimeSpan] = useState<RadarTimeSpan>('6h');
   const [lastFetchTime, setLastFetchTime] = useState<string>('Loading live data...');
 
   // Match state data from registry
@@ -78,14 +86,48 @@ export const RadarPage: React.FC<RadarPageProps> = ({
     return found || INDIA_WEATHER_DATA[0];
   }, [selectedStateName]);
 
+  // Active Weather Sector Name for lock and tactical focus
+  const currentSectorName = useMemo<string>(() => {
+    if (viewMode === 'radar' && selectedStation) {
+      return `${selectedStation.name} Radar Sector (${selectedStation.id})`;
+    }
+    if (viewMode === 'synoptic' && selectedStateName) {
+      return `${selectedStateName} Synoptic Sector`;
+    }
+    return 'India Weather Sector';
+  }, [viewMode, selectedStation, selectedStateName]);
+
+  // Resolve active timeline frames based on selected time-span (6h, 3h, or 1h)
+  const activeTimelineFrames = useMemo<RadarFrame[]>(() => {
+    if (!radarData) return [];
+    const sourceFrames =
+      radarData.sixHourFrames && radarData.sixHourFrames.length > 0
+        ? radarData.sixHourFrames
+        : radarData.pastFrames;
+
+    if (!sourceFrames || sourceFrames.length === 0) return [];
+
+    if (timeSpan === '1h') {
+      return sourceFrames.slice(-5);
+    }
+    if (timeSpan === '3h') {
+      return sourceFrames.slice(-13);
+    }
+    return sourceFrames;
+  }, [radarData, timeSpan]);
+
   // Load real radar metadata from RainViewer
   const loadLiveRadar = useCallback(async (force = false) => {
     setIsLoadingRadar(true);
     try {
       const result = await fetchLiveRadarData('MAXZ', force);
       setRadarData(result);
-      if (result.pastFrames && result.pastFrames.length > 0) {
-        setActiveFrameIndex(result.pastFrames.length - 1);
+      const frames =
+        result.sixHourFrames && result.sixHourFrames.length > 0
+          ? result.sixHourFrames
+          : result.pastFrames;
+      if (frames && frames.length > 0) {
+        setActiveFrameIndex(frames.length - 1);
       }
       const now = new Date();
       setLastFetchTime(
@@ -135,43 +177,51 @@ export const RadarPage: React.FC<RadarPageProps> = ({
 
   // Frame animation timer for radar playback
   useEffect(() => {
-    if (!isPlayingRadar || !radarData?.pastFrames || radarData.pastFrames.length <= 1) {
+    if (!isPlayingRadar || !activeTimelineFrames || activeTimelineFrames.length <= 1) {
       return;
     }
 
+    const intervalDuration = Math.max(150, Math.round(750 / playbackSpeed));
     const interval = setInterval(() => {
       setActiveFrameIndex((prev) => {
         const next = prev + 1;
-        if (next >= radarData.pastFrames.length) {
-          return 0;
+        if (next >= activeTimelineFrames.length) {
+          if (isLooping) {
+            return 0;
+          } else {
+            setIsPlayingRadar(false);
+            return activeTimelineFrames.length - 1;
+          }
         }
         return next;
       });
-    }, 1200);
+    }, intervalDuration);
 
     return () => clearInterval(interval);
-  }, [isPlayingRadar, radarData]);
+  }, [isPlayingRadar, activeTimelineFrames, playbackSpeed, isLooping]);
 
   // Active radar tile url based on current frame
   const currentTileUrl = useMemo<string | null>(() => {
-    if (!radarData || !radarData.available || !radarData.pastFrames.length) {
+    if (!radarData || !radarData.available || !activeTimelineFrames.length) {
       return null;
     }
-    const frame = radarData.pastFrames[activeFrameIndex] || radarData.pastFrames[radarData.pastFrames.length - 1];
+    const frame =
+      activeTimelineFrames[activeFrameIndex] ||
+      activeTimelineFrames[activeTimelineFrames.length - 1];
     if (!frame || !radarData.host) return null;
     return `${radarData.host}${frame.path}/256/{z}/{x}/{y}/2/1_1.png`;
-  }, [radarData, activeFrameIndex]);
+  }, [radarData, activeTimelineFrames, activeFrameIndex]);
 
   // Observation timestamp display
   const currentObsTimestamp = useMemo<string>(() => {
     if (viewMode === 'radar') {
-      if (radarData?.pastFrames?.[activeFrameIndex]) {
-        return radarData.pastFrames[activeFrameIndex].formattedTime;
+      if (activeTimelineFrames?.[activeFrameIndex]) {
+        return activeTimelineFrames[activeFrameIndex].formattedTime;
       }
       return lastFetchTime;
     }
     return selectedStateData?.updatedAt ? `${selectedStateData.updatedAt}, 06 Sep 2026` : lastFetchTime;
-  }, [viewMode, radarData, activeFrameIndex, lastFetchTime, selectedStateData]);
+  }, [viewMode, activeTimelineFrames, activeFrameIndex, lastFetchTime, selectedStateData]);
 
   // Data status for display
   const currentDataStatus = useMemo<'LIVE' | 'RECENT' | 'STALE' | 'UNAVAILABLE'>(() => {
@@ -360,6 +410,9 @@ export const RadarPage: React.FC<RadarPageProps> = ({
           onResetView={handleResetView}
           onMyLocation={handleMyLocation}
           hasUserLocation={!!(selectedLocation?.lat && selectedLocation?.lng)}
+          isLocked={isMapLocked}
+          onToggleLock={() => setIsMapLocked((prev) => !prev)}
+          sectorName={currentSectorName}
         />
 
         {/* 70% / 30% Grid: Map Workspace + Information Panel */}
@@ -383,84 +436,32 @@ export const RadarPage: React.FC<RadarPageProps> = ({
                   : null
               }
               onControlsReady={setMapControls}
+              isLocked={isMapLocked}
+              onToggleLock={() => setIsMapLocked((prev) => !prev)}
+              sectorName={currentSectorName}
               heightClass="h-full min-h-[440px] md:min-h-[520px] lg:min-h-[620px]"
+              showRadarLegend={viewMode === 'radar'}
+              showTimeLapseControl={viewMode === 'radar'}
+              timeLapseFrames={activeTimelineFrames}
+              activeFrameIndex={activeFrameIndex}
+              onChangeFrame={(idx) => {
+                setIsPlayingRadar(false);
+                setActiveFrameIndex(idx);
+              }}
+              isPlaying={isPlayingRadar}
+              onTogglePlay={() => setIsPlayingRadar((prev) => !prev)}
+              playbackSpeed={playbackSpeed}
+              onChangeSpeed={setPlaybackSpeed}
+              loop={isLooping}
+              onToggleLoop={() => setIsLooping((prev) => !prev)}
+              timeSpan={timeSpan}
+              onChangeTimeSpan={(span) => {
+                setTimeSpan(span);
+                setIsPlayingRadar(false);
+              }}
+              motionVector={radarData?.motionVector}
+              dataStatus={currentDataStatus}
             />
-
-            {/* Radar Time Scrubber & Frame Player Overlay in Radar Mode */}
-            {viewMode === 'radar' && radarData?.pastFrames && radarData.pastFrames.length > 0 && (
-              <div className="absolute bottom-3 left-3 right-3 z-10 bg-[#0B263D]/95 backdrop-blur-md border border-[#1D5278] rounded-md p-2.5 shadow-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 text-xs">
-                {/* Playback Controls */}
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsPlayingRadar(!isPlayingRadar)}
-                    className="px-2.5 py-1 rounded bg-[#1565C0] hover:bg-[#0B3D91] text-white font-bold flex items-center gap-1.5 transition-colors shadow-sm"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">
-                      {isPlayingRadar ? 'pause' : 'play_arrow'}
-                    </span>
-                    <span>{isPlayingRadar ? 'Pause' : 'Play Loop'}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setActiveFrameIndex((prev) => (prev > 0 ? prev - 1 : radarData.pastFrames.length - 1))
-                    }
-                    className="w-7 h-7 rounded bg-[#102D44] hover:bg-[#1D5278] text-[#AFC4D8] hover:text-white flex items-center justify-center border border-[#1D5278]"
-                    title="Previous frame"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">skip_previous</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setActiveFrameIndex((prev) =>
-                        prev < radarData.pastFrames.length - 1 ? prev + 1 : 0
-                      )
-                    }
-                    className="w-7 h-7 rounded bg-[#102D44] hover:bg-[#1D5278] text-[#AFC4D8] hover:text-white flex items-center justify-center border border-[#1D5278]"
-                    title="Next frame"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">skip_next</span>
-                  </button>
-                </div>
-
-                {/* Timeline Scrubber */}
-                <div className="flex-1 flex items-center gap-2 min-w-0">
-                  <span className="text-[10px] text-[#8A94A6] shrink-0 font-mono">
-                    {radarData.pastFrames[0]?.formattedTime.split(',')[0]}
-                  </span>
-                  <input
-                    type="range"
-                    min={0}
-                    max={radarData.pastFrames.length - 1}
-                    value={activeFrameIndex}
-                    onChange={(e) => {
-                      setIsPlayingRadar(false);
-                      setActiveFrameIndex(Number(e.target.value));
-                    }}
-                    className="w-full accent-[#38BDF8] cursor-pointer h-1.5 bg-[#102D44] rounded"
-                  />
-                  <span className="text-[10px] text-[#38BDF8] shrink-0 font-mono font-bold">
-                    {radarData.pastFrames[radarData.pastFrames.length - 1]?.formattedTime.split(',')[0]}
-                  </span>
-                </div>
-
-                {/* Current Timestamp */}
-                <div className="text-right shrink-0">
-                  <span className="font-mono text-xs font-bold text-[#F5F9FC] block">
-                    {radarData.pastFrames[activeFrameIndex]?.formattedTime || 'Current'}
-                  </span>
-                  <span className="text-[10px] text-[#AFC4D8]">
-                    {radarData.pastFrames[activeFrameIndex]?.ageMinutes === 0
-                      ? 'Live Scan'
-                      : `${radarData.pastFrames[activeFrameIndex]?.ageMinutes}m ago`}
-                  </span>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Observation Panel (Approx 30% on Desktop) */}

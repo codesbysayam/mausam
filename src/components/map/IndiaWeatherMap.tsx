@@ -304,6 +304,7 @@ export const IndiaWeatherMap: React.FC<IndiaWeatherMapProps> = ({
   const [isStationSaved, setIsStationSaved] = useState<boolean>(false);
   const [showDiagnostics, setShowDiagnostics] = useState<boolean>(false);
   const [isFullscreen, setIsFullscreen] = useState<boolean>(false);
+  const [isMapLocked, setIsMapLocked] = useState<boolean>(false);
 
   const mapSvgRef = useRef<SVGSVGElement>(null);
   const mapContainerRef = useRef<HTMLDivElement>(null);
@@ -499,9 +500,16 @@ export const IndiaWeatherMap: React.FC<IndiaWeatherMapProps> = ({
   };
 
   // Zoom handlers
-  const handleZoomIn = () => setZoomLevel((prev) => Math.min(prev + 0.25, 2.5));
-  const handleZoomOut = () => setZoomLevel((prev) => Math.max(prev - 0.25, 0.75));
+  const handleZoomIn = () => {
+    if (isMapLocked) return;
+    setZoomLevel((prev) => Math.min(prev + 0.25, 2.5));
+  };
+  const handleZoomOut = () => {
+    if (isMapLocked) return;
+    setZoomLevel((prev) => Math.max(prev - 0.25, 0.75));
+  };
   const handleResetZoom = () => {
+    if (isMapLocked) return;
     setZoomLevel(1);
     setPanOffset({ x: 0, y: 0 });
     setActiveRegion('all');
@@ -674,30 +682,68 @@ export const IndiaWeatherMap: React.FC<IndiaWeatherMapProps> = ({
           {/* Map Viewport & Overlay Action Buttons (Zoom / Reset / Pins / Labels / Fullscreen) */}
           <div className="absolute top-3 right-3 flex flex-col gap-1.5 z-10">
             <div className="bg-[#17212B]/95 border border-[#334155] rounded p-1 flex flex-col gap-1 shadow-lg">
+              {/* Visual Map Lock / Unlock Control */}
+              <button
+                id="btn-toggle-map-lock"
+                type="button"
+                title={
+                  isMapLocked
+                    ? 'Sector View Locked — Click to unlock panning & zooming'
+                    : 'Lock view to current weather sector (prevents accidental panning & zooming)'
+                }
+                aria-label={isMapLocked ? 'Unlock map panning and zooming' : 'Lock map to current sector'}
+                aria-pressed={isMapLocked}
+                onClick={() => setIsMapLocked(!isMapLocked)}
+                className={`w-7 h-7 rounded flex items-center justify-center transition-colors cursor-pointer text-xs ${
+                  isMapLocked
+                    ? 'bg-[#F59E0B] text-black shadow-md ring-1 ring-[#F59E0B]'
+                    : 'bg-[#1E2733] text-[#8A94A6] hover:text-white'
+                }`}
+              >
+                <span className="material-symbols-outlined text-[15px]">
+                  {isMapLocked ? 'lock' : 'lock_open'}
+                </span>
+              </button>
+
               <button
                 id="btn-map-zoom-in"
                 type="button"
-                title="Zoom In"
+                title={isMapLocked ? 'Map is locked to sector. Unlock to zoom.' : 'Zoom In'}
+                disabled={isMapLocked}
                 onClick={handleZoomIn}
-                className="w-7 h-7 bg-[#1E2733] hover:bg-[#0B72B9] text-white rounded flex items-center justify-center transition-colors cursor-pointer text-xs"
+                className={`w-7 h-7 rounded flex items-center justify-center transition-colors text-xs ${
+                  isMapLocked
+                    ? 'bg-[#1E2733]/50 text-[#8A94A6]/40 cursor-not-allowed'
+                    : 'bg-[#1E2733] hover:bg-[#0B72B9] text-white cursor-pointer'
+                }`}
               >
                 <span className="material-symbols-outlined text-[16px]">add</span>
               </button>
               <button
                 id="btn-map-zoom-out"
                 type="button"
-                title="Zoom Out"
+                title={isMapLocked ? 'Map is locked to sector. Unlock to zoom.' : 'Zoom Out'}
+                disabled={isMapLocked}
                 onClick={handleZoomOut}
-                className="w-7 h-7 bg-[#1E2733] hover:bg-[#0B72B9] text-white rounded flex items-center justify-center transition-colors cursor-pointer text-xs"
+                className={`w-7 h-7 rounded flex items-center justify-center transition-colors text-xs ${
+                  isMapLocked
+                    ? 'bg-[#1E2733]/50 text-[#8A94A6]/40 cursor-not-allowed'
+                    : 'bg-[#1E2733] hover:bg-[#0B72B9] text-white cursor-pointer'
+                }`}
               >
                 <span className="material-symbols-outlined text-[16px]">remove</span>
               </button>
               <button
                 id="btn-map-reset-zoom"
                 type="button"
-                title="Reset View"
+                title={isMapLocked ? 'Map is locked to sector. Unlock to reset.' : 'Reset View'}
+                disabled={isMapLocked}
                 onClick={handleResetZoom}
-                className="w-7 h-7 bg-[#1E2733] hover:bg-[#0B72B9] text-white rounded flex items-center justify-center transition-colors cursor-pointer text-xs"
+                className={`w-7 h-7 rounded flex items-center justify-center transition-colors text-xs ${
+                  isMapLocked
+                    ? 'bg-[#1E2733]/50 text-[#8A94A6]/40 cursor-not-allowed'
+                    : 'bg-[#1E2733] hover:bg-[#0B72B9] text-white cursor-pointer'
+                }`}
               >
                 <span className="material-symbols-outlined text-[16px]">restart_alt</span>
               </button>
@@ -741,6 +787,23 @@ export const IndiaWeatherMap: React.FC<IndiaWeatherMapProps> = ({
               </button>
             </div>
           </div>
+
+          {/* On-Map Floating Sector Lock Badge */}
+          {isMapLocked && (
+            <div className="absolute top-3 left-3 z-20 flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#17212B]/95 border border-[#F59E0B] text-[#F59E0B] text-[11px] font-mono shadow-md backdrop-blur-md pointer-events-auto">
+              <span className="material-symbols-outlined text-[14px]">lock</span>
+              <span className="font-bold">
+                LOCKED: {activeRegion !== 'all' ? `${activeRegion.toUpperCase()} SECTOR` : `${(activeObservationState?.name || 'SYNOPTIC').toUpperCase()} SECTOR`}
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsMapLocked(false)}
+                className="text-white hover:underline text-[10px] ml-1 cursor-pointer font-sans"
+              >
+                Unlock
+              </button>
+            </div>
+          )}
 
           <div
             className="w-full flex items-center justify-center transition-transform duration-300 ease-out"

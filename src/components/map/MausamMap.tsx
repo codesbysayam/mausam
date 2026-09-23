@@ -7,13 +7,30 @@ import {
 import { StateWeatherData } from './IndiaWeatherMap';
 import { INDIA_WEATHER_DATA } from '../../data/indiaWeatherData';
 import { RadarStation } from '../../types/radar';
-import { OFFICIAL_RADAR_STATIONS } from '../../services/radarService';
+import {
+  OFFICIAL_RADAR_STATIONS,
+  RadarFrame,
+  RadarMotionVector,
+  RadarDataStatus,
+} from '../../services/radarService';
+import {
+  RadarMapLegendPanel,
+  PrecipLevelId,
+  ALL_PRECIP_LEVEL_IDS,
+  PRECIP_INTERVALS,
+} from '../radar/RadarMapLegendPanel';
+import {
+  RadarTimeLapseController,
+  RadarTimeSpan,
+} from '../radar/RadarTimeLapseController';
 
 export interface MausamMapControls {
   zoomIn: () => void;
   zoomOut: () => void;
   resetView: () => void;
   flyTo: (lat: number, lng: number, zoom?: number) => void;
+  toggleLock?: () => void;
+  isLocked?: boolean;
 }
 
 export interface MausamMapProps {
@@ -29,6 +46,27 @@ export interface MausamMapProps {
   onControlsReady?: (controls: MausamMapControls) => void;
   className?: string;
   heightClass?: string;
+  isLocked?: boolean;
+  onToggleLock?: () => void;
+  sectorName?: string;
+  showRadarLegend?: boolean;
+  activePrecipLevels?: PrecipLevelId[];
+  onPrecipLevelsChange?: (levels: PrecipLevelId[]) => void;
+  // Automatic 6-Hour Time-Lapse Playback Controls on Radar Map
+  showTimeLapseControl?: boolean;
+  timeLapseFrames?: RadarFrame[];
+  activeFrameIndex?: number;
+  onChangeFrame?: (index: number) => void;
+  isPlaying?: boolean;
+  onTogglePlay?: () => void;
+  playbackSpeed?: number;
+  onChangeSpeed?: (speed: number) => void;
+  loop?: boolean;
+  onToggleLoop?: () => void;
+  timeSpan?: RadarTimeSpan;
+  onChangeTimeSpan?: (span: RadarTimeSpan) => void;
+  motionVector?: RadarMotionVector;
+  dataStatus?: RadarDataStatus;
 }
 
 /**
@@ -114,10 +152,14 @@ function MapController({
   center,
   zoom,
   onControlsReady,
+  isLocked,
+  onToggleLock,
 }: {
   center: [number, number];
   zoom: number;
   onControlsReady?: (controls: MausamMapControls) => void;
+  isLocked?: boolean;
+  onToggleLock?: () => void;
 }) {
   const map = useMap();
 
@@ -128,13 +170,54 @@ function MapController({
   useEffect(() => {
     if (onControlsReady) {
       onControlsReady({
-        zoomIn: () => map.zoomIn(),
-        zoomOut: () => map.zoomOut(),
-        resetView: () => map.setView([22.8, 80.5], 4.8, { animate: true }),
+        zoomIn: () => {
+          if (!isLocked) map.zoomIn();
+        },
+        zoomOut: () => {
+          if (!isLocked) map.zoomOut();
+        },
+        resetView: () => {
+          if (!isLocked) map.setView([22.8, 80.5], 4.8, { animate: true });
+        },
         flyTo: (lat: number, lng: number, z = 7) => map.flyTo([lat, lng], z, { animate: true }),
+        toggleLock: onToggleLock,
+        isLocked,
       });
     }
-  }, [map, onControlsReady]);
+  }, [map, onControlsReady, isLocked, onToggleLock]);
+
+  return null;
+}
+
+/**
+ * Controller to enable/disable Leaflet panning, zooming, and scrolling
+ * when the map view is locked to prevent accidental movement.
+ */
+function MapInteractionLockController({ isLocked }: { isLocked: boolean }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map) return;
+    try {
+      if (isLocked) {
+        map.dragging?.disable();
+        map.touchZoom?.disable();
+        map.doubleClickZoom?.disable();
+        map.scrollWheelZoom?.disable();
+        map.boxZoom?.disable();
+        map.keyboard?.disable();
+      } else {
+        map.dragging?.enable();
+        map.touchZoom?.enable();
+        map.doubleClickZoom?.enable();
+        map.scrollWheelZoom?.enable();
+        map.boxZoom?.enable();
+        map.keyboard?.enable();
+      }
+    } catch {
+      // Safe fallback
+    }
+  }, [map, isLocked]);
 
   return null;
 }
@@ -220,9 +303,103 @@ export const MausamMap: React.FC<MausamMapProps> = ({
   onControlsReady,
   className = '',
   heightClass = 'h-[440px] md:h-[520px] lg:h-[620px]',
+  isLocked = false,
+  onToggleLock,
+  sectorName,
+  showRadarLegend = true,
+  activePrecipLevels,
+  onPrecipLevelsChange,
+  // Automatic 6-Hour Time-Lapse Playback Controls on Radar Map
+  showTimeLapseControl,
+  timeLapseFrames,
+  activeFrameIndex,
+  onChangeFrame,
+  isPlaying,
+  onTogglePlay,
+  playbackSpeed,
+  onChangeSpeed,
+  loop,
+  onToggleLoop,
+  timeSpan = '6h',
+  onChangeTimeSpan,
+  motionVector,
+  dataStatus,
 }) => {
   const INDIA_CENTER: [number, number] = [22.8, 80.5];
   const DEFAULT_ZOOM = 4.8;
+  const [showLockNotice, setShowLockNotice] = useState<boolean>(false);
+
+  const effectiveShowTimeLapse =
+    showTimeLapseControl !== undefined
+      ? showTimeLapseControl
+      : viewMode === 'radar' && !!(timeLapseFrames && timeLapseFrames.length > 0);
+
+  // Precipitation intensity layer filter state
+  const [internalPrecipLevels, setInternalPrecipLevels] = useState<PrecipLevelId[]>(ALL_PRECIP_LEVEL_IDS);
+  const effectivePrecipLevels = activePrecipLevels !== undefined ? activePrecipLevels : internalPrecipLevels;
+  const handlePrecipLevelsChange = useCallback((levels: PrecipLevelId[]) => {
+    if (activePrecipLevels === undefined) {
+      setInternalPrecipLevels(levels);
+    }
+    onPrecipLevelsChange?.(levels);
+  }, [activePrecipLevels, onPrecipLevelsChange]);
+
+  const isPrecipFiltered = effectivePrecipLevels.length < ALL_PRECIP_LEVEL_IDS.length;
+
+  // Compute CSS filter class for Doppler radar tile layer based on active levels
+  const computedTileFilterClass = useMemo(() => {
+    if (effectivePrecipLevels.length === ALL_PRECIP_LEVEL_IDS.length) return '';
+    if (effectivePrecipLevels.length === 0) return 'radar-filter-zero';
+    const hasTrace = effectivePrecipLevels.includes('trace');
+    const hasLight = effectivePrecipLevels.includes('light');
+    const hasMod = effectivePrecipLevels.includes('moderate');
+    const hasHeavy = effectivePrecipLevels.includes('heavy');
+    const hasIntense = effectivePrecipLevels.includes('intense');
+    const hasExtreme = effectivePrecipLevels.includes('extreme');
+
+    // Only convective downpours & storms (≥ 40 dBZ)
+    if (!hasTrace && !hasLight && !hasMod && (hasHeavy || hasIntense || hasExtreme)) {
+      return 'radar-filter-heavy-plus';
+    }
+    // Moderate and above (≥ 30 dBZ)
+    if (!hasTrace && !hasLight && (hasMod || hasHeavy || hasIntense || hasExtreme)) {
+      return 'radar-filter-mod-plus';
+    }
+    // Light rain only (< 30 dBZ)
+    if (!hasHeavy && !hasIntense && !hasExtreme && (hasTrace || hasLight)) {
+      return 'radar-filter-trace-only';
+    }
+    return 'radar-filter-custom';
+  }, [effectivePrecipLevels]);
+
+  const computedTileOpacity = useMemo(() => {
+    if (effectivePrecipLevels.length === 0) return 0;
+    if (effectivePrecipLevels.length === ALL_PRECIP_LEVEL_IDS.length) return radarOpacity;
+    return Math.max(0.35, (effectivePrecipLevels.length / ALL_PRECIP_LEVEL_IDS.length) * radarOpacity);
+  }, [effectivePrecipLevels, radarOpacity]);
+
+  // Check if a state's rainfall falls within the active filter intervals
+  const isStateRainfallInFilter = useCallback((rainfallMm: number = 0) => {
+    if (effectivePrecipLevels.length === ALL_PRECIP_LEVEL_IDS.length) return true;
+    if (rainfallMm < 0.5) return effectivePrecipLevels.includes('trace');
+    if (rainfallMm < 4) return effectivePrecipLevels.includes('light');
+    if (rainfallMm < 15) return effectivePrecipLevels.includes('moderate');
+    if (rainfallMm < 50) return effectivePrecipLevels.includes('heavy');
+    if (rainfallMm < 100) return effectivePrecipLevels.includes('intense');
+    return effectivePrecipLevels.includes('extreme');
+  }, [effectivePrecipLevels]);
+
+  // Determine active sector display label
+  const activeSectorLabel = useMemo<string>(() => {
+    if (sectorName) return sectorName;
+    if (viewMode === 'radar' && selectedStation) {
+      return `${selectedStation.name} Radar Sector (${selectedStation.id})`;
+    }
+    if (viewMode === 'synoptic' && selectedState) {
+      return `${selectedState} Synoptic Sector`;
+    }
+    return 'India Meteorological Sector';
+  }, [sectorName, viewMode, selectedStation, selectedState]);
 
   // Determine center based on selection
   const center = useMemo<[number, number]>(() => {
@@ -255,9 +432,12 @@ export const MausamMap: React.FC<MausamMapProps> = ({
       const stateName = state.name;
       const key = stateName.toLowerCase();
       const code = STATE_COORDINATES[key]?.code || state.id.replace('IN-', '');
+      const isRainfallMetric = activeMetric === 'rainfall';
+      const isMatchingPrecipFilter = isRainfallMetric ? isStateRainfallInFilter(state.rainfall) : true;
+      const filterStyle = !isMatchingPrecipFilter ? 'opacity: 0.22; filter: grayscale(85%);' : '';
 
       const html = `
-        <div class="cursor-pointer group flex flex-col items-center select-none" style="transform: translate(-50%, -50%);">
+        <div class="cursor-pointer group flex flex-col items-center select-none" style="transform: translate(-50%, -50%); ${filterStyle}">
           <div class="flex items-center gap-1 px-1.5 py-0.5 rounded shadow-lg text-[10px] font-bold font-mono transition-transform duration-150 ${
             isSelected
               ? 'ring-2 ring-white scale-110 shadow-[0_0_12px_rgba(21,101,192,0.8)]'
@@ -278,7 +458,7 @@ export const MausamMap: React.FC<MausamMapProps> = ({
         iconAnchor: [30, 12],
       });
     },
-    [activeMetric]
+    [activeMetric, isStateRainfallInFilter]
   );
 
   // Create custom DivIcon for Doppler radar stations
@@ -330,21 +510,182 @@ export const MausamMap: React.FC<MausamMapProps> = ({
 
   return (
     <div
-      className={`relative w-full ${heightClass} bg-[#061A2B] rounded-lg overflow-hidden border border-[#1D5278] shadow-inner ${className}`}
+      className={`relative w-full ${heightClass} bg-[#061A2B] rounded-lg overflow-hidden border border-[#1D5278] shadow-inner select-none ${
+        isLocked ? '[&_.leaflet-grab]:!cursor-default [&_.leaflet-container]:!cursor-default' : ''
+      } ${className}`}
       style={{ zIndex: 0 }}
+      onClick={() => {
+        if (isLocked) {
+          setShowLockNotice(true);
+          setTimeout(() => setShowLockNotice(false), 2400);
+        }
+      }}
     >
+      {/* Floating Visual Lock/Unlock Toggle Button (Top-Right) */}
+      <div className="absolute top-3 right-3 z-[400] flex items-center gap-2 pointer-events-auto">
+        <button
+          type="button"
+          id="btn-map-floating-lock"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleLock?.();
+          }}
+          aria-label={isLocked ? 'Unlock radar map panning and zooming' : 'Lock radar map to current sector'}
+          aria-pressed={isLocked}
+          title={
+            isLocked
+              ? `Map view locked to ${activeSectorLabel}. Click to unlock panning & zooming.`
+              : 'Lock view to current weather sector (prevents accidental panning & zooming)'
+          }
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold backdrop-blur-md transition-all shadow-xl cursor-pointer ${
+            isLocked
+              ? 'bg-[#091522]/95 text-[#F59E0B] border border-[#F59E0B] shadow-[#F59E0B]/20 ring-2 ring-[#F59E0B]/30'
+              : 'bg-[#0B263D]/85 text-[#AFC4D8] hover:text-white hover:bg-[#102D44] border border-[#1D5278]'
+          }`}
+        >
+          <span className="material-symbols-outlined text-[16px]">
+            {isLocked ? 'lock' : 'lock_open'}
+          </span>
+          <span className="font-mono uppercase tracking-wider text-[11px]">
+            {isLocked ? 'SECTOR LOCKED' : 'LOCK VIEW'}
+          </span>
+          {isLocked && (
+            <span className="w-2 h-2 rounded-full bg-[#F59E0B] animate-ping ml-0.5" />
+          )}
+        </button>
+      </div>
+
+      {/* On-Map Sector Lock Notification Strip (Top-Left) */}
+      {isLocked && (
+        <div className="absolute top-3 left-3 z-[400] bg-[#07131E]/95 border border-[#F59E0B]/70 backdrop-blur-md px-3 py-1.5 rounded-lg text-xs font-mono text-[#F4F7FA] flex items-center gap-2 shadow-lg pointer-events-auto">
+          <span className="w-2 h-2 rounded-full bg-[#F59E0B] animate-pulse"></span>
+          <span className="text-[#F59E0B] font-bold text-[10px] uppercase tracking-wider">LOCKED SECTOR:</span>
+          <span className="text-[11px] font-semibold text-white truncate max-w-[150px] sm:max-w-[280px]">
+            {activeSectorLabel}
+          </span>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleLock?.();
+            }}
+            className="ml-1 text-[10px] text-[#38BDF8] hover:text-white underline font-sans cursor-pointer shrink-0 font-semibold"
+            title="Unlock map to pan and zoom freely"
+          >
+            Unlock
+          </button>
+        </div>
+      )}
+
+      {/* Notice tooltip when interacting with locked map */}
+      {showLockNotice && isLocked && (
+        <div className="absolute top-14 left-1/2 -translate-x-1/2 z-[400] bg-[#091522]/95 border border-[#F59E0B] text-white text-xs px-3.5 py-1.5 rounded-lg shadow-2xl flex items-center gap-2 pointer-events-none backdrop-blur-md animate-fade-in">
+          <span className="material-symbols-outlined text-[#F59E0B] text-[16px]">lock</span>
+          <span className="text-[11px] font-medium text-[#F4F7FA]">
+            Sector View is Locked — Accidental pan/zoom prevented. Click &quot;Unlock&quot; to adjust.
+          </span>
+        </div>
+      )}
+
+      {/* Persistent Semi-Transparent Radar Legend Panel directly on the map surface */}
+      {showRadarLegend && (
+        <RadarMapLegendPanel
+          initialMetric="all"
+          positionClass={isLocked ? 'top-14 left-3' : 'top-3 left-3'}
+          activePrecipLevels={effectivePrecipLevels}
+          onPrecipLevelsChange={handlePrecipLevelsChange}
+          sectorName={activeSectorLabel}
+          stationName={selectedStation?.name}
+        />
+      )}
+
+      {/* Automatic 6-Hour Radar Time-Lapse Playback Control directly on the map surface */}
+      {effectiveShowTimeLapse && timeLapseFrames && timeLapseFrames.length > 0 && (
+        <div
+          id="mausam-map-time-lapse-overlay"
+          className="absolute bottom-2 left-2 right-2 sm:bottom-3 sm:left-1/2 sm:-translate-x-1/2 sm:w-[580px] md:w-[680px] max-w-[calc(100vw-24px)] z-[410] pointer-events-auto"
+          onClick={(e) => e.stopPropagation()}
+          onMouseDown={(e) => e.stopPropagation()}
+          onDoubleClick={(e) => e.stopPropagation()}
+        >
+          <RadarTimeLapseController
+            frames={timeLapseFrames}
+            activeFrameIndex={activeFrameIndex ?? timeLapseFrames.length - 1}
+            onChangeFrame={onChangeFrame ?? (() => {})}
+            isPlaying={isPlaying ?? false}
+            onTogglePlay={onTogglePlay ?? (() => {})}
+            playbackSpeed={playbackSpeed ?? 1}
+            onChangeSpeed={onChangeSpeed ?? (() => {})}
+            loop={loop ?? true}
+            onToggleLoop={onToggleLoop}
+            timeSpan={timeSpan}
+            onChangeTimeSpan={onChangeTimeSpan}
+            motionVector={motionVector}
+            dataStatus={dataStatus}
+            isCollapsible={true}
+          />
+        </div>
+      )}
+
+      {/* On-Map Precipitation Filter Banner when active */}
+      {isPrecipFiltered && (
+        <div className="absolute top-3 right-14 z-[400] bg-[#07131E]/95 border border-[#F59E0B]/90 backdrop-blur-md px-2.5 py-1.5 rounded-lg text-xs font-mono text-[#F4F7FA] flex items-center gap-2 shadow-2xl pointer-events-auto animate-fadeIn">
+          <span className="w-2 h-2 rounded-full bg-[#F59E0B] animate-pulse" />
+          <span className="text-[#F59E0B] font-bold text-[10px] uppercase">
+            FILTER: {effectivePrecipLevels.length}/6 ON
+          </span>
+          <button
+            type="button"
+            onClick={() => handlePrecipLevelsChange(ALL_PRECIP_LEVEL_IDS)}
+            className="text-[10px] text-[#38BDF8] hover:text-white underline font-sans cursor-pointer font-bold"
+            title="Show all precipitation intensity layers"
+          >
+            Reset
+          </button>
+        </div>
+      )}
+
+      {/* Embedded dynamic CSS styles for radar layer intensity filtering */}
+      <style>{`
+        .radar-tile-layer img {
+          transition: filter 0.3s ease, opacity 0.3s ease;
+        }
+        .radar-filter-zero img {
+          opacity: 0 !important;
+        }
+        .radar-filter-heavy-plus img {
+          filter: contrast(220%) saturate(190%) brightness(110%) drop-shadow(0 0 6px rgba(239,68,68,0.5));
+        }
+        .radar-filter-mod-plus img {
+          filter: contrast(165%) saturate(160%) brightness(105%);
+        }
+        .radar-filter-trace-only img {
+          filter: contrast(135%) saturate(135%) hue-rotate(170deg);
+        }
+        .radar-filter-custom img {
+          filter: contrast(145%) saturate(150%);
+        }
+      `}</style>
+
       <MapContainer
         center={center}
         zoom={zoom}
         minZoom={3}
         maxZoom={18}
         zoomControl={false}
-        scrollWheelZoom={true}
+        scrollWheelZoom={!isLocked}
         className="w-full h-full"
         style={{ background: '#061A2B' }}
       >
         <MapResizeFix />
-        <MapController center={center} zoom={zoom} onControlsReady={onControlsReady} />
+        <MapController
+          center={center}
+          zoom={zoom}
+          onControlsReady={onControlsReady}
+          isLocked={isLocked}
+          onToggleLock={onToggleLock}
+        />
+        <MapInteractionLockController isLocked={isLocked} />
 
         {/* Base Cartographic Tile Layer */}
         <TileLayer
@@ -357,10 +698,11 @@ export const MausamMap: React.FC<MausamMapProps> = ({
         {/* Real RainViewer Doppler Radar Tile Overlay in Radar Mode */}
         {viewMode === 'radar' && radarTileUrl && (
           <TileLayer
-            key={radarTileUrl}
+            key={`radar-tile-layer-${effectivePrecipLevels.join(',')}`}
             url={radarTileUrl}
-            opacity={radarOpacity}
+            opacity={computedTileOpacity}
             zIndex={300}
+            className={`radar-tile-layer ${computedTileFilterClass}`}
             attribution='Weather radar data by RainViewer'
           />
         )}

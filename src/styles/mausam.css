@@ -981,6 +981,11 @@ img, svg, canvas, video {
   max-width: none !important;
 }
 
+/* Meteorological Dark OSM Tiles (No API key required) */
+.osm-tiles-meteorological {
+  filter: brightness(0.7) invert(1) contrast(2.4) hue-rotate(200deg) saturate(0.35) brightness(0.75);
+}
+
 @media (max-width: 768px) {
   .radar-map-container {
     height: 60vh;

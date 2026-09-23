@@ -9,6 +9,7 @@ import {
   Wheat,
   FileText,
   LucideIcon,
+  Disc,
 } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { TranslationDictionary } from '../../i18n/translations';
@@ -20,6 +21,7 @@ export type MainNavTab =
   | 'forecast'
   | 'warnings'
   | 'radar'
+  | 'cyclone-tracker'
   | 'aqi'
   | 'agromet'
   | 'reports';
@@ -87,6 +89,15 @@ const NAV_CONFIG: NavItemConfig[] = [
     bgHover: 'hover:border-[#2ECC71]',
   },
   {
+    id: 'cyclone-tracker',
+    labelKey: 'cycloneTracker' as any,
+    defaultLabel: 'CYCLONE TRACKER',
+    shortLabel: 'CYCLONE',
+    icon: Disc,
+    color: 'text-[#38BDF8]',
+    bgHover: 'hover:border-[#38BDF8]',
+  },
+  {
     id: 'aqi',
     labelKey: 'airQuality',
     defaultLabel: 'AQI & AIR',
@@ -129,7 +140,7 @@ export const MainNavigation: React.FC<MainNavigationProps> = ({
       aria-label="Primary Navigation"
     >
       <div className="max-w-[1440px] mx-auto">
-        <div className="grid grid-cols-8 gap-1 sm:gap-1.5 md:gap-2 w-full">
+        <div className="grid grid-cols-9 gap-1 sm:gap-1.5 md:gap-2 w-full">
           {NAV_CONFIG.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;

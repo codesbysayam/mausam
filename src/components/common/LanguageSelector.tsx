@@ -10,6 +10,8 @@ import {
   SupportedLanguageMode,
   getRegionLanguageConfig,
 } from '../../types/regionLanguages';
+import { useLanguage } from '../../i18n/LanguageContext';
+import { Language } from '../../i18n/translations';
 
 export interface LanguageSelectorProps {
   selectedMode?: SupportedLanguageMode;
@@ -33,6 +35,8 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
   className = '',
   idPrefix = '',
 }) => {
+  const { language, setLanguage, languageMode: ctxMode } = useLanguage();
+
   // 1. Internal state fallback for uncontrolled usage
   const [internalMode, setInternalMode] = useState<SupportedLanguageMode>(() => {
     try {
@@ -43,10 +47,8 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
     } catch {
       // Storage unavailable
     }
-    return 'en';
+    return ctxMode || 'en';
   });
-
-  const activeMode = controlledMode !== undefined ? controlledMode : internalMode;
 
   // 2. Resolve region configuration
   const resolvedRegionConfig = useMemo(() => {
@@ -54,7 +56,22 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
     return getRegionLanguageConfig(stateOrRegion || 'Odisha');
   }, [providedConfig, stateOrRegion]);
 
-  // 3. Keep in sync with cross-component and cross-tab storage changes
+  const regionalLangCode = useMemo(() => {
+    return (resolvedRegionConfig.regionalLanguageCode ||
+      resolvedRegionConfig.primaryRegionalCode ||
+      'or') as Language;
+  }, [resolvedRegionConfig]);
+
+  // Determine active mode from controlled prop, language context, or internal mode
+  const activeMode: SupportedLanguageMode = useMemo(() => {
+    if (controlledMode !== undefined) return controlledMode;
+    if (language === 'en') return 'en';
+    if (language === 'hi') return 'hi';
+    if (language === regionalLangCode) return 'regional';
+    return ctxMode || internalMode;
+  }, [controlledMode, language, regionalLangCode, ctxMode, internalMode]);
+
+  // Keep in sync with cross-component and cross-tab storage changes
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === STORAGE_KEY && e.newValue) {
@@ -84,25 +101,35 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
     };
   }, []);
 
+  // When regional mode is active and stateOrRegion changes, update language to match the region
+  useEffect(() => {
+    if (activeMode === 'regional' && regionalLangCode && language !== regionalLangCode) {
+      setLanguage(regionalLangCode);
+    }
+  }, [activeMode, regionalLangCode, language, setLanguage]);
+
   // 4. Handle language mode selection
   const handleSelect = useCallback(
     (mode: SupportedLanguageMode) => {
+      setInternalMode(mode);
       if (controlledOnSelect) {
         controlledOnSelect(mode);
-      } else {
-        setInternalMode(mode);
       }
 
       try {
         localStorage.setItem(STORAGE_KEY, mode);
         // Also map to primary app language code for general i18n alignment
-        const effectiveLang =
+        const effectiveLang: Language =
           mode === 'en'
             ? 'en'
             : mode === 'hi'
             ? 'hi'
-            : resolvedRegionConfig.regionalLanguageCode || resolvedRegionConfig.primaryRegionalCode || 'en';
+            : regionalLangCode;
+
         localStorage.setItem(APP_STORAGE_KEY, effectiveLang);
+
+        // Update global LanguageContext state so the entire application updates synchronously
+        setLanguage(effectiveLang);
 
         // Notify other mounted selector instances
         window.dispatchEvent(
@@ -110,11 +137,16 @@ export const LanguageSelector: React.FC<LanguageSelectorProps> = ({
             detail: mode,
           })
         );
+        window.dispatchEvent(
+          new CustomEvent<{ language: Language; mode: SupportedLanguageMode }>('mausam_language_change', {
+            detail: { language: effectiveLang, mode },
+          })
+        );
       } catch {
         // Storage unavailable
       }
     },
-    [controlledOnSelect, resolvedRegionConfig]
+    [controlledOnSelect, regionalLangCode, setLanguage]
   );
 
   // 5. Regional display label and accessibility properties

@@ -28,6 +28,8 @@ import {
   ShieldCheck,
   Activity,
   Wind,
+  Lock,
+  Unlock,
 } from 'lucide-react';
 import {
   RadarStation,
@@ -158,6 +160,38 @@ function MapResizeHandler({ onReady }: { onReady?: () => void }) {
       window.removeEventListener('resize', handleWindowResize);
     };
   }, [map, onReady]);
+
+  return null;
+}
+
+/**
+ * Disables panning, scrolling, and dragging when the user locks view to the active sector
+ */
+function MapLockHandler({ isLocked }: { isLocked: boolean }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map) return;
+    try {
+      if (isLocked) {
+        map.dragging?.disable();
+        map.touchZoom?.disable();
+        map.doubleClickZoom?.disable();
+        map.scrollWheelZoom?.disable();
+        map.boxZoom?.disable();
+        map.keyboard?.disable();
+      } else {
+        map.dragging?.enable();
+        map.touchZoom?.enable();
+        map.doubleClickZoom?.enable();
+        map.scrollWheelZoom?.enable();
+        map.boxZoom?.enable();
+        map.keyboard?.enable();
+      }
+    } catch {
+      // Safe fallback
+    }
+  }, [map, isLocked]);
 
   return null;
 }
@@ -604,6 +638,7 @@ export const DopplerRadarViewer: React.FC<DopplerRadarViewerProps> = ({
   }, [propStation]);
 
   // Radar Controls State
+  const [isMapLocked, setIsMapLocked] = useState<boolean>(false);
   const [activeProduct, setActiveProduct] = useState<RadarProductType>(
     initialProduct === 'PVV' ? 'PPV' : initialProduct
   );
@@ -733,7 +768,7 @@ export const DopplerRadarViewer: React.FC<DopplerRadarViewerProps> = ({
 
   // Recenter view on station using smooth animated flyTo
   const handleRecenter = () => {
-    if (!mapRef.current) return;
+    if (isMapLocked || !mapRef.current) return;
     const targetZoom = selectedRangeKm > 250 ? 7 : 8;
     mapRef.current.flyTo([station.lat, station.lng], targetZoom, {
       animate: true,
@@ -744,6 +779,7 @@ export const DopplerRadarViewer: React.FC<DopplerRadarViewerProps> = ({
 
   // Smooth Zoom In
   const handleZoomIn = () => {
+    if (isMapLocked) return;
     if (mapRef.current) {
       mapRef.current.zoomIn(1, {
         animate: true,
@@ -753,6 +789,7 @@ export const DopplerRadarViewer: React.FC<DopplerRadarViewerProps> = ({
 
   // Smooth Zoom Out
   const handleZoomOut = () => {
+    if (isMapLocked) return;
     if (mapRef.current) {
       mapRef.current.zoomOut(1, {
         animate: true,
@@ -1219,6 +1256,7 @@ export const DopplerRadarViewer: React.FC<DopplerRadarViewerProps> = ({
             showCities={showCities}
             showCoverageMask={showCoverageMask}
           />
+          <MapLockHandler isLocked={isMapLocked} />
         </MapContainer>
 
         {/* Animated Rotating Radar Sweep Arm Overlay */}
@@ -1237,27 +1275,76 @@ export const DopplerRadarViewer: React.FC<DopplerRadarViewerProps> = ({
           <span className="text-[9px] font-mono text-[#93A4B8] mt-1">TRUE NORTH</span>
         </div>
 
-        {/* Tactical Floating Zoom Controls (+ / -) with Smooth Interaction */}
+        {/* Tactical Floating Controls (+ / - / Lock) with Smooth Interaction */}
         <div className="absolute top-20 right-4 z-20 flex flex-col gap-1.5 shadow-xl">
+          {/* Tactical Sector Lock / Unlock Control */}
           <button
             type="button"
+            id="btn-doppler-sector-lock"
+            onClick={() => setIsMapLocked((prev) => !prev)}
+            className={`w-8 h-8 rounded-lg border flex items-center justify-center cursor-pointer transition-all duration-150 shadow-md select-none ${
+              isMapLocked
+                ? 'bg-[#FF8C42]/20 border-[#FF8C42] text-[#FF8C42] ring-1 ring-[#FF8C42]/50'
+                : 'bg-[#071018]/90 hover:bg-[#162331] border-[#162331] text-[#D1DCE8] hover:text-white'
+            }`}
+            title={
+              isMapLocked
+                ? `Locked to ${station.name} (${station.maxRangeKm}km sector). Click to unlock panning & zooming.`
+                : `Lock view to ${station.name} weather sector (prevents accidental panning & zooming)`
+            }
+            aria-label={isMapLocked ? 'Unlock radar map panning and zooming' : 'Lock radar map to current sector'}
+            aria-pressed={isMapLocked}
+          >
+            {isMapLocked ? <Lock className="w-4 h-4 text-[#FF8C42]" /> : <Unlock className="w-4 h-4 text-[#93A4B8]" />}
+          </button>
+
+          <button
+            type="button"
+            disabled={isMapLocked}
             onClick={handleZoomIn}
-            className="w-8 h-8 rounded-lg bg-[#071018]/90 hover:bg-[#162331] active:bg-[#43C7F4]/20 active:scale-90 border border-[#162331] text-[#D1DCE8] hover:text-white flex items-center justify-center cursor-pointer transition-all duration-150 shadow-md select-none"
-            title="Smooth Zoom In"
+            className={`w-8 h-8 rounded-lg border flex items-center justify-center transition-all duration-150 shadow-md select-none ${
+              isMapLocked
+                ? 'bg-[#071018]/50 border-[#162331]/40 text-[#8A94A6]/40 cursor-not-allowed'
+                : 'bg-[#071018]/90 hover:bg-[#162331] active:bg-[#43C7F4]/20 active:scale-90 border-[#162331] text-[#D1DCE8] hover:text-white cursor-pointer'
+            }`}
+            title={isMapLocked ? 'Map is locked to sector. Unlock to zoom.' : 'Smooth Zoom In'}
             aria-label="Zoom In"
           >
             <ZoomIn className="w-4 h-4" />
           </button>
           <button
             type="button"
+            disabled={isMapLocked}
             onClick={handleZoomOut}
-            className="w-8 h-8 rounded-lg bg-[#071018]/90 hover:bg-[#162331] active:bg-[#43C7F4]/20 active:scale-90 border border-[#162331] text-[#D1DCE8] hover:text-white flex items-center justify-center cursor-pointer transition-all duration-150 shadow-md select-none"
-            title="Smooth Zoom Out"
+            className={`w-8 h-8 rounded-lg border flex items-center justify-center transition-all duration-150 shadow-md select-none ${
+              isMapLocked
+                ? 'bg-[#071018]/50 border-[#162331]/40 text-[#8A94A6]/40 cursor-not-allowed'
+                : 'bg-[#071018]/90 hover:bg-[#162331] active:bg-[#43C7F4]/20 active:scale-90 border-[#162331] text-[#D1DCE8] hover:text-white cursor-pointer'
+            }`}
+            title={isMapLocked ? 'Map is locked to sector. Unlock to zoom.' : 'Smooth Zoom Out'}
             aria-label="Zoom Out"
           >
             <ZoomOut className="w-4 h-4" />
           </button>
         </div>
+
+        {/* On-Map Floating Sector Lock HUD Badge */}
+        {isMapLocked && (
+          <div className="absolute top-4 left-4 z-30 flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#071018]/95 border border-[#FF8C42]/80 text-[#FF8C42] text-xs font-mono shadow-2xl backdrop-blur-md">
+            <Lock className="w-3.5 h-3.5 text-[#FF8C42]" />
+            <div className="flex flex-col">
+              <span className="font-bold uppercase tracking-wider text-[11px]">Sector View Locked</span>
+              <span className="text-[10px] text-[#D1DCE8]">{station.name} ({station.band} Band)</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsMapLocked(false)}
+              className="ml-2 px-2 py-0.5 rounded bg-[#FF8C42]/20 hover:bg-[#FF8C42]/30 text-[#FF8C42] text-[10px] font-sans font-bold cursor-pointer transition-colors"
+            >
+              Unlock
+            </button>
+          </div>
+        )}
 
         {/* Station Telemetry HUD Overlay (Top-Left) */}
         <div className="absolute top-4 left-4 z-20 pointer-events-none bg-[#071018]/92 backdrop-blur-xs border border-[#162331] rounded-xl p-3 shadow-xl max-w-xs flex flex-col gap-1 text-xs">

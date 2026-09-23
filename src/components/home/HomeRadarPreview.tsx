@@ -21,6 +21,8 @@ import {
   Activity,
   Zap,
   Navigation,
+  Lock,
+  Unlock,
 } from 'lucide-react';
 import { MapContainer, TileLayer, ZoomControl, useMap, useMapEvents, Marker, Popup } from 'react-leaflet';
 import L from 'leaflet';
@@ -29,10 +31,20 @@ import {
   findNearestRadarStation,
   RadarStation,
 } from '../../data/radarStations';
+import { buildSixHourRadarTimeline, RadarFrame } from '../../services/radarService';
+import {
+  RadarMapLegendPanel,
+  PrecipLevelId,
+  ALL_PRECIP_LEVEL_IDS,
+  PRECIP_INTERVALS,
+} from '../radar/RadarMapLegendPanel';
 
 interface RainViewerFrame {
   time: number;
   path: string;
+  formattedTime?: string;
+  ageMinutes?: number;
+  relativeLabel?: string;
 }
 
 interface RainViewerData {
@@ -249,6 +261,38 @@ function MapViewController({
   return null;
 }
 
+/**
+ * Disables panning, scrolling, and dragging when the user locks view to the active sector
+ */
+function MapLockHandler({ isLocked }: { isLocked: boolean }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (!map) return;
+    try {
+      if (isLocked) {
+        map.dragging?.disable();
+        map.touchZoom?.disable();
+        map.doubleClickZoom?.disable();
+        map.scrollWheelZoom?.disable();
+        map.boxZoom?.disable();
+        map.keyboard?.disable();
+      } else {
+        map.dragging?.enable();
+        map.touchZoom?.enable();
+        map.doubleClickZoom?.enable();
+        map.scrollWheelZoom?.enable();
+        map.boxZoom?.enable();
+        map.keyboard?.enable();
+      }
+    } catch {
+      // Ignore unmounted map event handler errors
+    }
+  }, [map, isLocked]);
+
+  return null;
+}
+
 // Custom clean SVG markers for map pins
 const getStationDivIcon = () =>
   typeof window !== 'undefined' && L?.divIcon
@@ -313,6 +357,7 @@ export const HomeRadarPreview: React.FC<HomeRadarPreviewProps> = ({
 
   const [selectedStationId, setSelectedStationId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'station' | 'all-india'>('station');
+  const [isMapLocked, setIsMapLocked] = useState<boolean>(false);
 
   // Reset selected station if location prop changes drastically
   useEffect(() => {
@@ -360,6 +405,7 @@ export const HomeRadarPreview: React.FC<HomeRadarPreviewProps> = ({
   const [host, setHost] = useState<string>('https://tilecache.rainviewer.com');
   const [activeFrameIndex, setActiveFrameIndex] = useState<number>(0);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
 
@@ -442,20 +488,27 @@ export const HomeRadarPreview: React.FC<HomeRadarPreviewProps> = ({
       setHost(hostUrl);
 
       const past = data.radar?.past || [];
-      // Extract the last 6 frames for precipitation accumulation sequence
-      const last6Frames = past.slice(-6);
-      setFrames(last6Frames);
+      // Generate full 6-hour radar timeline (25 frames, 15m cadence)
+      const mappedPast: RadarFrame[] = past.map((p) => ({
+        time: p.time,
+        path: p.path,
+        formattedTime: '',
+        ageMinutes: Math.max(0, Math.round((Date.now() / 1000 - p.time) / 60)),
+      }));
+      const { frames: sixHourTimeline } = buildSixHourRadarTimeline(mappedPast, 15);
+      const effectiveFrames = sixHourTimeline && sixHourTimeline.length > 0 ? sixHourTimeline : past;
+      setFrames(effectiveFrames);
 
       // Latest observation timestamp from source
-      const newestFrame = last6Frames[last6Frames.length - 1];
+      const newestFrame = effectiveFrames[effectiveFrames.length - 1];
       if (newestFrame) {
         setRadarTimestamp(newestFrame.time);
       }
 
       // Default active frame to the latest frame if user wasn't animating
       setActiveFrameIndex((prev) => {
-        if (prev >= last6Frames.length) return Math.max(0, last6Frames.length - 1);
-        return isManual ? Math.max(0, last6Frames.length - 1) : prev || Math.max(0, last6Frames.length - 1);
+        if (prev >= effectiveFrames.length) return Math.max(0, effectiveFrames.length - 1);
+        return isManual ? Math.max(0, effectiveFrames.length - 1) : prev || Math.max(0, effectiveFrames.length - 1);
       });
 
       setRadarStatus('ready');
@@ -497,16 +550,17 @@ export const HomeRadarPreview: React.FC<HomeRadarPreviewProps> = ({
     };
   }, [fetchRadarData]);
 
-  // Animation Playback Engine (cycles through the 6 frames)
+  // Animation Playback Engine (cycles through the 6-hour time-lapse frames)
   useEffect(() => {
     if (!isPlaying || frames.length === 0) return;
 
+    const intervalDuration = Math.max(150, Math.round(750 / playbackSpeed));
     const timer = setInterval(() => {
       setActiveFrameIndex((prev) => (prev + 1) % frames.length);
-    }, 900);
+    }, intervalDuration);
 
     return () => clearInterval(timer);
-  }, [isPlaying, frames.length]);
+  }, [isPlaying, frames.length, playbackSpeed]);
 
   const activeFrame = frames[activeFrameIndex];
   const displayedTimestamp = activeFrame?.time || radarTimestamp;
@@ -517,6 +571,38 @@ export const HomeRadarPreview: React.FC<HomeRadarPreviewProps> = ({
     activeFrame && host
       ? `${host}${activeFrame.path}/256/{z}/{x}/{y}/2/1_1.png`
       : null;
+
+  // Active precipitation intensity level filter state
+  const [activePrecipLevels, setActivePrecipLevels] = useState<PrecipLevelId[]>(ALL_PRECIP_LEVEL_IDS);
+  const isPrecipFiltered = activePrecipLevels.length < ALL_PRECIP_LEVEL_IDS.length;
+
+  const computedTileFilterClass = useMemo(() => {
+    if (activePrecipLevels.length === ALL_PRECIP_LEVEL_IDS.length) return '';
+    if (activePrecipLevels.length === 0) return 'radar-filter-zero';
+    const hasTrace = activePrecipLevels.includes('trace');
+    const hasLight = activePrecipLevels.includes('light');
+    const hasMod = activePrecipLevels.includes('moderate');
+    const hasHeavy = activePrecipLevels.includes('heavy');
+    const hasIntense = activePrecipLevels.includes('intense');
+    const hasExtreme = activePrecipLevels.includes('extreme');
+
+    if (!hasTrace && !hasLight && !hasMod && (hasHeavy || hasIntense || hasExtreme)) {
+      return 'radar-filter-heavy-plus';
+    }
+    if (!hasTrace && !hasLight && (hasMod || hasHeavy || hasIntense || hasExtreme)) {
+      return 'radar-filter-mod-plus';
+    }
+    if (!hasHeavy && !hasIntense && !hasExtreme && (hasTrace || hasLight)) {
+      return 'radar-filter-trace-only';
+    }
+    return 'radar-filter-custom';
+  }, [activePrecipLevels]);
+
+  const computedTileOpacity = useMemo(() => {
+    if (activePrecipLevels.length === 0) return 0;
+    if (activePrecipLevels.length === ALL_PRECIP_LEVEL_IDS.length) return 0.72;
+    return Math.max(0.3, (activePrecipLevels.length / ALL_PRECIP_LEVEL_IDS.length) * 0.72);
+  }, [activePrecipLevels]);
 
   // Actual timestamp formatting in IST
   const formatTimestamp = (unixSeconds: number | null): string => {
@@ -861,6 +947,33 @@ export const HomeRadarPreview: React.FC<HomeRadarPreviewProps> = ({
                   <X className="w-2.5 h-2.5 ml-0.5" />
                 </button>
               )}
+
+              {/* Visual Map Lock / Unlock Control */}
+              <button
+                type="button"
+                id="btn-home-radar-lock"
+                onClick={() => setIsMapLocked((prev) => !prev)}
+                aria-label={isMapLocked ? 'Unlock radar map panning and zooming' : 'Lock radar map to current sector'}
+                aria-pressed={isMapLocked}
+                title={
+                  isMapLocked
+                    ? 'Map view locked to sector (prevents accidental panning/zooming while viewing storm sector). Click to unlock.'
+                    : 'Lock view to current weather sector (prevents accidental panning & zooming)'
+                }
+                className={`px-2 py-1 rounded text-[11px] font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+                  isMapLocked
+                    ? 'bg-[#FF8C42]/20 text-[#FF8C42] border border-[#FF8C42]/60 shadow-sm ring-1 ring-[#FF8C42]/40'
+                    : 'text-[#93A4B8] hover:text-white bg-[#071018] border border-[#162331]'
+                }`}
+              >
+                {isMapLocked ? <Lock className="w-3 h-3 text-[#FF8C42]" /> : <Unlock className="w-3 h-3 text-[#93A4B8]" />}
+                <span className="font-mono text-[10px] uppercase font-bold">
+                  {isMapLocked ? 'Sector Locked' : 'Lock View'}
+                </span>
+                {isMapLocked && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#FF8C42] animate-pulse" />
+                )}
+              </button>
             </div>
 
             <div className="text-[11px] text-[#93A4B8] font-mono flex items-center gap-2">
@@ -879,7 +992,26 @@ export const HomeRadarPreview: React.FC<HomeRadarPreviewProps> = ({
           </div>
 
           {/* Leaflet Map Canvas Container */}
-          <div className="h-[360px] sm:h-[400px] rounded-xl bg-[#070C14] border border-[#162331] relative overflow-hidden shadow-inner flex flex-col">
+          <div
+            className={`h-[360px] sm:h-[400px] rounded-xl bg-[#070C14] border border-[#162331] relative overflow-hidden shadow-inner flex flex-col ${
+              isMapLocked ? '[&_.leaflet-grab]:!cursor-default [&_.leaflet-container]:!cursor-default' : ''
+            }`}
+          >
+            {/* On-Map Floating Lock Indicator Badge */}
+            {isMapLocked && (
+              <div className="absolute top-2.5 right-2.5 z-[400] flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#070C14]/90 border border-[#FF8C42]/70 text-[#FF8C42] text-[10px] font-mono backdrop-blur-md shadow-md pointer-events-auto">
+                <Lock className="w-3 h-3" />
+                <span className="font-bold">LOCKED: {focusTarget ? 'ECHO CELL' : `${currentStation.city} SECTOR`}</span>
+                <button
+                  type="button"
+                  onClick={() => setIsMapLocked(false)}
+                  className="text-white hover:underline text-[9px] ml-1 cursor-pointer font-sans font-medium"
+                >
+                  Unlock
+                </button>
+              </div>
+            )}
+
             <MapContainer
               center={effectiveCenter}
               zoom={effectiveZoom}
@@ -892,6 +1024,7 @@ export const HomeRadarPreview: React.FC<HomeRadarPreviewProps> = ({
             >
               <MapResizeHandler />
               <MapViewController center={effectiveCenter} zoom={effectiveZoom} />
+              <MapLockHandler isLocked={isMapLocked} />
               <MapProbeHandler onProbe={handleMapProbe} />
 
               <TileLayer
@@ -903,9 +1036,14 @@ export const HomeRadarPreview: React.FC<HomeRadarPreviewProps> = ({
 
               {activeTileUrl && (
                 <TileLayer
-                  key={activeFrame?.path ? `${activeFrame.path}-${activeFrameIndex}` : `radar-tile-${activeFrameIndex}`}
+                  key={
+                    activeFrame?.path
+                      ? `${activeFrame.path}-${activeFrameIndex}-${activePrecipLevels.join(',')}`
+                      : `radar-tile-${activeFrameIndex}-${activePrecipLevels.join(',')}`
+                  }
                   url={activeTileUrl}
-                  opacity={0.72}
+                  opacity={computedTileOpacity}
+                  className={`radar-tile-layer ${computedTileFilterClass}`}
                   maxNativeZoom={7}
                   maxZoom={12}
                   attribution="Weather data by RainViewer"
@@ -914,7 +1052,7 @@ export const HomeRadarPreview: React.FC<HomeRadarPreviewProps> = ({
               )}
 
               {/* DWR Station Geographic Marker */}
-              {viewMode === 'station' && (
+              {viewMode === 'station' && stationDivIcon && (
                 <Marker
                   position={[currentStation.lat, currentStation.lng]}
                   icon={stationDivIcon}
@@ -936,7 +1074,7 @@ export const HomeRadarPreview: React.FC<HomeRadarPreviewProps> = ({
               )}
 
               {/* Focused Active Convective Echo Target Marker */}
-              {focusTarget && (
+              {focusTarget && echoTargetDivIcon && (
                 <Marker
                   position={[focusTarget.center[0], focusTarget.center[1]]}
                   icon={echoTargetDivIcon}
@@ -958,7 +1096,7 @@ export const HomeRadarPreview: React.FC<HomeRadarPreviewProps> = ({
               )}
 
               {/* User Probed Point Marker */}
-              {probedPoint && (
+              {probedPoint && probeDivIcon && (
                 <Marker
                   position={[probedPoint.lat, probedPoint.lng]}
                   icon={probeDivIcon}
@@ -1158,134 +1296,213 @@ export const HomeRadarPreview: React.FC<HomeRadarPreviewProps> = ({
                 </button>
               </div>
             )}
+
+            {/* Persistent Semi-Transparent Radar Legend Panel directly on the map surface */}
+            <RadarMapLegendPanel
+              initialMetric="all"
+              positionClass="bottom-3 left-3"
+              activePrecipLevels={activePrecipLevels}
+              onPrecipLevelsChange={setActivePrecipLevels}
+              sectorName={currentStation ? `${currentStation.city} (${currentStation.state}) Sector` : 'National Doppler Radar Network'}
+              stationName={currentStation ? `DWR ${currentStation.city}` : undefined}
+              timestamp={activeFrame?.time}
+            />
+
+            {/* On-Map Precipitation Filter Banner when active */}
+            {isPrecipFiltered && (
+              <div className="absolute top-12 right-3 z-[500] bg-[#07131E]/95 border border-[#F59E0B]/90 backdrop-blur-md px-2.5 py-1.5 rounded-lg text-xs font-mono text-[#F4F7FA] flex items-center gap-2 shadow-2xl pointer-events-auto animate-fadeIn">
+                <span className="w-2 h-2 rounded-full bg-[#F59E0B] animate-pulse" />
+                <span className="text-[#F59E0B] font-bold text-[10px] uppercase">
+                  FILTER: {activePrecipLevels.length}/6 ON
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setActivePrecipLevels(ALL_PRECIP_LEVEL_IDS)}
+                  className="text-[10px] text-[#38BDF8] hover:text-white underline font-sans cursor-pointer font-bold"
+                  title="Reset precipitation intensity filter"
+                >
+                  Reset
+                </button>
+              </div>
+            )}
+
+            {/* Embedded dynamic CSS styles for radar layer intensity filtering */}
+            <style>{`
+              .radar-tile-layer img {
+                transition: filter 0.3s ease, opacity 0.3s ease;
+              }
+              .radar-filter-zero img {
+                opacity: 0 !important;
+              }
+              .radar-filter-heavy-plus img {
+                filter: contrast(220%) saturate(190%) brightness(110%) drop-shadow(0 0 6px rgba(239,68,68,0.5));
+              }
+              .radar-filter-mod-plus img {
+                filter: contrast(165%) saturate(160%) brightness(105%);
+              }
+              .radar-filter-trace-only img {
+                filter: contrast(135%) saturate(135%) hue-rotate(170deg);
+              }
+              .radar-filter-custom img {
+                filter: contrast(145%) saturate(150%);
+              }
+            `}</style>
           </div>
 
-          {/* Play/Pause Playback Controls Bar (6 frames precipitation accumulation loop) */}
+          {/* Play/Pause Playback Controls Bar (6-Hour precipitation progression loop) */}
           <div
             id="radar-playback-controls"
-            className="p-3 rounded-xl bg-[#071018] border border-[#162331] flex flex-col sm:flex-row items-center justify-between gap-3 shadow-sm"
+            className="p-3 rounded-xl bg-[#071018] border border-[#162331] flex flex-col gap-2.5 shadow-sm"
           >
-            {/* Play/Pause & Step Buttons */}
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                id="btn-radar-step-back"
-                title="Previous Frame"
-                onClick={() => {
-                  setIsPlaying(false);
-                  setActiveFrameIndex((prev) => (prev > 0 ? prev - 1 : frames.length - 1));
-                }}
-                disabled={frames.length === 0}
-                className="w-8 h-8 rounded-lg bg-[#0B141E] hover:bg-[#162331] text-[#93A4B8] hover:text-white border border-[#162331] flex items-center justify-center transition-colors cursor-pointer disabled:opacity-40"
-              >
-                <SkipBack className="w-3.5 h-3.5" />
-              </button>
+            {/* Top Row: Playback Buttons, Speed Selector & Latest Echo */}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              {/* Play/Pause & Step Buttons */}
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  id="btn-radar-step-start"
+                  title="Jump to -6 Hours (Start)"
+                  onClick={() => {
+                    setIsPlaying(false);
+                    setActiveFrameIndex(0);
+                  }}
+                  disabled={frames.length === 0}
+                  className="w-8 h-8 rounded-lg bg-[#0B141E] hover:bg-[#162331] text-[#93A4B8] hover:text-white border border-[#162331] flex items-center justify-center transition-colors cursor-pointer disabled:opacity-40"
+                >
+                  <SkipBack className="w-3.5 h-3.5" />
+                </button>
 
-              <button
-                type="button"
-                id="btn-radar-play-pause"
-                title={isPlaying ? 'Pause Animation' : 'Play 6-Frame Animation'}
-                onClick={() => setIsPlaying(!isPlaying)}
-                disabled={frames.length === 0}
-                className={`px-3.5 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-sm ${
-                  isPlaying
-                    ? 'bg-[#FF8C42] hover:bg-[#E0742E] text-white'
-                    : 'bg-[#1499E8] hover:bg-[#0F7DC0] text-white'
-                } disabled:opacity-40`}
-              >
-                {isPlaying ? (
-                  <>
-                    <Pause className="w-3.5 h-3.5" />
-                    <span>Pause</span>
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-3.5 h-3.5 fill-current" />
-                    <span>Play Loop</span>
-                  </>
-                )}
-              </button>
+                <button
+                  type="button"
+                  id="btn-radar-play-pause"
+                  title={isPlaying ? 'Pause Animation' : 'Play 6-Hour Time-Lapse'}
+                  onClick={() => setIsPlaying(!isPlaying)}
+                  disabled={frames.length === 0}
+                  className={`px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-sm ${
+                    isPlaying
+                      ? 'bg-[#FF8C42] hover:bg-[#E0742E] text-white'
+                      : 'bg-[#1499E8] hover:bg-[#0F7DC0] text-white'
+                  } disabled:opacity-40`}
+                >
+                  {isPlaying ? (
+                    <>
+                      <Pause className="w-3.5 h-3.5" />
+                      <span>Pause</span>
+                    </>
+                  ) : (
+                    <>
+                      <Play className="w-3.5 h-3.5 fill-current" />
+                      <span>Play 6h Loop</span>
+                    </>
+                  )}
+                </button>
 
-              <button
-                type="button"
-                id="btn-radar-step-forward"
-                title="Next Frame"
-                onClick={() => {
-                  setIsPlaying(false);
-                  setActiveFrameIndex((prev) => (prev + 1) % frames.length);
-                }}
-                disabled={frames.length === 0}
-                className="w-8 h-8 rounded-lg bg-[#0B141E] hover:bg-[#162331] text-[#93A4B8] hover:text-white border border-[#162331] flex items-center justify-center transition-colors cursor-pointer disabled:opacity-40"
-              >
-                <SkipForward className="w-3.5 h-3.5" />
-              </button>
-            </div>
+                <button
+                  type="button"
+                  id="btn-radar-step-forward"
+                  title="Next Frame (+15m)"
+                  onClick={() => {
+                    setIsPlaying(false);
+                    setActiveFrameIndex((prev) => (prev + 1) % frames.length);
+                  }}
+                  disabled={frames.length === 0}
+                  className="w-8 h-8 rounded-lg bg-[#0B141E] hover:bg-[#162331] text-[#93A4B8] hover:text-white border border-[#162331] flex items-center justify-center transition-colors cursor-pointer disabled:opacity-40"
+                >
+                  <SkipForward className="w-3.5 h-3.5" />
+                </button>
 
-            {/* Interactive Timeline Pips for the 6 Accumulation Frames */}
-            <div className="flex items-center gap-1.5 w-full sm:w-auto justify-center">
-              {frames.map((frame, idx) => {
-                const isSelected = activeFrameIndex === idx;
-                const isLatest = idx === frames.length - 1;
-                const minutesAgo = (frames.length - 1 - idx) * 10;
-                const pipLabel = isLatest ? 'Now' : `-${minutesAgo}m`;
-
-                return (
-                  <button
-                    key={frame.path ? `${frame.path}-${idx}` : `radar-pip-${frame.time || idx}`}
-                    type="button"
-                    onClick={() => {
-                      setIsPlaying(false);
-                      setActiveFrameIndex(idx);
-                    }}
-                    title={`Frame ${idx + 1}: ${formatTimestamp(frame.time)}`}
-                    className={`flex flex-col items-center gap-1 px-2 py-1 rounded-md transition-all cursor-pointer ${
-                      isSelected
-                        ? 'bg-[#1499E8]/20 border border-[#1499E8] text-[#43C7F4]'
-                        : 'bg-[#0B141E] border border-transparent text-[#93A4B8] hover:text-[#F4F7FA] hover:bg-[#162331]'
-                    }`}
-                  >
-                    <div
-                      className={`w-2.5 h-2.5 rounded-full transition-all ${
-                        isSelected
-                          ? 'bg-[#43C7F4] shadow-[0_0_8px_rgba(67,199,244,0.8)] scale-110'
-                          : isLatest
-                          ? 'bg-[#22C7A0]'
-                          : 'bg-[#334155]'
+                {/* Speed Controls: 0.5x, 1x, 2x */}
+                <div className="flex items-center bg-[#0B141E] p-0.5 rounded-lg border border-[#162331] ml-1">
+                  {[0.5, 1, 2].map((spd) => (
+                    <button
+                      key={spd}
+                      type="button"
+                      onClick={() => setPlaybackSpeed(spd)}
+                      className={`px-2 py-0.5 rounded text-[10px] font-mono transition-all ${
+                        playbackSpeed === spd
+                          ? 'bg-[#1499E8] text-white font-bold'
+                          : 'text-[#93A4B8] hover:text-white'
                       }`}
-                    />
-                    <span className="text-[9px] font-mono font-medium">{pipLabel}</span>
-                  </button>
-                );
-              })}
+                      title={`Playback Speed: ${spd}x`}
+                    >
+                      {spd}x
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Active Timestamp Readout & Latest Echo Button */}
+              <div className="flex items-center gap-2">
+                <div className="text-right hidden sm:block">
+                  <div className="text-[11px] font-mono font-bold text-white">
+                    {activeFrame ? formatTimestamp(activeFrame.time).split(',')[0] : 'Live Scan'}
+                  </div>
+                  <div className="text-[9px] text-[#43C7F4] font-mono">
+                    {activeFrame?.relativeLabel || (isLatestFrame ? 'LIVE SCAN' : `${activeFrame?.ageMinutes || 0}m ago`)}
+                  </div>
+                </div>
+
+                {/* Fully Functional Latest Echo Button */}
+                <button
+                  type="button"
+                  id="btn-radar-jump-latest"
+                  onClick={handleLatestEchoAction}
+                  disabled={frames.length === 0}
+                  title={
+                    isLatestFrame
+                      ? 'Inspect Latest Echo Telemetry & Convective Cells'
+                      : 'Jump to the newest radar echo frame'
+                  }
+                  className={`text-xs font-mono font-semibold px-3 py-1.5 rounded-lg border flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40 shadow-sm ${
+                    isLatestFrame
+                      ? 'bg-[#1499E8]/20 hover:bg-[#1499E8]/35 border-[#1499E8]/70 text-[#43C7F4] hover:text-white'
+                      : 'bg-[#1499E8] hover:bg-[#0F7DC0] border-transparent text-white'
+                  }`}
+                >
+                  <Radio
+                    className={`w-3.5 h-3.5 ${
+                      isRefreshing ? 'animate-spin text-[#43C7F4]' : isLatestFrame ? 'text-[#22C7A0]' : 'text-white'
+                    }`}
+                  />
+                  <span>{isLatestFrame ? 'Inspect Latest' : 'Jump Live →'}</span>
+                  {isLatestFrame && (
+                    <span className="w-2 h-2 rounded-full bg-[#22C7A0] animate-pulse" />
+                  )}
+                </button>
+              </div>
             </div>
 
-            {/* Fully Functional Latest Echo Button (Never Disabled) */}
-            <button
-              type="button"
-              id="btn-radar-jump-latest"
-              onClick={handleLatestEchoAction}
-              disabled={frames.length === 0}
-              title={
-                isLatestFrame
-                  ? 'Inspect Latest Echo Telemetry & Convective Cells'
-                  : 'Jump to the newest radar echo frame'
-              }
-              className={`text-xs font-mono font-semibold px-3 py-1.5 rounded-lg border flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-40 shadow-sm ${
-                isLatestFrame
-                  ? 'bg-[#1499E8]/20 hover:bg-[#1499E8]/35 border-[#1499E8]/70 text-[#43C7F4] hover:text-white'
-                  : 'bg-[#1499E8] hover:bg-[#0F7DC0] border-transparent text-white'
-              }`}
-            >
-              <Radio
-                className={`w-3.5 h-3.5 ${
-                  isRefreshing ? 'animate-spin text-[#43C7F4]' : isLatestFrame ? 'text-[#22C7A0]' : 'text-white'
-                }`}
+            {/* Bottom Row: 6-Hour Time-Lapse Slider Track & Ticks */}
+            <div className="flex flex-col gap-1 pt-1">
+              <input
+                type="range"
+                min={0}
+                max={Math.max(0, frames.length - 1)}
+                value={activeFrameIndex}
+                onChange={(e) => {
+                  setIsPlaying(false);
+                  setActiveFrameIndex(Number(e.target.value));
+                }}
+                aria-label="6-hour precipitation progression scrubber"
+                className="w-full h-1.5 rounded appearance-none cursor-pointer bg-[#0A141E] border border-[#162331] accent-[#1499E8]"
+                style={{
+                  background: `linear-gradient(to right, #0F7DC0 0%, #43C7F4 ${
+                    frames.length > 1 ? (activeFrameIndex / (frames.length - 1)) * 100 : 100
+                  }%, #0B141E ${
+                    frames.length > 1 ? (activeFrameIndex / (frames.length - 1)) * 100 : 100
+                  }%, #0B141E 100%)`,
+                }}
               />
-              <span>{isLatestFrame ? 'Inspect Latest Echo' : 'Latest Echo →'}</span>
-              {isLatestFrame && (
-                <span className="w-2 h-2 rounded-full bg-[#22C7A0] animate-pulse" />
-              )}
-            </button>
+              <div className="flex items-center justify-between text-[9px] font-mono text-[#62778E] px-0.5 select-none">
+                <span className="text-[#38BDF8] font-bold">-6h</span>
+                <span>-5h</span>
+                <span>-4h</span>
+                <span className="text-[#8AB4D5] font-semibold">-3h</span>
+                <span>-2h</span>
+                <span>-1h</span>
+                <span className="text-[#22C7A0] font-bold">LIVE (NOW)</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

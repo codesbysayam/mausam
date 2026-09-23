@@ -24,6 +24,7 @@ const OpenDataApi = React.lazy(() => import('./pages/OpenDataApi').then((m) => (
 const TermsOfObservation = React.lazy(() => import('./pages/TermsOfObservation').then((m) => ({ default: m.TermsOfObservation })));
 const ApiDebugPage = React.lazy(() => import('./pages/ApiDebug').then((m) => ({ default: m.ApiDebugPage })));
 const DocsPage = React.lazy(() => import('./pages/DocsPage').then((m) => ({ default: m.DocsPage })));
+const CycloneTrackerPage = React.lazy(() => import('./pages/CycloneTracker').then((m) => ({ default: m.CycloneTrackerPage })));
 
 import { AskMausamDrawer } from './components/AskMausamDrawer';
 import { ReportDetailModal } from './components/ReportDetailModal';
@@ -43,7 +44,7 @@ import './styles/mausam.css';
 
 export type AppView = MainNavTab | FooterView | 'not-found';
 
-const SWIPEABLE_TABS: MainNavTab[] = ['home', 'weather', 'forecast', 'warnings', 'radar', 'aqi', 'agromet', 'reports'];
+const SWIPEABLE_TABS: MainNavTab[] = ['home', 'weather', 'forecast', 'warnings', 'radar', 'cyclone-tracker', 'aqi', 'agromet', 'reports'];
 
 function getTabFromPathname(path: string): AppView {
   const cleanPath = path.toLowerCase().replace(/\/+$/, '');
@@ -56,6 +57,7 @@ function getTabFromPathname(path: string): AppView {
   if (cleanPath === '/forecast') return 'forecast';
   if (cleanPath === '/warnings' || cleanPath === '/alerts') return 'warnings';
   if (cleanPath === '/radar' || cleanPath === '/maps') return 'radar';
+  if (cleanPath === '/cyclone-tracker' || cleanPath === '/cyclone' || cleanPath === '/cyclones') return 'cyclone-tracker';
   if (cleanPath === '/aqi' || cleanPath === '/air') return 'aqi';
   if (cleanPath === '/agromet') return 'agromet';
   if (cleanPath === '/reports') return 'reports';
@@ -82,6 +84,8 @@ function getPathForView(view: AppView): string {
       return '/warnings';
     case 'radar':
       return '/radar';
+    case 'cyclone-tracker':
+      return '/cyclone-tracker';
     case 'aqi':
       return '/aqi';
     case 'agromet':
@@ -438,6 +442,11 @@ export default function App() {
                 locationSource={locationSource}
                 onOpenLocationCenter={() => setIsLocationCenterOpen(true)}
               />
+            )}
+
+            {/* CYCLONE TRACKER: Real-Time Synoptic Disturbance & IMD Cyclone Track */}
+            {activeTab === 'cyclone-tracker' && (
+              <CycloneTrackerPage />
             )}
 
             {/* AQI & AIR: National Air Quality Index & Aero-Allergen Pollen */}

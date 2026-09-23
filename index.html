@@ -35,6 +35,55 @@
     <!-- Consent Banner Styling -->
     <link rel="stylesheet" href="/css/consent.css" />
 
+    <!-- Application Stylesheet -->
+    <link rel="stylesheet" href="/src/index.css" />
+
+    <!-- Critical Dark Theme & Accessibility Shell (Zero Flash) -->
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      html, body {
+        background-color: #071A2D !important;
+        color: #FFFFFF !important;
+        margin: 0;
+        padding: 0;
+        min-height: 100vh;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      .skip-link {
+        position: absolute !important;
+        left: -9999px !important;
+        top: auto !important;
+        width: 1px !important;
+        height: 1px !important;
+        overflow: hidden !important;
+      }
+      .skip-link:focus {
+        position: fixed !important;
+        left: 12px !important;
+        top: 12px !important;
+        width: auto !important;
+        height: auto !important;
+        z-index: 99999 !important;
+        background: #0B72B9 !important;
+        color: #FFFFFF !important;
+        padding: 8px 16px !important;
+        border-radius: 6px !important;
+        text-decoration: none !important;
+        font-weight: 600 !important;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+      }
+      @keyframes mausamPulse {
+        0%, 100% { opacity: 0.4; transform: scale(0.96); }
+        50% { opacity: 1; transform: scale(1.02); }
+      }
+      @keyframes mausamSpin {
+        to { transform: rotate(360deg); }
+      }
+    </style>
+
     <!-- Fonts & Icons Preconnect -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -57,7 +106,18 @@
       Skip to main content
     </a>
 
-    <div id="root"></div>
+    <div id="root">
+      <div style="min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background-color: #071A2D; color: #FFFFFF; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; gap: 18px;">
+        <div style="position: relative; width: 56px; height: 56px; display: flex; align-items: center; justify-content: center;">
+          <div style="position: absolute; inset: 0; border: 2.5px solid rgba(56, 189, 248, 0.2); border-top-color: #38BDF8; border-radius: 50%; animation: mausamSpin 0.9s cubic-bezier(0.5, 0, 0.5, 1) infinite;"></div>
+          <div style="width: 14px; height: 14px; border-radius: 50%; background: #38BDF8; box-shadow: 0 0 16px rgba(56, 189, 248, 0.8); animation: mausamPulse 1.8s ease-in-out infinite;"></div>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 5px; text-align: center;">
+          <div style="font-weight: 800; font-size: 15px; letter-spacing: 0.12em; text-transform: uppercase; color: #F8FAFC;">MAUSAM</div>
+          <div style="font-size: 11px; color: #94A3B8; font-family: monospace; letter-spacing: 0.04em;">Atmospheric Intelligence Platform • Connecting Telemetry...</div>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
